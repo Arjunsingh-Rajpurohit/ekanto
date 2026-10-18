@@ -1,11 +1,14 @@
 import './style.css';
 import { App as NativeApp } from '@capacitor/app';
-import { Capacitor } from '@capacitor/core';
 import { Share } from '@capacitor/share';
 import { CallSession, type CallState, type Person } from './call';
+import { Chat } from './chat';
+import { ChatPanel } from './chat-ui';
 import { APP_DOWNLOAD_URL, APP_SCHEME, HAS_TURN, publicUrl } from './config';
 import { MAX_PEOPLE, MIN_PEOPLE, SMOOTH_PEOPLE, inviteToHash, newInvite, parseInvite, type Invite } from './invite';
-import { MediaProblem, cameraTrack, openCamera, type Facing } from './media';
+import { MediaProblem, cameraTrack, canShareScreenInBrowser, openCamera, screenTrack, type Facing } from './media';
+import { IN_APP, nativeCall, nativeScreenTrack } from './native';
+import { clearSaved } from './viewer';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -18,22 +21,28 @@ const ICON = {
   camOff: svg('<path d="M10.66 6H14a2 2 0 0 1 2 2v2.5l5.248-3.062A.5.5 0 0 1 22 7.87v8.196"/><path d="M16 16a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2"/><path d="m2 2 20 20"/>'),
   flip: svg('<path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/>'),
   invite: svg('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/>'),
+  chat: svg('<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>'),
+  screen: svg('<rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/>'),
+  more: svg('<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>'),
   end: svg('<path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.34a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"/><line x1="22" x2="2" y1="2" y2="22"/>'),
 };
 
 type Screen = 'home' | 'join' | 'protected' | 'call' | 'message';
 
-const IN_APP = Capacitor.isNativePlatform();
-
 let invite: Invite | null = null;
 let size: number | null = null;
+let voice = false;
 let stream: MediaStream | null = null;
 let session: CallSession | null = null;
+let chat: Chat | null = null;
+let panel: ChatPanel | null = null;
 let facing: Facing = 'user';
 let wakeLock: WakeLockSentinel | null = null;
 let clock: ReturnType<typeof setInterval> | undefined;
 let lastState: CallState | null = null;
 let warnedBlocked = false;
+/** The screen being shared, and how to stop it. */
+let sharing: { track: MediaStreamTrack; stop: () => Promise<void> } | null = null;
 
 /* ---------- Small helpers ---------- */
 
@@ -79,8 +88,18 @@ function link(): string {
 }
 
 const peopleText = (limit: number | null) => (limit ? `up to ${limit} people` : 'no limit on people');
+const callWord = (i: Invite) => (i.voice ? 'voice call' : 'video call');
 
 /* ---------- Home ---------- */
+
+function setKind(isVoice: boolean): void {
+  voice = isVoice;
+  for (const b of $('kinds').querySelectorAll<HTMLButtonElement>('button')) {
+    const on = (b.dataset['kind'] === 'voice') === isVoice;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-checked', String(on));
+  }
+}
 
 function setSize(n: number | null): void {
   size = n;
@@ -107,7 +126,8 @@ function route(): void {
   invite = parsed;
   // A protected call is never joined from a browser, where extensions could watch it.
   if (parsed.appOnly && !IN_APP) return show('protected');
-  $('join-sub').textContent = `You're invited to a ${parsed.appOnly ? 'protected' : 'private'} video call — ${peopleText(parsed.limit)}.`;
+  $('join-sub').textContent = `You're invited to a ${parsed.appOnly ? 'protected' : 'private'} ${callWord(parsed)} — ${peopleText(parsed.limit)}.`;
+  $('join-btn').textContent = parsed.voice ? 'Join voice call' : 'Join call';
   $<HTMLInputElement>('join-name').value = savedName();
   show('join');
 }
@@ -115,7 +135,7 @@ function route(): void {
 function startNew(): void {
   const name = $<HTMLInputElement>('name').value.trim();
   saveName(name);
-  invite = newInvite(size, IN_APP && $<HTMLInputElement>('protect').checked);
+  invite = newInvite(size, IN_APP && $<HTMLInputElement>('protect').checked, voice);
   history.replaceState(null, '', `#${inviteToHash(invite)}`);
   void enterCall(name);
 }
@@ -125,17 +145,15 @@ function startNew(): void {
 async function enterCall(name: string): Promise<void> {
   if (!invite) return;
   try {
-    stream = await openCamera(facing);
+    stream = await openCamera(facing, !invite.voice);
   } catch (e) {
-    return message('🎥', 'Camera or mic not available', e instanceof MediaProblem ? e.message : 'Please try again.');
+    return message(invite.voice ? '🎙️' : '🎥', invite.voice ? 'Microphone not available' : 'Camera or mic not available',
+      e instanceof MediaProblem ? e.message : 'Please try again.');
   }
   show('call');
-  const local = $<HTMLVideoElement>('local');
-  local.srcObject = stream;
-  local.hidden = stream.getVideoTracks().length === 0;
-  $('waiting-sub').textContent = `Send them the link. This call allows ${peopleText(invite.limit)}${invite.appOnly ? ' and only the Hush app can join' : ''}.`;
+  showLocal();
+  $('waiting-sub').textContent = `Send them the link. This ${callWord(invite)} allows ${peopleText(invite.limit)}${invite.appOnly ? ' and only the Hush app can join' : ''}.`;
   warnedBlocked = false;
-  drawControls();
 
   session = new CallSession({
     invite,
@@ -143,8 +161,14 @@ async function enterCall(name: string): Promise<void> {
     relayOnly: HAS_TURN && hideIp(),
     local: () => stream!,
     onChange: render,
+    platform: IN_APP ? 'app' : 'web',
+    media: { cam: !!stream.getVideoTracks()[0], screen: false },
   });
+  chat = new Chat(session, () => panel?.render());
+  panel = new ChatPanel(chat, () => lastState?.people ?? [], toast);
+  drawControls();
   await session.start();
+  void nativeCall.start();
   void keepAwake();
   clock = setInterval(() => lastState && drawStatus(lastState), 1000);
 }
@@ -178,10 +202,13 @@ function render(state: CallState): void {
 /** One tile per person; tiles are reused so their video doesn't flicker on every update. */
 function drawGrid(people: Person[]): void {
   const grid = $('grid');
-  grid.dataset['count'] = String(Math.min(people.length, 9));
-  const keep = new Set(people.map((p) => p.id));
+  // Someone sharing their screen goes first and gets the most room.
+  const ordered = [...people].sort((a, b) => Number(b.screen) - Number(a.screen));
+  grid.dataset['count'] = String(Math.min(ordered.length, 9));
+  grid.classList.toggle('has-screen', ordered.some((p) => p.screen));
+  const keep = new Set(ordered.map((p) => p.id));
   for (const tile of [...grid.children] as HTMLElement[]) if (!keep.has(tile.dataset['id']!)) tile.remove();
-  for (const person of people) {
+  for (const person of ordered) {
     let tile = grid.querySelector<HTMLElement>(`[data-id="${CSS.escape(person.id)}"]`);
     if (!tile) {
       tile = document.createElement('div');
@@ -190,19 +217,24 @@ function drawGrid(people: Person[]): void {
       const video = document.createElement('video');
       video.autoplay = true;
       video.playsInline = true;
+      const avatar = document.createElement('div');
+      avatar.className = 'avatar';
       const label = document.createElement('span');
       label.className = 'name';
       const wait = document.createElement('div');
       wait.className = 'tile-wait';
       wait.innerHTML = '<div class="spinner"></div><p>Connecting securely…</p>';
-      tile.append(video, label, wait);
-      grid.append(tile);
+      tile.append(video, avatar, label, wait);
     }
+    grid.append(tile);
     const video = tile.querySelector('video')!;
     if (video.srcObject !== person.stream) video.srcObject = person.stream;
     // textContent, never innerHTML: a name is whatever someone typed.
-    tile.querySelector('.name')!.textContent = person.name;
+    tile.querySelector('.name')!.textContent = person.screen ? `${person.name} · sharing screen` : person.name;
+    tile.querySelector('.avatar')!.textContent = (person.name.trim()[0] ?? '?').toUpperCase();
     tile.classList.toggle('waiting', !person.connected);
+    tile.classList.toggle('no-video', person.cam === false && !person.screen);
+    tile.classList.toggle('screen', person.screen);
   }
 }
 
@@ -220,30 +252,69 @@ function drawStatus(state: CallState): void {
   }
 }
 
+/** Your own picture in the corner: camera (mirrored), your shared screen, or nothing. */
+function showLocal(): void {
+  const local = $<HTMLVideoElement>('local');
+  const camera = stream?.getVideoTracks()[0];
+  const track = sharing?.track ?? camera;
+  local.srcObject = track ? new MediaStream([track]) : null;
+  local.hidden = !track;
+  local.classList.toggle('mirror', !sharing && facing === 'user');
+}
+
 function drawControls(): void {
   const audio = stream?.getAudioTracks()[0];
-  const video = stream?.getVideoTracks()[0];
+  const camOn = !!stream?.getVideoTracks()[0];
   const set = (id: string, icon: string, off: boolean, label: string, disabled = false) => {
     const b = $<HTMLButtonElement>(id);
+    const badge = b.querySelector('.badge');
     b.innerHTML = icon;
+    if (badge) b.append(badge);
     b.classList.toggle('off', off);
     b.setAttribute('aria-label', label);
     b.disabled = disabled;
   };
   set('mic', audio?.enabled === false ? ICON.micOff : ICON.mic, audio?.enabled === false, audio?.enabled === false ? 'Unmute' : 'Mute', !audio);
-  set('cam', video?.enabled ? ICON.cam : ICON.camOff, !video?.enabled, video?.enabled ? 'Camera off' : 'Camera on', !video);
-  set('flip', ICON.flip, false, 'Switch camera', !video);
-  set('invite', ICON.invite, false, 'Invite someone');
+  set('cam', camOn ? ICON.cam : ICON.camOff, !camOn, camOn ? 'Camera off' : 'Camera on');
+  set('chat-btn', ICON.chat, false, 'Chat');
+  set('more', ICON.more, false, 'More');
   set('end', ICON.end, false, 'End call');
-  $('local').classList.toggle('mirror', facing === 'user');
-  $('local').classList.toggle('cam-off', !video?.enabled);
+  $('flip').querySelector('.mi')!.innerHTML = ICON.flip;
+  $('screen').querySelector('.mi')!.innerHTML = ICON.screen;
+  $('invite').querySelector('.mi')!.innerHTML = ICON.invite;
+  ($('flip') as HTMLButtonElement).disabled = !camOn || !!sharing;
+  const canShare = IN_APP || canShareScreenInBrowser();
+  ($('screen') as HTMLButtonElement).disabled = !canShare;
+  $('screen-note').hidden = canShare;
+  $('screen-label').textContent = sharing ? 'Stop sharing screen' : 'Share my screen';
+  showLocal();
+}
+
+/** Camera off really switches the camera off (its light goes out); on starts it again. */
+async function toggleCamera(): Promise<void> {
+  if (!stream) return;
+  const current = stream.getVideoTracks()[0];
+  if (current) {
+    current.stop();
+    stream.removeTrack(current);
+    if (!sharing) await session?.replaceVideoTrack(null);
+  } else {
+    try {
+      const track = await cameraTrack(facing);
+      stream.addTrack(track);
+      if (!sharing) await session?.replaceVideoTrack(track);
+    } catch {
+      toast("Couldn't turn the camera on. Check the camera permission.");
+    }
+  }
+  session?.setMedia({ cam: !!stream.getVideoTracks()[0], screen: !!sharing });
+  drawControls();
 }
 
 async function flipCamera(): Promise<void> {
   const old = stream?.getVideoTracks()[0];
-  if (!stream || !old) return;
+  if (!stream || !old || sharing) return;
   const next: Facing = facing === 'user' ? 'environment' : 'user';
-  const wasOn = old.enabled;
   // Phones can't always hold both cameras open: release the old one first.
   old.stop();
   stream.removeTrack(old);
@@ -254,19 +325,51 @@ async function flipCamera(): Promise<void> {
     track = await cameraTrack(facing).catch(() => null);
   }
   if (track) {
-    track.enabled = wasOn;
     stream.addTrack(track);
     await session?.replaceVideoTrack(track);
   }
-  $<HTMLVideoElement>('local').srcObject = stream;
+  drawControls();
+}
+
+/** Your screen replaces your camera for everyone until you stop. */
+async function toggleScreen(): Promise<void> {
+  $('more-sheet').hidden = true;
+  if (sharing) return stopScreen();
+  try {
+    if (IN_APP) {
+      sharing = await nativeScreenTrack(() => void stopScreen());
+    } else {
+      const track = await screenTrack();
+      sharing = { track, stop: async () => track.stop() };
+      // The browser's own "Stop sharing" button ends it too.
+      track.addEventListener('ended', () => void stopScreen());
+    }
+  } catch {
+    // Cancelled the picker, or not allowed.
+    return;
+  }
+  await session?.replaceVideoTrack(sharing.track);
+  session?.setMedia({ cam: !!stream?.getVideoTracks()[0], screen: true });
+  toast(IN_APP ? 'Sharing your screen. Hush itself shows as black — open the app you want to show.' : 'Sharing your screen.');
+  drawControls();
+}
+
+async function stopScreen(): Promise<void> {
+  if (!sharing) return;
+  const was = sharing;
+  sharing = null;
+  await was.stop();
+  await session?.replaceVideoTrack(stream?.getVideoTracks()[0] ?? null);
+  session?.setMedia({ cam: !!stream?.getVideoTracks()[0], screen: false });
   drawControls();
 }
 
 async function shareLink(): Promise<void> {
+  $('more-sheet').hidden = true;
   const url = link();
-  const text = 'Join my private video call';
+  const text = invite?.voice ? 'Join my private voice call' : 'Join my private video call';
   try {
-    if (Capacitor.isNativePlatform()) await Share.share({ title: 'Private call', text, url });
+    if (IN_APP) await Share.share({ title: 'Private call', text, url });
     else if (navigator.share) await navigator.share({ title: 'Private call', text, url });
     else await copyLink();
   } catch {
@@ -291,19 +394,27 @@ async function keepAwake(): Promise<void> {
   }
 }
 
-/** Hang up and leave nothing behind: camera off, link wiped from the address bar. */
+/** Hang up and leave nothing behind: camera off, chat and files forgotten, link wiped. */
 function finish(): number {
   const since = lastState?.liveSince;
+  void sharing?.stop();
+  sharing = null;
   session?.leave();
   session = null;
+  chat?.dispose();
+  chat = null;
+  panel?.reset();
+  panel = null;
   stream?.getTracks().forEach((t) => t.stop());
   stream = null;
   clearInterval(clock);
   void wakeLock?.release().catch(() => undefined);
   wakeLock = null;
+  void nativeCall.end();
+  void clearSaved();
   $('grid').replaceChildren();
   $<HTMLVideoElement>('local').srcObject = null;
-  $('sheet').hidden = true;
+  for (const id of ['sheet', 'more-sheet', 'send-sheet']) $(id).hidden = true;
   lastState = null;
   history.replaceState(null, '', location.pathname);
   return since ? Date.now() - since : 0;
@@ -313,12 +424,13 @@ function endCall(): void {
   const ms = finish();
   const min = Math.floor(ms / 60000);
   const sec = Math.floor((ms % 60000) / 1000);
-  message('👋', 'Call ended', ms ? `You talked for ${min ? `${min} min ` : ''}${sec} sec. Nothing was saved.` : 'Nothing was saved.');
+  message('👋', 'Call ended', ms ? `You talked for ${min ? `${min} min ` : ''}${sec} sec. Nothing was saved — the chat and files are gone too.` : 'Nothing was saved.');
 }
 
-function openSheet(): void {
+function openSafety(): void {
+  $('more-sheet').hidden = true;
   const people = (lastState?.people ?? []).filter((p) => p.connected);
-  if (!people.length) return;
+  if (!people.length) return toast('The safety check starts once someone is connected.');
   const list = $('safety');
   list.replaceChildren(...people.map((p) => {
     const li = document.createElement('li');
@@ -360,8 +472,9 @@ function addHideIpToggles(): void {
       } catch {
         // Not remembered, still applied to this call.
       }
-      document.querySelectorAll<HTMLInputElement>('.toggle input').forEach((b) => (b.checked = box.checked));
+      document.querySelectorAll<HTMLInputElement>('.toggle.hide-ip input').forEach((b) => (b.checked = box.checked));
     });
+    label.classList.add('hide-ip');
     const text = document.createElement('span');
     text.innerHTML = '<strong>Hide my IP address</strong><br>The call goes through the encrypted relay, so others never see where you are. A little slower.';
     label.append(box, text);
@@ -372,6 +485,9 @@ function addHideIpToggles(): void {
 /* ---------- Wiring ---------- */
 
 $<HTMLInputElement>('name').value = savedName();
+for (const b of $('kinds').querySelectorAll<HTMLButtonElement>('button')) {
+  b.addEventListener('click', () => setKind(b.dataset['kind'] === 'voice'));
+}
 for (const b of $('sizes').querySelectorAll<HTMLButtonElement>('button')) {
   b.addEventListener('click', () => {
     $<HTMLInputElement>('size-custom').value = '';
@@ -388,6 +504,7 @@ $('size-custom').addEventListener('change', () => {
   const input = $<HTMLInputElement>('size-custom');
   if (input.value !== '' && size !== null) input.value = String(size);
 });
+setKind(false);
 setSize(null);
 addHideIpToggles();
 
@@ -426,26 +543,53 @@ $('paste').addEventListener('submit', (e) => {
   $<HTMLInputElement>('paste-input').value = '';
   route();
 });
+
+// In the call
 $('share').addEventListener('click', () => void shareLink());
 $('copy').addEventListener('click', () => void copyLink());
-$('invite').addEventListener('click', () => void shareLink());
-$('status').addEventListener('click', openSheet);
+$('status').addEventListener('click', openSafety);
 $('sheet-close').addEventListener('click', () => ($('sheet').hidden = true));
-$('sheet').addEventListener('click', (e) => {
-  if (e.target === $('sheet')) $('sheet').hidden = true;
-});
 $('mic').addEventListener('click', () => {
   const t = stream?.getAudioTracks()[0];
   if (t) t.enabled = !t.enabled;
   drawControls();
 });
-$('cam').addEventListener('click', () => {
-  const t = stream?.getVideoTracks()[0];
-  if (t) t.enabled = !t.enabled;
-  drawControls();
-});
-$('flip').addEventListener('click', () => void flipCamera());
+$('cam').addEventListener('click', () => void toggleCamera());
 $('end').addEventListener('click', endCall);
+$('more').addEventListener('click', () => ($('more-sheet').hidden = false));
+$('more-close').addEventListener('click', () => ($('more-sheet').hidden = true));
+$('flip').addEventListener('click', () => {
+  $('more-sheet').hidden = true;
+  void flipCamera();
+});
+$('screen').addEventListener('click', () => void toggleScreen());
+$('invite').addEventListener('click', () => void shareLink());
+$('safety-btn').addEventListener('click', openSafety);
+for (const id of ['sheet', 'more-sheet', 'send-sheet']) {
+  $(id).addEventListener('click', (e) => {
+    if (e.target === $(id)) $(id).hidden = true;
+  });
+}
+
+// Chat
+$('chat-btn').addEventListener('click', () => panel?.openPanel());
+$('chat-close').addEventListener('click', () => panel?.closePanel());
+$('chat-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  panel?.sendText();
+});
+$('attach').addEventListener('click', () => $<HTMLInputElement>('file-input').click());
+$('file-input').addEventListener('change', () => {
+  const input = $<HTMLInputElement>('file-input');
+  const file = input.files?.[0];
+  input.value = '';
+  if (file) panel?.pick(file);
+});
+$('send-download').addEventListener('click', () => panel?.send('download'));
+$('send-view').addEventListener('click', () => panel?.send('view'));
+$('send-cancel').addEventListener('click', () => panel?.cancelSend());
+$('viewer-close').addEventListener('click', () => panel?.hideViewer());
+
 window.addEventListener('hashchange', () => {
   if (!session) route();
 });
@@ -467,9 +611,14 @@ if (IN_APP) {
   void NativeApp.addListener('appUrlOpen', (e) => openFromOutside(e.url));
   void NativeApp.getLaunchUrl().then((r) => openFromOutside(r?.url));
   void NativeApp.addListener('backButton', () => {
-    if (session) endCall();
-    else if (!$('home').hidden) void NativeApp.exitApp();
-    else show('home');
+    // Back closes whatever is open on top; in the call itself it keeps the call going in the
+    // background (it never hangs up by accident).
+    if (!$('viewer').hidden) return panel?.hideViewer();
+    for (const id of ['send-sheet', 'more-sheet', 'sheet']) if (!$(id).hidden) return void ($(id).hidden = true);
+    if (!$('chat').hidden) return panel?.closePanel();
+    if (session) return void NativeApp.minimizeApp();
+    if (!$('home').hidden) return void NativeApp.exitApp();
+    show('home');
   });
 }
 

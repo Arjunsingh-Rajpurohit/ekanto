@@ -6,10 +6,24 @@ import { Relay } from './relay';
 export type Phase = 'starting' | 'waiting' | 'live' | 'full' | 'offline';
 
 /** Someone else in the call, as the screen sees them. */
+/** What each phone tells the others over the private side-channel. */
+export interface MediaState {
+  cam: boolean;
+  screen: boolean;
+}
+
 export interface Person {
   id: string;
   name: string;
   stream: MediaStream | null;
+  /** Camera on? (false = show their initial instead of video). Null until they say. */
+  cam: boolean | null;
+  /** Sharing their screen: show it whole, not cropped. */
+  screen: boolean;
+  /** Where they are: the app blocks screenshots, the website can't. */
+  platform: 'app' | 'web' | null;
+  /** The private side-channel is open: chat and files can go to this person. */
+  channelOpen: boolean;
   connected: boolean;
   /** Five emojis from both phones' encryption keys; the same on both phones = nobody in between. */
   safety: string[] | null;
@@ -54,6 +68,14 @@ interface Peer {
   lastHeard: number;
   /** "Ravi joined" is shown once per person. */
   announced: boolean;
+  /**
+   * A private side-channel inside the same encrypted connection (WebRTC data channel, DTLS).
+   * Chat, files and camera/screen signals go phone to phone through it — never via any relay.
+   */
+  channel: RTCDataChannel;
+  cam: boolean | null;
+  screen: boolean;
+  platform: 'app' | 'web' | null;
   offerTimer?: ReturnType<typeof setTimeout>;
   failTimer?: ReturnType<typeof setTimeout>;
 }
@@ -107,6 +129,10 @@ export class CallSession {
   private readonly relayOnly: boolean;
   private readonly getLocal: () => MediaStream;
   private readonly onChange: (state: CallState) => void;
+  private readonly platform: 'app' | 'web';
+  private media: MediaState;
+  /** Chat and files: everything on the side-channel that isn't a camera/screen signal. */
+  onChannelData: (from: Person, data: string | ArrayBuffer) => void = () => undefined;
 
   constructor(options: {
     invite: Invite;
@@ -115,12 +141,51 @@ export class CallSession {
     relayOnly: boolean;
     local: () => MediaStream;
     onChange: (state: CallState) => void;
+    platform: 'app' | 'web';
+    media: MediaState;
   }) {
     this.invite = options.invite;
     this.name = options.name;
     this.relayOnly = options.relayOnly;
     this.getLocal = options.local;
     this.onChange = options.onChange;
+    this.platform = options.platform;
+    this.media = options.media;
+  }
+
+  /** Tell everyone the camera went on/off or screen sharing started/stopped. */
+  setMedia(media: MediaState): void {
+    this.media = media;
+    for (const peer of this.peers.values()) this.sayHi(peer);
+  }
+
+  /** Send on one person's side-channel. False if it isn't open (they left, or not connected yet). */
+  sendTo(id: string, data: string | ArrayBuffer): boolean {
+    const channel = this.peers.get(id)?.channel;
+    if (channel?.readyState !== 'open') return false;
+    channel.send(data as never);
+    return true;
+  }
+
+  /** Bytes still queued for a person: senders of big files wait while this is high. */
+  buffered(id: string): number {
+    return this.peers.get(id)?.channel.bufferedAmount ?? Infinity;
+  }
+
+  /** Resolves once a person's queue has drained below `low` bytes (or they left). */
+  drained(id: string, low: number): Promise<void> {
+    const channel = this.peers.get(id)?.channel;
+    if (!channel || channel.readyState !== 'open' || channel.bufferedAmount <= low) return Promise.resolve();
+    channel.bufferedAmountLowThreshold = low;
+    return new Promise((resolve) => {
+      const done = () => {
+        channel.removeEventListener('bufferedamountlow', done);
+        channel.removeEventListener('close', done);
+        resolve();
+      };
+      channel.addEventListener('bufferedamountlow', done);
+      channel.addEventListener('close', done);
+    });
   }
 
   async start(): Promise<void> {
@@ -149,11 +214,13 @@ export class CallSession {
   }
 
   /** Swap the camera (front/back) without reconnecting anyone. */
-  async replaceVideoTrack(track: MediaStreamTrack): Promise<void> {
+  /** Camera, screen, or nothing (null): swapped in place, no reconnecting. */
+  async replaceVideoTrack(track: MediaStreamTrack | null): Promise<void> {
     for (const peer of this.peers.values()) {
-      const sender = peer.pc.getSenders().find((s) => s.track?.kind === 'video');
-      if (sender) await sender.replaceTrack(track);
+      const sender = videoSender(peer.pc);
+      if (sender) await sender.replaceTrack(track).catch(() => undefined);
     }
+    this.tune();
   }
 
   leave(): void {
@@ -175,7 +242,10 @@ export class CallSession {
   private publish(): void {
     const people: Person[] = [...this.peers.values()]
       .sort((a, b) => a.joined - b.joined)
-      .map((p) => ({ id: p.id, name: p.name, stream: p.stream, connected: p.connected, safety: p.safety, route: p.route }));
+      .map((p) => ({
+        id: p.id, name: p.name, stream: p.stream, connected: p.connected, safety: p.safety, route: p.route,
+        cam: p.cam, screen: p.screen, platform: p.platform, channelOpen: p.channel.readyState === 'open',
+      }));
     const anyLive = people.some((p) => p.connected);
     const phase = this.state.phase === 'full' || this.state.phase === 'offline' || this.state.phase === 'starting'
       ? this.state.phase
@@ -289,6 +359,28 @@ export class CallSession {
     return true;
   }
 
+  private sayHi(peer: Peer): void {
+    if (peer.channel.readyState !== 'open') return;
+    peer.channel.send(JSON.stringify({ k: 'hi', platform: this.platform, cam: this.media.cam, screen: this.media.screen }));
+  }
+
+  private onChannel(peer: Peer, data: string | ArrayBuffer): void {
+    if (typeof data === 'string' && data.startsWith('{"k":"hi"')) {
+      try {
+        const hi = JSON.parse(data) as { platform?: string; cam?: boolean; screen?: boolean };
+        peer.platform = hi.platform === 'app' ? 'app' : 'web';
+        peer.cam = !!hi.cam;
+        peer.screen = !!hi.screen;
+        this.publish();
+      } catch {
+        // Ignore a broken signal.
+      }
+      return;
+    }
+    const person = this.state.people.find((p) => p.id === peer.id);
+    if (person) this.onChannelData(person, data);
+  }
+
   private alive(p: Peer): boolean {
     const s = p.pc.connectionState;
     return s === 'connected' || s === 'connecting' || s === 'new' || Date.now() - p.lastHeard < 15000;
@@ -300,15 +392,33 @@ export class CallSession {
       bundlePolicy: 'max-bundle',
       iceTransportPolicy: this.relayOnly ? 'relay' : 'all',
     });
+    // Same id on both sides ("negotiated"), so the channel exists without an extra round trip.
+    const channel = pc.createDataChannel('hush', { negotiated: true, id: 0, ordered: true });
+    channel.binaryType = 'arraybuffer';
     const peer: Peer = {
       id: m.from, name: m.name?.slice(0, 30) || 'Guest', joined: m.joined, pc,
       stream: null, connected: false, safety: null, route: null, lastHeard: Date.now(), announced: false,
+      channel, cam: null, screen: false, platform: null,
     };
     this.peers.set(peer.id, peer);
+    channel.onopen = () => {
+      this.sayHi(peer);
+      this.publish();
+    };
+    channel.onclose = () => this.publish();
+    channel.onmessage = (e) => this.onChannel(peer, e.data);
     const local = this.getLocal();
-    for (const track of local.getTracks()) pc.addTrack(track, local);
+    for (const track of local.getAudioTracks()) pc.addTrack(track, local);
+    // Always a video slot, even in a voice call or with the camera off, so the camera or a shared
+    // screen can be switched in later without reconnecting. The phone making the offer creates
+    // it; the other one opens the slot from the offer when answering (see answer()).
+    const camera = local.getVideoTracks()[0];
+    if (camera) pc.addTrack(camera, local);
+    else if (this.id < m.from) pc.addTransceiver('video', { direction: 'sendrecv', streams: [local] });
+    // One stream per person holding their sound and their picture, however they arrive.
     pc.ontrack = (e) => {
-      peer.stream = e.streams[0] ?? new MediaStream([e.track]);
+      peer.stream ??= new MediaStream();
+      if (!peer.stream.getTracks().includes(e.track)) peer.stream.addTrack(e.track);
       this.publish();
     };
     pc.onconnectionstatechange = () => {
@@ -346,6 +456,13 @@ export class CallSession {
     }
     if (pc.signalingState !== 'stable' && pc.signalingState !== 'have-remote-offer') return;
     await pc.setRemoteDescription({ type: 'offer', sdp: m.sdp });
+    // Without a camera we added no video track, so the slot from the offer would only receive.
+    // Open it both ways now, so turning the camera on (or sharing a screen) later reaches them.
+    const slot = pc.getTransceivers().find((t) => t.receiver.track.kind === 'video');
+    if (slot && slot.direction === 'recvonly') {
+      slot.direction = 'sendrecv';
+      slot.sender.setStreams?.(this.getLocal());
+    }
     await pc.setLocalDescription(await pc.createAnswer());
     await gathered(pc);
     void this.post({ t: 'answer', to: peer.id, sdp: pc.localDescription!.sdp });
@@ -421,8 +538,8 @@ export class CallSession {
     const others = this.peers.size;
     const ceiling = others <= 1 ? 2_500_000 : others === 2 ? 1_600_000 : others === 3 ? 1_200_000 : others <= 5 ? 800_000 : 500_000;
     for (const peer of this.peers.values()) {
-      const sender = peer.pc.getSenders().find((s) => s.track?.kind === 'video');
-      if (!sender) continue;
+      const sender = videoSender(peer.pc);
+      if (!sender?.track) continue;
       const params = sender.getParameters() as RTCRtpSendParameters & { degradationPreference?: string };
       if (!params.encodings?.length) continue;
       params.encodings[0].maxBitrate = ceiling;
@@ -433,6 +550,11 @@ export class CallSession {
       sender.setParameters(params).catch(() => undefined);
     }
   }
+}
+
+/** The video slot's sender, whether it currently carries a camera, a screen, or nothing. */
+function videoSender(pc: RTCPeerConnection): RTCRtpSender | undefined {
+  return pc.getTransceivers().find((t) => t.receiver.track.kind === 'video')?.sender;
 }
 
 /**

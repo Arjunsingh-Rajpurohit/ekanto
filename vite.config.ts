@@ -13,8 +13,11 @@ function contentSecurityPolicy(): Plugin {
     "default-src 'none'",
     "script-src 'self'",
     "style-src 'self'",
-    "img-src 'self' data:",
+    // blob: = photos and screen frames from the chat, held in memory only.
+    "img-src 'self' data: blob:",
     "media-src 'self' blob: mediastream:",
+    // The PDF viewer's helper, from this site only.
+    "worker-src 'self'",
     `connect-src 'self' ${relayOrigins}`,
     "manifest-src 'self'",
     "base-uri 'none'",

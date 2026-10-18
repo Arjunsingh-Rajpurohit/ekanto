@@ -20,9 +20,11 @@
     "@capacitor/android": "^8.5.3",
     "@capacitor/app": "^8.1.2",
     "@capacitor/core": "^8.5.3",
+    "@capacitor/filesystem": "^8.1.5",
     "@capacitor/share": "^8.0.3",
     "@noble/curves": "^2.4.0",
     "@noble/hashes": "^2.4.0",
-    "mqtt": "^5.16.1"
+    "mqtt": "^5.16.1",
+    "pdfjs-dist": "^6.4.299"
   }
 }

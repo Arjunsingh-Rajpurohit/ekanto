@@ -8,6 +8,8 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        // Hush's own Android code (background calls, screen sharing) — see HushNativePlugin.
+        registerPlugin(HushNativePlugin.class);
         super.onCreate(savedInstanceState);
         // Blocks screenshots and screen recording of this app, hides it from the
         // recent-apps preview, and keeps it off screen sharing and casting.

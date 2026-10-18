@@ -27,6 +27,14 @@
         </label>
 
         <div class="field">
+          <span>Call type</span>
+          <div id="kinds" class="kinds" role="radiogroup" aria-label="Call type">
+            <button type="button" data-kind="video" role="radio" class="on" aria-checked="true">🎥 Video call</button>
+            <button type="button" data-kind="voice" role="radio" aria-checked="false">📞 Voice call</button>
+          </div>
+        </div>
+
+        <div class="field">
           <span>How many people? <em class="muted">(including you)</em></span>
           <div id="sizes" class="sizes" role="radiogroup" aria-label="How many people">
             <button type="button" data-n="2" role="radio">2</button>
@@ -114,10 +122,70 @@
         <footer class="controls">
           <button id="mic" class="round" type="button" aria-label="Mute microphone"></button>
           <button id="cam" class="round" type="button" aria-label="Turn camera off"></button>
-          <button id="flip" class="round" type="button" aria-label="Switch camera"></button>
-          <button id="invite" class="round" type="button" aria-label="Invite"></button>
+          <button id="chat-btn" class="round" type="button" aria-label="Chat">
+            <span id="chat-badge" class="badge" hidden></span>
+          </button>
+          <button id="more" class="round" type="button" aria-label="More"></button>
           <button id="end" class="round danger" type="button" aria-label="End call"></button>
         </footer>
+
+        <!-- More: the things you need less often -->
+        <div id="more-sheet" class="sheet" hidden>
+          <div class="sheet-card menu">
+            <button id="flip" class="menu-item" type="button"><span class="mi"></span>Switch camera</button>
+            <button id="screen" class="menu-item" type="button"><span class="mi"></span><span id="screen-label">Share my screen</span></button>
+            <p id="screen-note" class="hint" hidden>Phone browsers can't share their screen. Use a computer, or the Hush app.</p>
+            <button id="invite" class="menu-item" type="button"><span class="mi"></span>Invite someone</button>
+            <button id="safety-btn" class="menu-item" type="button"><span class="mi">🔒</span>Safety check</button>
+            <button id="more-close" class="btn" type="button">Close</button>
+          </div>
+        </div>
+
+        <!-- Chat: messages and files, only for the people in the call now -->
+        <section id="chat" class="chat" hidden aria-label="Chat">
+          <header class="chat-head">
+            <div>
+              <h2>Chat</h2>
+              <p class="hint">Only people in the call now see this. It all disappears when the call ends.</p>
+            </div>
+            <button id="chat-close" class="btn small" type="button">Close</button>
+          </header>
+          <ol id="chat-list" class="chat-list"></ol>
+          <form id="chat-form" class="composer">
+            <button id="attach" class="attach" type="button" aria-label="Send a file or photo">📎</button>
+            <input id="chat-input" type="text" maxlength="2000" autocomplete="off" placeholder="Message" aria-label="Message" />
+            <button class="btn primary small" type="submit">Send</button>
+          </form>
+          <input id="file-input" type="file" hidden />
+        </section>
+
+        <!-- Before a file goes: download or view only -->
+        <div id="send-sheet" class="sheet" hidden>
+          <div class="sheet-card">
+            <h2>Send <span id="send-name"></span>?</h2>
+            <button id="send-download" class="choice-row" type="button">
+              <span class="ci">📥</span><span><strong>Let them download</strong><br>They can save it. A saved copy stays on their phone.</span>
+            </button>
+            <button id="send-view" class="choice-row" type="button">
+              <span class="ci">👁️</span><span><strong>View only</strong><br>They can only look at it inside Hush. Gone when the call ends.</span>
+            </button>
+            <p id="send-warning" class="warn" hidden></p>
+            <button id="send-cancel" class="btn" type="button">Cancel</button>
+          </div>
+        </div>
+
+        <!-- Looking at a file -->
+        <div id="viewer" class="viewer" hidden>
+          <header class="viewer-head">
+            <div class="viewer-title">
+              <strong id="viewer-name"></strong>
+              <span id="viewer-mode" class="hint"></span>
+            </div>
+            <button id="viewer-save" class="btn small" type="button" hidden>Save</button>
+            <button id="viewer-close" class="btn small" type="button">Close</button>
+          </header>
+          <div id="viewer-body" class="viewer-body"></div>
+        </div>
 
         <div id="sheet" class="sheet" hidden>
           <div class="sheet-card">
