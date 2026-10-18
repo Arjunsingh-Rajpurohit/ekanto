@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!-- Never tell any site where a visitor came from. -->
+    <meta name="referrer" content="no-referrer" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#0b0c0f" />
+    <meta name="color-scheme" content="dark" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <title>Hush — private video calls</title>
+  </head>
+  <body>
+    <main id="app">
+      <!-- Home: name, how many people, create -->
+      <section id="home" class="screen pad" hidden>
+        <header class="brand">
+          <img src="./favicon.svg" alt="" class="logo" />
+          <h1>Hush</h1>
+          <p class="sub">Private video calls. No login. Nothing saved.</p>
+        </header>
+
+        <label class="field">
+          <span>Your name</span>
+          <input id="name" type="text" maxlength="30" autocomplete="off" placeholder="What should others see?" />
+        </label>
+
+        <div class="field">
+          <span>How many people? <em class="muted">(including you)</em></span>
+          <div id="sizes" class="sizes" role="radiogroup" aria-label="How many people">
+            <button type="button" data-n="2" role="radio">2</button>
+            <button type="button" data-n="3" role="radio">3</button>
+            <button type="button" data-n="4" role="radio">4</button>
+            <button type="button" data-n="6" role="radio">6</button>
+            <button type="button" data-n="" role="radio" class="on">Any</button>
+            <input id="size-custom" type="number" inputmode="numeric" min="2" max="20" placeholder="#" aria-label="Type a number" />
+          </div>
+          <p id="size-note" class="hint"></p>
+        </div>
+
+        <label id="protect-row" class="toggle" hidden>
+          <input id="protect" type="checkbox" />
+          <span><strong>Protected call</strong><br>Others can join only from the Hush app: no screenshots, no screen recording, no browser extensions.</span>
+        </label>
+
+        <button id="create" class="btn primary big">Create call link</button>
+
+        <div class="or"><span>or</span></div>
+        <form id="paste" class="paste">
+          <input id="paste-input" type="url" inputmode="url" autocomplete="off" placeholder="Paste a call link" aria-label="Call link" />
+          <button class="btn" type="submit">Join</button>
+        </form>
+
+        <ul class="promises">
+          <li>🔒 Video and voice go phone to phone, encrypted.</li>
+          <li>🔑 The key is only in your link — no server ever sees it.</li>
+          <li>🚫 No account, no tracking, no recordings.</li>
+        </ul>
+        <a id="get-app" class="app-promo" hidden target="_blank" rel="noopener noreferrer">
+          📱 <span><strong>Get the Hush app</strong> — blocks screenshots, screen recording and browser extensions.</span>
+        </a>
+      </section>
+
+      <!-- Opened a link -->
+      <section id="join" class="screen pad center" hidden>
+        <header class="brand">
+          <img src="./favicon.svg" alt="" class="logo" />
+          <h1>Private call</h1>
+          <p id="join-sub" class="sub">You're invited to a private video call.</p>
+        </header>
+        <label class="field">
+          <span>Your name</span>
+          <input id="join-name" type="text" maxlength="30" autocomplete="off" placeholder="What should others see?" />
+        </label>
+        <button id="join-btn" class="btn primary big">Join call</button>
+        <p class="hint center-text">Your camera and microphone turn on when you join.</p>
+      </section>
+
+      <!-- A protected call opened in a browser: it must be joined from the app -->
+      <section id="protected" class="screen pad center" hidden>
+        <header class="brand">
+          <div class="big-icon">🛡️</div>
+          <h1>Protected call</h1>
+          <p class="sub">This call can only be joined from the Hush app. The app blocks screenshots, screen recording and browser extensions, so the call stays private.</p>
+        </header>
+        <button id="open-app" class="btn primary big">Open in Hush app</button>
+        <a id="download-app" class="btn center-text" target="_blank" rel="noopener noreferrer" hidden>Get the Hush app (Android)</a>
+        <button id="copy-protected" class="btn">Copy link</button>
+        <p class="hint center-text">Have the app? Tap "Open in Hush app", or open the app and paste the link.</p>
+      </section>
+
+      <!-- In the call -->
+      <section id="call" class="screen call" hidden>
+        <div id="grid" class="grid"></div>
+        <video id="local" class="mirror" autoplay playsinline muted></video>
+
+        <header class="call-top">
+          <button id="status" class="chip" type="button">Starting…</button>
+        </header>
+
+        <div id="waiting" class="overlay" hidden>
+          <div class="card">
+            <div class="pulse" aria-hidden="true"></div>
+            <h2 id="waiting-title">Waiting for others</h2>
+            <p id="waiting-sub" class="sub">Send them the link.</p>
+            <div class="row">
+              <button id="share" class="btn primary">Share link</button>
+              <button id="copy" class="btn">Copy</button>
+            </div>
+          </div>
+        </div>
+
+        <footer class="controls">
+          <button id="mic" class="round" type="button" aria-label="Mute microphone"></button>
+          <button id="cam" class="round" type="button" aria-label="Turn camera off"></button>
+          <button id="flip" class="round" type="button" aria-label="Switch camera"></button>
+          <button id="invite" class="round" type="button" aria-label="Invite"></button>
+          <button id="end" class="round danger" type="button" aria-label="End call"></button>
+        </footer>
+
+        <div id="sheet" class="sheet" hidden>
+          <div class="sheet-card">
+            <h2>🔒 Safety check</h2>
+            <p class="sub">Ask each person to read out their emojis. Same 5 on both phones = nobody is listening in between.</p>
+            <ul id="safety" class="safety"></ul>
+            <button id="sheet-close" class="btn">Close</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- After a call, or when something stops it -->
+      <section id="message" class="screen pad center" hidden>
+        <header class="brand">
+          <div id="message-icon" class="big-icon">👋</div>
+          <h1 id="message-title">Call ended</h1>
+          <p id="message-text" class="sub"></p>
+        </header>
+        <button id="again" class="btn primary big">Start a new call</button>
+        <button id="home-btn" class="btn">Home</button>
+      </section>
+
+      <div id="toast" class="toast" role="status" hidden></div>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
