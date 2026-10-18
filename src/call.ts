@@ -23,6 +23,10 @@ export interface CallState {
   liveSince: number | null;
   /** A one-off line for the screen, e.g. "Ravi left". */
   news: string | null;
+  /** A one-off "Ravi joined", the first time someone connects. */
+  joined: string | null;
+  /** Messages that reached this call's room but weren't sealed with its key: break-in attempts. */
+  blocked: number;
 }
 
 type Kind = 'hello' | 'ack' | 'offer' | 'answer' | 'bye' | 'full';
@@ -48,6 +52,8 @@ interface Peer {
   safety: string[] | null;
   route: 'direct' | 'relay' | null;
   lastHeard: number;
+  /** "Ravi joined" is shown once per person. */
+  announced: boolean;
   offerTimer?: ReturnType<typeof setTimeout>;
   failTimer?: ReturnType<typeof setTimeout>;
 }
@@ -86,7 +92,7 @@ const MAX_OFFERS = 8;
  */
 export class CallSession {
   readonly id = toBase64Url(crypto.getRandomValues(new Uint8Array(12)));
-  state: CallState = { phase: 'starting', relaysUp: 0, people: [], liveSince: null, news: null };
+  state: CallState = { phase: 'starting', relaysUp: 0, people: [], liveSince: null, news: null, joined: null, blocked: 0 };
 
   private room?: Room;
   private relay = new Relay();
@@ -182,6 +188,7 @@ export class CallSession {
     };
     this.onChange(this.state);
     this.state.news = null;
+    this.state.joined = null;
   }
 
   /** Sealing is async; the queue keeps messages in the order they were made. */
@@ -198,8 +205,14 @@ export class CallSession {
   private async receive(data: Uint8Array): Promise<void> {
     if (!this.room || this.ended) return;
     const m = await open<Message>(this.room.key, data);
-    // Not sealed with this call's key, our own echo, meant for someone else, or an old replay.
-    if (!m || m.from === this.id || (m.to && m.to !== this.id) || Math.abs(Date.now() - m.ts) > MAX_AGE_MS) return;
+    if (!m) {
+      // Only someone who learned this call's room name could post here, and without the key
+      // nothing they send opens. Count it, so the people in the call know someone tried.
+      this.update({ blocked: this.state.blocked + 1 });
+      return;
+    }
+    // Our own echo, meant for someone else, or an old replay.
+    if (m.from === this.id || (m.to && m.to !== this.id) || Math.abs(Date.now() - m.ts) > MAX_AGE_MS) return;
     log('in', m.t, short(m.from), '->', short(this.id));
     const known = this.peers.get(m.from);
     if (known) known.lastHeard = Date.now();
@@ -289,7 +302,7 @@ export class CallSession {
     });
     const peer: Peer = {
       id: m.from, name: m.name?.slice(0, 30) || 'Guest', joined: m.joined, pc,
-      stream: null, connected: false, safety: null, route: null, lastHeard: Date.now(),
+      stream: null, connected: false, safety: null, route: null, lastHeard: Date.now(), announced: false,
     };
     this.peers.set(peer.id, peer);
     const local = this.getLocal();
@@ -350,6 +363,10 @@ export class CallSession {
         peer.connected = true;
         peer.safety = mine && theirs ? await safetyEmojis(mine, theirs) : null;
         peer.route = await routeOf(pc);
+        if (!peer.announced) {
+          peer.announced = true;
+          this.state.joined = `${peer.name} joined`;
+        }
         this.publish();
         this.tune();
         return;

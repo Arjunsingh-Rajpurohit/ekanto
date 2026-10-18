@@ -33,6 +33,7 @@ let facing: Facing = 'user';
 let wakeLock: WakeLockSentinel | null = null;
 let clock: ReturnType<typeof setInterval> | undefined;
 let lastState: CallState | null = null;
+let warnedBlocked = false;
 
 /* ---------- Small helpers ---------- */
 
@@ -133,6 +134,7 @@ async function enterCall(name: string): Promise<void> {
   local.srcObject = stream;
   local.hidden = stream.getVideoTracks().length === 0;
   $('waiting-sub').textContent = `Send them the link. This call allows ${peopleText(invite.limit)}${invite.appOnly ? ' and only the Hush app can join' : ''}.`;
+  warnedBlocked = false;
   drawControls();
 
   session = new CallSession({
@@ -160,6 +162,15 @@ function render(state: CallState): void {
   $('waiting').hidden = !alone;
   $('waiting-title').textContent = state.phase === 'offline' ? 'No internet — trying again…' : 'Waiting for others';
   if (state.news) toast(state.news);
+  if (state.joined) {
+    toast(state.joined);
+    navigator.vibrate?.(60);
+  }
+  if (state.blocked > 0 && !warnedBlocked) {
+    warnedBlocked = true;
+    toast('🛡️ Someone without the key tried to get in. They were blocked.');
+    navigator.vibrate?.([60, 80, 60]);
+  }
   drawGrid(state.people);
   drawStatus(state);
 }
