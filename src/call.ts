@@ -393,20 +393,26 @@ export class CallSession {
   }
 
   /**
-   * Each phone sends its video to every other phone, so the more people, the lighter each copy:
-   * one person gets sharp video, six people get a lighter stream each so phones keep up.
+   * Quality follows the network on its own. These are only ceilings: WebRTC measures each
+   * connection live and sends less when the internet is weak (a lift, a crowded station), and
+   * lowers the picture size when the phone gets busy. With a strong network it goes right up to
+   * the ceiling. Ceilings fall as the call grows because every phone uploads one copy per person,
+   * and phone uploads are far slower than downloads:
+   *   2 people → 2.5 Mbps (sharp HD)   4 people → 1.2 Mbps each (near HD)   6 people → 0.8 Mbps each.
    */
   private tune(): void {
-    const n = this.peers.size;
-    const bitrate = n <= 1 ? 1_500_000 : n === 2 ? 900_000 : n <= 4 ? 500_000 : 300_000;
-    const scale = n <= 2 ? 1 : n <= 4 ? 1.5 : 2;
+    const others = this.peers.size;
+    const ceiling = others <= 1 ? 2_500_000 : others === 2 ? 1_600_000 : others === 3 ? 1_200_000 : others <= 5 ? 800_000 : 500_000;
     for (const peer of this.peers.values()) {
       const sender = peer.pc.getSenders().find((s) => s.track?.kind === 'video');
       if (!sender) continue;
-      const params = sender.getParameters();
+      const params = sender.getParameters() as RTCRtpSendParameters & { degradationPreference?: string };
       if (!params.encodings?.length) continue;
-      params.encodings[0].maxBitrate = bitrate;
-      params.encodings[0].scaleResolutionDownBy = scale;
+      params.encodings[0].maxBitrate = ceiling;
+      // No forced shrinking: full size whenever the network and phone can carry it.
+      params.encodings[0].scaleResolutionDownBy = 1;
+      // When something has to give, trade a little sharpness and a little smoothness evenly.
+      params.degradationPreference = 'balanced';
       sender.setParameters(params).catch(() => undefined);
     }
   }
