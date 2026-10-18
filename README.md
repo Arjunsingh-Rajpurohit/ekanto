@@ -4,9 +4,20 @@ Video calls for 2 or more people. No login, no account, nothing saved. Just a na
 
 ## How it works
 
-1. Type your name, pick how many people can join (2, 3, 4… or "Any"), tap **Create call link**.
+1. Type your name, pick **Video** or **Voice**, pick how many people can join (2, 3, 4… or "Any"),
+   tap **Create call link**.
 2. Send the link (WhatsApp, SMS…). Others tap it, type a name, tap **Join call**.
 3. Tap the green 🔒 chip to compare **safety emojis**. Same 5 on both phones = nobody is in between.
+
+## In a call
+
+| | |
+|---|---|
+| 💬 **Chat** | Messages, photos and files — only for people in the call now. Gone when the call ends. |
+| 📥 / 👁️ **Files** | Sender picks **Download** (they can save it; a saved copy stays on their phone) or **View only** (shown inside Hush only, never saved, gone after the call). Up to 100 MB per file. |
+| 🖥️ **Share screen** | From a computer browser, or the Android app. Phone browsers can't share their screen (no website can). |
+| 🎥 **Camera** | On/off any time — off really switches the camera off. A voice call can turn video on later. |
+| 🔔 **Alerts** | "Ravi joined", and a warning if someone without the key tries to get in. |
 
 ## Why it's private
 
@@ -19,6 +30,7 @@ Video calls for 2 or more people. No login, no account, nothing saved. Just a na
 | Website | Strict security policy: it may load only its own files and talk only to the meeting points. No trackers, no fonts, no analytics. |
 | Nothing saved | No account, no history, no recordings. The link is wiped from the address bar when you hang up. Only your name is remembered, on your own phone. |
 | **Protected call** (app only) | Others can join only from the Android app, which blocks screenshots and screen recording (FLAG_SECURE) and has no browser extensions. |
+| Chat and files | Go on a private data channel inside the same encrypted connection — never through any relay. Held in memory only. |
 
 **What no app can stop:** someone filming the screen with another phone. On the website (not the app), browser extensions the person installed can see the page.
 
