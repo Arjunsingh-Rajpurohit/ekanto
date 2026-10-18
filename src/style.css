@@ -1007,3 +1007,20 @@ a.btn {
   font-size: 14px;
   color: var(--ink);
 }
+
+/* Owner's mark: small and quiet, at the bottom of each screen. */
+.mark {
+  margin: auto 0 0;
+  padding-top: 18px;
+  text-align: center;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: var(--ink-2);
+  opacity: 0.75;
+}
+
+.card .mark,
+.sheet-card .mark {
+  margin-top: 14px;
+  padding-top: 0;
+}
