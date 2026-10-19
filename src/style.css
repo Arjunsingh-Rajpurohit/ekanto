@@ -1177,67 +1177,82 @@ a.btn {
   transform: scaleX(-1);
 }
 
-/* Whoever is talking: a soft white ripple — from the edges of their picture, or out from their
-   initial when the camera is off. */
-.tile.speaking:not(.no-video)::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  animation: edge-ripple 1.4s ease-out infinite;
+/* Whoever is talking: a soft white ripple spreading outward — from their picture's edge, or from
+   the circle around their initial when the camera is off. */
+.tile.speaking:not(.no-video),
+.float:has(.tile.speaking:not(.no-video)) {
+  animation: edge-ripple 2s ease-out infinite;
 }
 
 @keyframes edge-ripple {
-  0% { box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.9); }
-  100% { box-shadow: inset 0 0 0 14px rgba(255, 255, 255, 0); }
+  0% { outline: 2px solid rgba(255, 255, 255, 0.32); outline-offset: 0; }
+  100% { outline: 2px solid rgba(255, 255, 255, 0); outline-offset: 10px; }
 }
 
-.tile.no-video.speaking .avatar::before,
-.tile.no-video.speaking .avatar::after {
+/* Camera off: the initial sits in a circle; the waves start at its edge and drift out.
+   Sized from the picture itself, so the circle and its waves fit even the small floating one. */
+.tile {
+  container-type: size;
+}
+
+.tile .avatar {
+  z-index: 0;
+  font-size: clamp(20px, 20cqmin, 72px);
+}
+
+.tile.no-video .avatar::before,
+.tile.no-video .avatar::after {
   content: '';
   position: absolute;
+  z-index: -1;
   left: 50%;
   top: 50%;
-  width: 1.7em;
-  height: 1.7em;
+  width: 2.1em;
+  height: 2.1em;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.6);
-  pointer-events: none;
   transform: translate(-50%, -50%);
-  opacity: 0;
-  /* "both": the second ring waits, centred and invisible, for its turn. */
-  animation: ripple 1.6s ease-out infinite both;
+  pointer-events: none;
+}
+
+.tile.no-video .avatar::before {
+  background: linear-gradient(160deg, #2f3a4c, #18202c);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.tile.no-video.speaking .avatar::before {
+  animation: soft-ripple 2.2s ease-out infinite;
 }
 
 .tile.no-video.speaking .avatar::after {
-  animation-delay: 0.8s;
+  /* A second, later wave: "both" keeps it still and unseen until its turn. */
+  animation: soft-ripple 2.2s ease-out 1.1s infinite both;
 }
 
-/* One-to-one: the name sits above the call buttons, not under them. */
-.stage[data-layout='duo'] .main .tile .name {
-  bottom: calc(112px + env(safe-area-inset-bottom));
-}
-
-@keyframes ripple {
-  0% { transform: translate(-50%, -50%) scale(0.85); opacity: 0.8; }
-  100% { transform: translate(-50%, -50%) scale(2.3); opacity: 0; }
+@keyframes soft-ripple {
+  0% { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 0 0 0 rgba(255, 255, 255, 0.16); }
+  100% { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 0 0 0.6em rgba(255, 255, 255, 0); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tile.speaking:not(.no-video)::after,
+  .tile.speaking:not(.no-video),
+  .float:has(.tile.speaking:not(.no-video)),
   .tile.no-video.speaking .avatar::before,
   .tile.no-video.speaking .avatar::after {
     animation: none;
   }
 
-  .tile.speaking:not(.no-video)::after {
-    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.9);
+  .tile.speaking:not(.no-video) {
+    outline: 2px solid rgba(255, 255, 255, 0.3);
   }
 
   .tile.no-video.speaking .avatar::before {
-    transform: translate(-50%, -50%) scale(1.2);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 0 0 0.25em rgba(255, 255, 255, 0.1);
   }
+}
+
+/* One-to-one: the name sits above the call buttons, not under them. */
+.stage[data-layout='duo'] .main .tile .name {
+  bottom: calc(112px + env(safe-area-inset-bottom));
 }
 
 .tile {
