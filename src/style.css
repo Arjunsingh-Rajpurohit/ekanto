@@ -1177,32 +1177,8 @@ a.btn {
   transform: scaleX(-1);
 }
 
-/* Whoever is talking: a soft white ripple spreading outward — from their picture's edge, or from
-   the circle around their initial when the camera is off. */
-.tile.speaking:not(.no-video),
-.float:has(.tile.speaking:not(.no-video)) {
-  animation: edge-ripple 2s ease-out infinite;
-}
-
-/* The big picture fills the screen, so it has no "outside": its name tag ripples instead. */
-.stage .main .tile.speaking:not(.no-video) {
-  animation: none;
-}
-
-.stage .main .tile.speaking:not(.no-video) .name {
-  animation: name-ripple 2s ease-out infinite;
-}
-
-@keyframes name-ripple {
-  0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.35); }
-  100% { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); }
-}
-
-@keyframes edge-ripple {
-  0% { outline: 2px solid rgba(255, 255, 255, 0.32); outline-offset: 0; }
-  100% { outline: 2px solid rgba(255, 255, 255, 0); outline-offset: 10px; }
-}
-
+/* Whoever is talking with the camera off: soft white waves spread out from the circle around
+   their initial. With the camera on, their face shows it — no effect. */
 /* Camera off: the initial sits in a circle; the waves start at its edge and drift out.
    Sized from the picture itself, so the circle and its waves fit even the small floating one. */
 .tile {
@@ -1248,24 +1224,9 @@ a.btn {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tile.speaking:not(.no-video),
-  .float:has(.tile.speaking:not(.no-video)),
-  .stage .main .tile.speaking:not(.no-video) .name,
   .tile.no-video.speaking .avatar::before,
   .tile.no-video.speaking .avatar::after {
     animation: none;
-  }
-
-  .stage .main .tile.speaking:not(.no-video) {
-    outline: none;
-  }
-
-  .stage .main .tile.speaking:not(.no-video) .name {
-    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35);
-  }
-
-  .tile.speaking:not(.no-video) {
-    outline: 2px solid rgba(255, 255, 255, 0.3);
   }
 
   .tile.no-video.speaking .avatar::before {
