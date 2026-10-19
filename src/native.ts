@@ -3,21 +3,40 @@ import { Capacitor, registerPlugin, type PluginListenerHandle } from '@capacitor
 /** The Android side of Hush (android/app/src/main/java/app/hush/call). */
 interface HushNative {
   /** Keeps the call alive (mic, camera) while you use other apps; shows "Hush call in progress". */
-  startCall(): Promise<void>;
+  startCall(options: { voice: boolean }): Promise<void>;
   endCall(): Promise<void>;
   /** Asks Android for screen-capture permission, then streams the screen as frames. */
   startScreen(): Promise<void>;
   stopScreen(): Promise<void>;
   addListener(event: 'frame', fn: (f: { data: string; width: number; height: number }) => void): Promise<PluginListenerHandle>;
   addListener(event: 'screenStopped', fn: () => void): Promise<PluginListenerHandle>;
+  getAudioRoutes(): Promise<AudioRoutes>;
+  setAudioRoute(options: { route: AudioRoute }): Promise<AudioRoutes>;
+  setVoiceCall(options: { voice: boolean }): Promise<void>;
+  addListener(event: 'audioRoutes', fn: (r: AudioRoutes) => void): Promise<PluginListenerHandle>;
+}
+
+export type AudioRoute = 'speaker' | 'earpiece' | 'bluetooth' | 'wired';
+export interface AudioRoutes {
+  routes: AudioRoute[];
+  current: AudioRoute;
 }
 
 export const IN_APP = Capacitor.isNativePlatform();
 const plugin = registerPlugin<HushNative>('HushNative');
 
 export const nativeCall = {
-  start: () => (IN_APP ? plugin.startCall().catch(() => undefined) : Promise.resolve()),
+  /** Voice calls start on the earpiece, video calls on the speaker (headsets always win). */
+  start: (voice: boolean) => (IN_APP ? plugin.startCall({ voice }).catch(() => undefined) : Promise.resolve()),
   end: () => (IN_APP ? plugin.endCall().catch(() => undefined) : Promise.resolve()),
+};
+
+/** Where the call's sound comes out, in the app. */
+export const nativeAudio = {
+  routes: () => plugin.getAudioRoutes(),
+  set: (route: AudioRoute) => plugin.setAudioRoute({ route }),
+  setVoice: (voice: boolean) => (IN_APP ? plugin.setVoiceCall({ voice }).catch(() => undefined) : Promise.resolve()),
+  onChange: (fn: (r: AudioRoutes) => void) => plugin.addListener('audioRoutes', fn),
 };
 
 /**

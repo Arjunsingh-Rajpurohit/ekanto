@@ -1169,3 +1169,32 @@ a.btn {
   width: 20px;
   height: 20px;
 }
+
+.audio-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.menu-item.on {
+  outline: 2px solid var(--accent);
+  background: rgba(75, 141, 255, 0.14);
+}
+
+.menu-item .check {
+  margin-left: auto;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* Six buttons on a narrow phone: a little smaller. */
+@media (max-width: 440px) {
+  .controls {
+    gap: 10px;
+  }
+
+  .round {
+    width: 52px;
+    height: 52px;
+  }
+}

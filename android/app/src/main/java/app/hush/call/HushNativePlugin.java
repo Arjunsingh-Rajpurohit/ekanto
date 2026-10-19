@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.media.projection.MediaProjectionManager;
 import androidx.activity.result.ActivityResult;
 import androidx.core.content.ContextCompat;
+import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -21,10 +22,21 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 public class HushNativePlugin extends Plugin {
 
     private static HushNativePlugin instance;
+    private AudioRoutes audio;
 
     @Override
     public void load() {
         instance = this;
+        audio = new AudioRoutes(getContext(), () -> notifyListeners("audioRoutes", routes()));
+    }
+
+    private JSObject routes() {
+        JSObject out = new JSObject();
+        JSArray list = new JSArray();
+        for (String r : audio.available()) list.put(r);
+        out.put("routes", list);
+        out.put("current", audio.current());
+        return out;
     }
 
     /** A screen frame (JPEG, base64) for the page to paint into the call. */
@@ -47,6 +59,7 @@ public class HushNativePlugin extends Plugin {
     @PluginMethod
     public void startCall(PluginCall call) {
         try {
+            audio.start(call.getBoolean("voice", false));
             ContextCompat.startForegroundService(getContext(), CallService.intent(getContext(), CallService.ACTION_CALL));
             call.resolve();
         } catch (Exception e) {
@@ -56,7 +69,27 @@ public class HushNativePlugin extends Plugin {
 
     @PluginMethod
     public void endCall(PluginCall call) {
+        audio.stop();
         getContext().stopService(new Intent(getContext(), CallService.class));
+        call.resolve();
+    }
+
+    /** Which outputs exist right now (speaker, earpiece, bluetooth, wired) and which one is used. */
+    @PluginMethod
+    public void getAudioRoutes(PluginCall call) {
+        call.resolve(routes());
+    }
+
+    @PluginMethod
+    public void setAudioRoute(PluginCall call) {
+        if (audio.select(call.getString("route"))) call.resolve(routes());
+        else call.reject("That output isn't available");
+    }
+
+    /** The camera went on/off: earpiece-and-screen-off behaviour follows. */
+    @PluginMethod
+    public void setVoiceCall(PluginCall call) {
+        audio.setVoiceCall(call.getBoolean("voice", false));
         call.resolve();
     }
 

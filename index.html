@@ -138,12 +138,22 @@
         <footer class="controls">
           <button id="mic" class="round" type="button" aria-label="Mute microphone"></button>
           <button id="cam" class="round" type="button" aria-label="Turn camera off"></button>
+          <button id="audio-btn" class="round" type="button" aria-label="Sound output" hidden></button>
           <button id="chat-btn" class="round" type="button" aria-label="Chat">
             <span id="chat-badge" class="badge" hidden></span>
           </button>
           <button id="more" class="round" type="button" aria-label="More"></button>
           <button id="end" class="round danger" type="button" aria-label="End call"></button>
         </footer>
+
+        <!-- Where the sound comes out -->
+        <div id="audio-sheet" class="sheet" hidden>
+          <div class="sheet-card menu">
+            <h2>Sound</h2>
+            <div id="audio-list" class="audio-list"></div>
+            <button id="audio-close" class="btn" type="button">Close</button>
+          </div>
+        </div>
 
         <!-- More: the things you need less often -->
         <div id="more-sheet" class="sheet" hidden>

@@ -33,6 +33,8 @@ export class Stage {
   private loudest: string | null = null;
   private loudestSince = 0;
   private corner: 'tl' | 'tr' | 'bl' | 'br' = 'tr';
+  /** Output device for everyone else's sound (computers only; '' = default). */
+  private sink = '';
   private readonly root: HTMLElement;
   private readonly main: HTMLElement;
   private readonly grid: HTMLElement;
@@ -80,6 +82,17 @@ export class Stage {
 
   getMode(): LayoutMode {
     return this.mode;
+  }
+
+  /** Plays everyone's sound on this output (speakers, headset…). Computers only. */
+  setSink(deviceId: string): void {
+    this.sink = deviceId;
+    for (const [id, tile] of this.tiles) if (id !== ME) this.applySink(tile.querySelector('video')!);
+  }
+
+  private applySink(video: HTMLVideoElement): void {
+    const v = video as HTMLVideoElement & { setSinkId?: (id: string) => Promise<void>; sinkId?: string };
+    if (v.setSinkId && v.sinkId !== this.sink) void v.setSinkId(this.sink).catch(() => undefined);
   }
 
   reset(): void {
@@ -174,6 +187,7 @@ export class Stage {
       wait.innerHTML = '<div class="spinner"></div><p>Connecting securely…</p>';
       tile.append(video, avatar, label, wait);
       tile.addEventListener('click', () => this.tap(id));
+      if (id !== ME && this.sink) this.applySink(video);
       this.tiles.set(id, tile);
     }
     const video = tile.querySelector('video')!;

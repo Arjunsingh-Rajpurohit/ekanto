@@ -7,7 +7,8 @@ import { ChatPanel } from './chat-ui';
 import { APP_DOWNLOAD_URL, APP_SCHEME, HAS_TURN, publicUrl } from './config';
 import { MAX_PEOPLE, MIN_PEOPLE, SMOOTH_PEOPLE, inviteToHash, newInvite, parseInvite, type Invite } from './invite';
 import { MediaProblem, cameraTrack, canShareScreenInBrowser, openCamera, screenTrack, type Facing } from './media';
-import { IN_APP, nativeCall, nativeScreenTrack } from './native';
+import { IN_APP, nativeAudio, nativeCall, nativeScreenTrack, type AudioRoute, type AudioRoutes } from './native';
+import type { PluginListenerHandle } from '@capacitor/core';
 import { SpeakingMeter } from './speaking';
 import { Stage } from './stage';
 import { clearSaved } from './viewer';
@@ -29,6 +30,10 @@ const ICON = {
   grid: svg('<rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>'),
   speaker: svg('<rect width="18" height="12" x="3" y="3" rx="2"/><rect width="5" height="3" x="3" y="18" rx="1"/><rect width="5" height="3" x="10" y="18" rx="1"/><rect width="5" height="3" x="17" y="18" rx="1"/>'),
   pip: svg('<path d="M21 9V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10c0 1.1.9 2 2 2h4"/><rect width="10" height="7" x="12" y="13" rx="2"/>'),
+  speakerOut: svg('<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>'),
+  earpiece: svg('<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>'),
+  bluetooth: svg('<path d="m7 7 10 10-5 5V2l5 5L7 17"/>'),
+  headphones: svg('<path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/>'),
   full: svg('<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>'),
   end: svg('<path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.34a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"/><line x1="22" x2="2" y1="2" y2="22"/>'),
 };
@@ -51,6 +56,90 @@ let warnedBlocked = false;
 let sharing: { track: MediaStreamTrack; stop: () => Promise<void> } | null = null;
 /** Your own picture's stream, rebuilt only when its video track changes (so it never flickers). */
 let meView: { trackId: string; stream: MediaStream } | null = null;
+
+/* ---------- Sound output: speaker, earpiece, Bluetooth, headphones ---------- */
+
+const ROUTE: Record<AudioRoute, { label: string; icon: keyof typeof ICON }> = {
+  speaker: { label: 'Speaker', icon: 'speakerOut' },
+  earpiece: { label: 'Phone (earpiece)', icon: 'earpiece' },
+  bluetooth: { label: 'Bluetooth', icon: 'bluetooth' },
+  wired: { label: 'Headphones', icon: 'headphones' },
+};
+let appRoutes: AudioRoutes | null = null;
+let routeListener: PluginListenerHandle | null = null;
+/** Computers: the outputs the browser lists, and the one chosen ('' = default). */
+let webOutputs: MediaDeviceInfo[] = [];
+let webSink = '';
+
+async function startAudio(voiceStart: boolean): Promise<void> {
+  if (IN_APP) {
+    await nativeCall.start(voiceStart);
+    routeListener = await nativeAudio.onChange((r) => {
+      appRoutes = r;
+      drawAudioButton();
+      if (!$('audio-sheet').hidden) drawAudioSheet();
+    }).catch(() => null);
+    appRoutes = await nativeAudio.routes().catch(() => null);
+  } else if ('setSinkId' in HTMLMediaElement.prototype) {
+    // Phone browsers don't let a website choose; computers list their speakers and headsets.
+    const devices = await navigator.mediaDevices.enumerateDevices().catch(() => []);
+    webOutputs = devices.filter((d) => d.kind === 'audiooutput' && d.deviceId !== 'communications');
+  }
+  drawAudioButton();
+}
+
+function drawAudioButton(): void {
+  const btn = $<HTMLButtonElement>('audio-btn');
+  if (IN_APP) {
+    btn.hidden = !appRoutes || appRoutes.routes.length < 2;
+    const route = ROUTE[appRoutes?.current ?? 'speaker'];
+    btn.innerHTML = ICON[route.icon];
+    btn.setAttribute('aria-label', `Sound: ${route.label}`);
+  } else {
+    btn.hidden = webOutputs.length < 2;
+    btn.innerHTML = ICON.speakerOut;
+    btn.setAttribute('aria-label', 'Sound output');
+  }
+}
+
+function drawAudioSheet(): void {
+  const list = $('audio-list');
+  const item = (label: string, icon: string, on: boolean, pick: () => void) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = `menu-item${on ? ' on' : ''}`;
+    const mi = document.createElement('span');
+    mi.className = 'mi';
+    mi.innerHTML = icon;
+    const text = document.createElement('span');
+    text.textContent = label;
+    b.append(mi, text);
+    if (on) {
+      const check = document.createElement('span');
+      check.className = 'check';
+      check.textContent = '✓';
+      b.append(check);
+    }
+    b.addEventListener('click', pick);
+    return b;
+  };
+  if (IN_APP && appRoutes) {
+    list.replaceChildren(...appRoutes.routes.map((r) => item(ROUTE[r].label, ICON[ROUTE[r].icon], r === appRoutes!.current, () => {
+      void nativeAudio.set(r).then((now) => {
+        appRoutes = now;
+        drawAudioButton();
+        $('audio-sheet').hidden = true;
+      }).catch(() => toast("That output isn't available right now."));
+    })));
+  } else {
+    list.replaceChildren(...webOutputs.map((d, i) => item(d.label || `Speaker ${i + 1}`, ICON.speakerOut,
+      (webSink || 'default') === d.deviceId, () => {
+        webSink = d.deviceId === 'default' ? '' : d.deviceId;
+        stage.setSink(webSink);
+        $('audio-sheet').hidden = true;
+      })));
+  }
+}
 
 const stage = new Stage($('stage'), () => $('call').classList.toggle('clean'));
 const meter = new SpeakingMeter((speaking, loudest) => stage.setSpeaking(speaking, loudest));
@@ -201,7 +290,7 @@ async function enterCall(name: string): Promise<void> {
   panel = new ChatPanel(chat, () => lastState?.people ?? [], toast);
   drawControls();
   await session.start();
-  void nativeCall.start();
+  void startAudio(!stream.getVideoTracks()[0]);
   void keepAwake();
   clock = setInterval(() => lastState && drawStatus(lastState), 1000);
 }
@@ -316,6 +405,7 @@ async function toggleCamera(): Promise<void> {
     }
   }
   session?.setMedia({ cam: !!stream.getVideoTracks()[0], screen: !!sharing });
+  void nativeAudio.setVoice(!stream.getVideoTracks()[0]);
   drawControls();
 }
 
@@ -419,6 +509,12 @@ function finish(): number {
   void wakeLock?.release().catch(() => undefined);
   wakeLock = null;
   void nativeCall.end();
+  void routeListener?.remove();
+  routeListener = null;
+  appRoutes = null;
+  webOutputs = [];
+  webSink = '';
+  $('audio-btn').hidden = true;
   void clearSaved();
   stage.reset();
   meter.stop();
@@ -426,7 +522,7 @@ function finish(): number {
   $('call').classList.remove('clean');
   if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
   if (document.pictureInPictureElement) void document.exitPictureInPicture().catch(() => undefined);
-  for (const id of ['sheet', 'more-sheet', 'send-sheet', 'leave-sheet']) $(id).hidden = true;
+  for (const id of ['sheet', 'more-sheet', 'send-sheet', 'leave-sheet', 'audio-sheet']) $(id).hidden = true;
   lastState = null;
   history.replaceState(null, '', location.pathname);
   return since ? Date.now() - since : 0;
@@ -575,6 +671,11 @@ $('flip').addEventListener('click', () => {
   void flipCamera();
 });
 $('screen').addEventListener('click', () => void toggleScreen());
+$('audio-btn').addEventListener('click', () => {
+  drawAudioSheet();
+  $('audio-sheet').hidden = false;
+});
+$('audio-close').addEventListener('click', () => ($('audio-sheet').hidden = true));
 $('layout-btn').addEventListener('click', () => {
   stage.setMode(stage.getMode() === 'grid' ? 'speaker' : 'grid');
   if (lastState) drawTopActions(lastState);
@@ -590,7 +691,7 @@ $('pip-btn').addEventListener('click', () => {
 });
 $('invite').addEventListener('click', () => void shareLink());
 $('safety-btn').addEventListener('click', openSafety);
-for (const id of ['sheet', 'more-sheet', 'send-sheet']) {
+for (const id of ['sheet', 'more-sheet', 'send-sheet', 'audio-sheet', 'leave-sheet']) {
   $(id).addEventListener('click', (e) => {
     if (e.target === $(id)) $(id).hidden = true;
   });
@@ -650,7 +751,7 @@ if (IN_APP) {
     // Back closes whatever is open on top; in the call itself it keeps the call going in the
     // background (it never hangs up by accident).
     if (!$('viewer').hidden) return panel?.hideViewer();
-    for (const id of ['send-sheet', 'more-sheet', 'sheet']) if (!$(id).hidden) return void ($(id).hidden = true);
+    for (const id of ['send-sheet', 'more-sheet', 'audio-sheet', 'sheet']) if (!$(id).hidden) return void ($(id).hidden = true);
     if (!$('chat').hidden) return panel?.closePanel();
     if (session) return void NativeApp.minimizeApp();
     if (!$('home').hidden) return void NativeApp.exitApp();
