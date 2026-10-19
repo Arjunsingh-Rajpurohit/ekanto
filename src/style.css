@@ -165,10 +165,6 @@ h2 {
   padding: 0;
 }
 
-.sizes.five {
-  grid-template-columns: repeat(5, 1fr);
-}
-
 .sizes .on {
   border-color: var(--accent);
   background: var(--accent-soft);

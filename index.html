@@ -321,12 +321,13 @@
           </label>
           <div class="field left">
             <span>How many people? <em class="muted">(including you)</em></span>
-            <div id="newch-sizes" class="sizes five" role="radiogroup" aria-label="How many people">
+            <div id="newch-sizes" class="sizes" role="radiogroup" aria-label="How many people">
               <button type="button" data-n="2" role="radio">2</button>
               <button type="button" data-n="3" role="radio">3</button>
               <button type="button" data-n="4" role="radio">4</button>
               <button type="button" data-n="6" role="radio">6</button>
               <button type="button" data-n="" role="radio">Any</button>
+              <input id="newch-custom" type="number" inputmode="numeric" min="2" max="20" placeholder="#" aria-label="Type a number" />
             </div>
             <p id="newch-note" class="hint"></p>
           </div>

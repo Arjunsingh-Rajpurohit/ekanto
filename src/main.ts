@@ -1250,22 +1250,39 @@ $('viewer-close').addEventListener('click', () => panel?.hideViewer());
 let newChannelSize: number | null = null;
 function setChannelSize(n: number | null): void {
   newChannelSize = n;
+  const custom = $<HTMLInputElement>('newch-custom');
   for (const b of $('newch-sizes').querySelectorAll<HTMLButtonElement>('button')) {
-    const on = (b.dataset['n'] ? Number(b.dataset['n']) : null) === n;
+    const on = (b.dataset['n'] ? Number(b.dataset['n']) : null) === n && custom.value === '';
     b.classList.toggle('on', on);
     b.setAttribute('aria-checked', String(on));
   }
+  custom.classList.toggle('on', custom.value !== '');
   $('newch-note').textContent = n === 2
     ? 'Just the two of you. Nobody else can join and get it.'
-    : n ? `Up to ${n} people, including you. Nobody else can join and get it.`
+    : n ? `Up to ${n} people, including you. Nobody else can join and get it.${n > SMOOTH_PEOPLE ? ` Above ${SMOOTH_PEOPLE}, video may lag on phones.` : ''}`
       : 'Anyone you send the link to can join and get it.';
 }
 for (const b of $('newch-sizes').querySelectorAll<HTMLButtonElement>('button')) {
-  b.addEventListener('click', () => setChannelSize(b.dataset['n'] ? Number(b.dataset['n']) : null));
+  b.addEventListener('click', () => {
+    $<HTMLInputElement>('newch-custom').value = '';
+    setChannelSize(b.dataset['n'] ? Number(b.dataset['n']) : null);
+  });
 }
+// Your own number, 2–20 — the same as the home screen's "#".
+$('newch-custom').addEventListener('input', () => {
+  const input = $<HTMLInputElement>('newch-custom');
+  const n = Math.round(Number(input.value));
+  if (input.value === '') return setChannelSize(null);
+  setChannelSize(Number.isFinite(n) ? Math.min(MAX_PEOPLE, Math.max(MIN_PEOPLE, n)) : null);
+});
+$('newch-custom').addEventListener('change', () => {
+  const input = $<HTMLInputElement>('newch-custom');
+  if (input.value !== '' && newChannelSize !== null) input.value = String(newChannelSize);
+});
 for (const id of ['new-channel', 'new-channel-mini']) {
   $(id).addEventListener('click', () => {
     $<HTMLInputElement>('newch-name').value = '';
+    $<HTMLInputElement>('newch-custom').value = '';
     setChannelSize(null);
     $('newch-sheet').hidden = false;
     $('newch-name').focus();
