@@ -51,6 +51,9 @@ public class CallService extends Service {
     private static final int MAX_SIDE = 1280;
     private static final long FRAME_GAP_MS = 125;
 
+    /** A call is on: a saved channel's ring gets "busy" instead of the ringing screen. */
+    static volatile boolean running;
+
     private MediaProjection projection;
     private VirtualDisplay display;
     private ImageReader reader;
@@ -70,6 +73,7 @@ public class CallService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         String action = intent == null ? ACTION_CALL : intent.getAction();
+        running = true;
         if (ACTION_SCREEN.equals(action)) {
             // The screen-capture type must be in place before the capture starts.
             goForeground(true);
@@ -90,6 +94,7 @@ public class CallService extends Service {
 
     @Override
     public void onDestroy() {
+        running = false;
         stopCapture();
         super.onDestroy();
     }

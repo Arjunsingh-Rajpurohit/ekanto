@@ -958,6 +958,15 @@ a.btn {
   padding-top: 0;
 }
 
+.text-danger {
+  border: 0;
+  background: none;
+  padding: 6px;
+  color: #ff7a7e;
+  font-size: 15px;
+  font-weight: 600;
+}
+
 .btn.danger-btn {
   border: 0;
   background: var(--danger);
@@ -1216,4 +1225,254 @@ body.floating .stage[data-layout='focus'] .main {
   padding: 0;
   margin: 0;
   gap: 2px;
+}
+
+/* ---------- Saved channels ---------- */
+
+.channels {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.channels-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.channels-head h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.link-btn {
+  border: 0;
+  background: none;
+  padding: 4px 0;
+  color: var(--accent);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.channel-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 8px 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
+.ch-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 0;
+  background: none;
+  padding: 2px 0;
+  text-align: left;
+}
+
+.ch-avatar {
+  flex: none;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(160deg, #3d6fd6, #243c74);
+}
+
+.ch-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ch-text strong {
+  font-size: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ch-text small {
+  font-size: 13px;
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ch.live .ch-text small {
+  color: var(--good);
+  font-weight: 600;
+}
+
+.ch.missed .ch-text small {
+  color: #ff8a8d;
+}
+
+.ch.gone {
+  opacity: 0.6;
+}
+
+.ch-call {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 0;
+  display: grid;
+  place-items: center;
+  color: #cfe0ff;
+  background: rgba(75, 141, 255, 0.14);
+}
+
+.ch.live .ch-call {
+  color: #fff;
+  background: var(--good);
+}
+
+.ch-call svg {
+  width: 21px;
+  height: 21px;
+}
+
+.ch-call:disabled {
+  opacity: 0.3;
+}
+
+.new-channel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 14px;
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius);
+  background: transparent;
+  font-size: 16px;
+}
+
+.new-channel span {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.ring-warn {
+  border: 0;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: rgba(255, 207, 92, 0.12);
+  color: #ffcf5c;
+  font-size: 13.5px;
+  font-weight: 600;
+  text-align: left;
+}
+
+/* Home sheets sit over a page that can scroll. */
+.sheet.fixed {
+  position: fixed;
+  z-index: 20;
+}
+
+.sheet-card .field.left {
+  text-align: left;
+}
+
+/* ---------- Incoming call ---------- */
+
+.incoming {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: calc(64px + env(safe-area-inset-top)) 24px calc(28px + env(safe-area-inset-bottom));
+  text-align: center;
+  background:
+    radial-gradient(700px 500px at 50% 20%, rgba(75, 141, 255, 0.28), transparent 70%),
+    var(--bg);
+}
+
+.incoming-top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.in-avatar {
+  width: 112px;
+  height: 112px;
+  margin: 18px 0 6px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 48px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(160deg, #3d6fd6, #243c74);
+  animation: in-pulse 1.6s ease-out infinite;
+}
+
+@keyframes in-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(75, 141, 255, 0.55); }
+  100% { box-shadow: 0 0 0 34px rgba(75, 141, 255, 0); }
+}
+
+.incoming-actions {
+  display: flex;
+  justify-content: space-around;
+  width: 100%;
+  max-width: 360px;
+  margin-top: auto;
+  padding-bottom: 8px;
+}
+
+.in-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.round.in-btn {
+  width: 72px;
+  height: 72px;
+}
+
+.round.in-btn svg {
+  width: 30px;
+  height: 30px;
+}
+
+.round.accept {
+  background: var(--good);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .in-avatar {
+    animation: none;
+  }
 }

@@ -18,3 +18,10 @@ export const NOSTR_RELAYS = [
 ];
 
 export const ALL_RELAYS = [...MQTT_RELAYS, ...NOSTR_RELAYS];
+
+/**
+ * Where rings go: a fixed few, so the Android app's quiet background listener and every caller
+ * meet on the same ones. Two networks again, two operators each.
+ */
+export const RING_MQTT = ['wss://broker.hivemq.com:8884/mqtt', 'wss://broker.emqx.io:8084/mqtt'];
+export const RING_NOSTR = ['wss://nos.lol', 'wss://relay.damus.io'];

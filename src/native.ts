@@ -1,4 +1,5 @@
 import { Capacitor, registerPlugin, type PluginListenerHandle } from '@capacitor/core';
+import type { NativeChannel } from './ringing';
 
 /** The Android side of Hush (android/app/src/main/java/app/hush/call). */
 interface HushNative {
@@ -18,6 +19,35 @@ interface HushNative {
   enterFloating(): Promise<{ floating: boolean }>;
   addListener(event: 'floating', fn: (e: { floating: boolean }) => void): Promise<PluginListenerHandle>;
   addListener(event: 'hangUp', fn: () => void): Promise<PluginListenerHandle>;
+  /** Saved channels for the background listener that rings the phone while Hush is closed. */
+  setChannels(options: { name: string; channels: NativeChannel[] }): Promise<void>;
+  ringStatus(): Promise<RingStatus>;
+  ringSetting(options: { which: RingSetting }): Promise<RingStatus>;
+  /** The ring was answered or declined inside the app: stop the ringing notification. */
+  stopRinging(options: { call: string; keepOverLock: boolean }): Promise<void>;
+  /** What the app was opened for: an incoming call's screen, or "Answer" in the notification. */
+  takeLaunch(): Promise<Launch>;
+  addListener(event: 'ringData', fn: (e: { topic: string; data: string }) => void): Promise<PluginListenerHandle>;
+  addListener(event: 'launch', fn: () => void): Promise<PluginListenerHandle>;
+}
+
+/** Each is true once allowed. */
+export interface RingStatus {
+  notifications: boolean;
+  fullScreen: boolean;
+  battery: boolean;
+}
+export type RingSetting = 'notifications' | 'fullScreen' | 'battery';
+
+export interface Launch {
+  action?: 'incoming' | 'answer';
+  call?: string;
+  channel?: string;
+  from?: string;
+  voice?: boolean;
+  /** Heard while the page wasn't running. */
+  missed?: { channel: string; at: number }[];
+  gone?: { channel: string; from: string }[];
 }
 
 export type AudioRoute = 'speaker' | 'earpiece' | 'bluetooth' | 'wired';
@@ -97,4 +127,16 @@ export const nativeFloat = {
   enter: () => plugin.enterFloating().then((r) => r.floating).catch(() => false),
   onChange: (fn: (floating: boolean) => void) => plugin.addListener('floating', (e) => fn(e.floating)),
   onHangUp: (fn: () => void) => plugin.addListener('hangUp', fn),
+};
+
+/** Ringing while Hush is closed (Android): a quiet background listener, and the call screen. */
+export const nativeRing = {
+  setChannels: (name: string, channels: NativeChannel[]) => (IN_APP ? plugin.setChannels({ name, channels }).catch(() => undefined) : Promise.resolve()),
+  status: () => plugin.ringStatus(),
+  allow: (which: RingSetting) => plugin.ringSetting({ which }),
+  /** keepOverLock: answered, so the call may stay over the lock screen. */
+  stop: (call: string, keepOverLock = false) => (IN_APP ? plugin.stopRinging({ call, keepOverLock }).catch(() => undefined) : Promise.resolve()),
+  takeLaunch: () => plugin.takeLaunch().catch(() => ({}) as Launch),
+  onData: (fn: (topic: string, data: string) => void) => plugin.addListener('ringData', (e) => fn(e.topic, e.data)),
+  onLaunch: (fn: () => void) => plugin.addListener('launch', fn),
 };

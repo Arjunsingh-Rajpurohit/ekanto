@@ -141,6 +141,8 @@ export class CallSession {
   private media: MediaState;
   /** Chat and files: everything on the side-channel that isn't a camera/screen signal. */
   onChannelData: (from: Person, data: string | ArrayBuffer) => void = () => undefined;
+  /** "Save this call as a channel" and the answers to it ({"k":"chan…"}), phone to phone. */
+  onControl: (from: Person, message: Record<string, unknown>) => void = () => undefined;
 
   constructor(options: {
     invite: Invite;
@@ -408,7 +410,16 @@ export class CallSession {
       return;
     }
     const person = this.state.people.find((p) => p.id === peer.id);
-    if (person) this.onChannelData(person, data);
+    if (!person) return;
+    if (typeof data === 'string' && data.startsWith('{"k":"chan')) {
+      try {
+        this.onControl(person, JSON.parse(data) as Record<string, unknown>);
+      } catch {
+        // Ignore a broken signal.
+      }
+      return;
+    }
+    this.onChannelData(person, data);
   }
 
   private alive(p: Peer): boolean {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { deriveRoom, fingerprintOf, newSecret, open, safetyEmojis, seal } from './crypto';
-import { inviteScope, inviteToHash, newInvite, parseInvite } from './invite';
+import { expired, inviteScope, inviteToHash, newInvite, parseInvite } from './invite';
 
 describe('sealed messages', () => {
   it('open with the same link, never with another', async () => {
@@ -42,7 +42,7 @@ describe('links', () => {
   it('round-trips limit and protection', () => {
     const invite = newInvite(4, true);
     const hash = inviteToHash(invite);
-    expect(hash).toMatch(/^[A-Za-z0-9_-]{43}\.4\.p$/);
+    expect(hash).toMatch(/^[A-Za-z0-9_-]{43}\.4\.p\.e[0-9a-z]+$/);
     expect(parseInvite(`https://example.github.io/hush/#${hash}`)).toEqual(invite);
     expect(parseInvite(inviteToHash(newInvite(null)))?.limit).toBeNull();
   });
@@ -65,6 +65,33 @@ describe('links', () => {
     expect(unprotected.topic).not.toBe(real.topic);
     const sealed = await seal(real.key, { t: 'hello' });
     expect(await open(bigger.key, sealed)).toBeNull();
+  });
+});
+
+describe('24-hour links', () => {
+  const HOUR = 3600 * 1000;
+
+  it('work for a day, then stop', () => {
+    const made = Date.UTC(2026, 9, 19, 10, 30);
+    const invite = newInvite(2, false, false, made);
+    const back = parseInvite(inviteToHash(invite))!;
+    expect(back.expires).toBe(invite.expires);
+    expect(expired(back, made + 23 * HOUR)).toBe(false);
+    expect(expired(back, made + 25 * HOUR)).toBe(true);
+  });
+
+  it('an old link without an expiry still opens the same call', async () => {
+    const old = parseInvite(`${newSecret()}.2`)!;
+    expect(old.expires).toBeNull();
+    expect(expired(old)).toBe(false);
+    expect(inviteScope(old)).toBe('limit=2|app=0|voice=0');
+  });
+
+  it('moving the expiry to next year leads to a different, empty call', async () => {
+    const invite = newInvite(2);
+    const real = await deriveRoom(invite.secret, inviteScope(invite));
+    const stretched = await deriveRoom(invite.secret, inviteScope({ ...invite, expires: invite.expires! + 24 * 365 }));
+    expect(stretched.topic).not.toBe(real.topic);
   });
 });
 

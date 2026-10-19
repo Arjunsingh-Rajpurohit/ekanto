@@ -60,6 +60,20 @@
           <button class="btn" type="submit">Join</button>
         </form>
 
+        <!-- Saved channels: call the same people again with one tap, it rings their phone -->
+        <section id="channels" class="channels" aria-label="Saved channels">
+          <div id="channels-head" class="channels-head">
+            <h2>Saved channels</h2>
+            <button id="new-channel-mini" class="link-btn" type="button">＋ New</button>
+          </div>
+          <button id="ring-setup-btn" class="ring-warn" type="button" hidden>⚠️ Set up ringing, so calls reach you when Hush is closed</button>
+          <ul id="channel-list" class="channel-list"></ul>
+          <button id="new-channel" class="new-channel" type="button">
+            <strong>＋ New channel</strong>
+            <span>Call the same people again with one tap. No links.</span>
+          </button>
+        </section>
+
         <ul class="promises">
           <li>🔒 Video and voice go phone to phone, encrypted.</li>
           <li>🔑 The key is only in your link — no server ever sees it.</li>
@@ -101,6 +115,27 @@
         <p class="mark">Hush™ · © 2026 Mr.Rajpurohit</p>
       </section>
 
+      <!-- Someone in a saved channel is calling -->
+      <section id="incoming" class="screen incoming" hidden>
+        <div class="incoming-top">
+          <p id="in-kind" class="hint">Hush video call</p>
+          <div id="in-avatar" class="in-avatar" aria-hidden="true">P</div>
+          <h1 id="in-name">Priya</h1>
+          <p id="in-sub" class="sub">is calling…</p>
+        </div>
+        <div class="incoming-actions">
+          <div class="in-action">
+            <button id="in-decline" class="round danger in-btn" type="button" aria-label="Decline"></button>
+            <span>Decline</span>
+          </div>
+          <div class="in-action">
+            <button id="in-answer" class="round accept in-btn" type="button" aria-label="Answer"></button>
+            <span>Answer</span>
+          </div>
+        </div>
+        <p class="mark">Hush™ · © 2026 Mr.Rajpurohit</p>
+      </section>
+
       <!-- In the call -->
       <section id="call" class="screen call" hidden>
         <!-- The call's pictures: big one, grid, strip of small ones, and the floating one you can drag -->
@@ -127,7 +162,7 @@
             <div class="pulse" aria-hidden="true"></div>
             <h2 id="waiting-title">Waiting for others</h2>
             <p id="waiting-sub" class="sub">Send them the link.</p>
-            <div class="row">
+            <div id="waiting-share" class="row">
               <button id="share" class="btn primary">Share link</button>
               <button id="copy" class="btn">Copy</button>
             </div>
@@ -162,6 +197,7 @@
             <button id="screen" class="menu-item" type="button"><span class="mi"></span><span id="screen-label">Share my screen</span></button>
             <p id="screen-note" class="hint" hidden>Phone browsers can't share their screen. Use a computer, or the Hush app.</p>
             <button id="invite" class="menu-item" type="button"><span class="mi"></span>Invite someone</button>
+            <button id="save-channel" class="menu-item" type="button"><span class="mi"></span>Save as channel</button>
             <button id="safety-btn" class="menu-item" type="button"><span class="mi">🔒</span>Safety check</button>
             <button id="more-close" class="btn" type="button">Close</button>
             <p class="mark">Hush™ · © 2026 Mr.Rajpurohit</p>
@@ -214,6 +250,34 @@
           <div id="viewer-body" class="viewer-body"></div>
         </div>
 
+        <!-- Save this call as a channel -->
+        <div id="save-sheet" class="sheet" hidden>
+          <div class="sheet-card">
+            <h2>Save as channel</h2>
+            <p class="sub">Next time, just tap it to ring everyone here — no new links.</p>
+            <label class="field left">
+              <span>Channel name</span>
+              <input id="save-name" type="text" maxlength="30" autocomplete="off" placeholder="e.g. Wife, Family" />
+            </label>
+            <button id="save-yes" class="btn primary" type="button">Save</button>
+            <button id="save-no" class="btn" type="button">Cancel</button>
+          </div>
+        </div>
+
+        <!-- Someone in the call asks to save it as a channel -->
+        <div id="ask-sheet" class="sheet" hidden>
+          <div class="sheet-card">
+            <h2>Save this call as a channel?</h2>
+            <p id="ask-sub" class="sub"></p>
+            <label class="field left">
+              <span>Channel name</span>
+              <input id="ask-name" type="text" maxlength="30" autocomplete="off" />
+            </label>
+            <button id="ask-yes" class="btn primary" type="button">Save</button>
+            <button id="ask-no" class="btn" type="button">Not now</button>
+          </div>
+        </div>
+
         <div id="sheet" class="sheet" hidden>
           <div class="sheet-card">
             <h2>🔒 Safety check</h2>
@@ -243,6 +307,45 @@
           <p class="sub">The others stay in the call. You can rejoin with the same link.</p>
           <button id="leave-yes" class="btn danger-btn" type="button">Leave call</button>
           <button id="leave-no" class="btn" type="button">Stay</button>
+        </div>
+      </div>
+
+      <!-- New channel: starts a call; whoever joins is asked to save it -->
+      <div id="newch-sheet" class="sheet fixed" hidden>
+        <div class="sheet-card">
+          <h2>New channel</h2>
+          <p class="sub">Start a call and send the link. When they join, the channel is saved on both phones — next time, just tap to call.</p>
+          <label class="field left">
+            <span>Channel name</span>
+            <input id="newch-name" type="text" maxlength="30" autocomplete="off" placeholder="e.g. Wife, Family" />
+          </label>
+          <button id="newch-start" class="btn primary" type="button">Start call &amp; get link</button>
+          <button id="newch-cancel" class="btn" type="button">Cancel</button>
+        </div>
+      </div>
+
+      <!-- One channel: rename or delete -->
+      <div id="ch-sheet" class="sheet fixed" hidden>
+        <div class="sheet-card">
+          <h2 id="ch-title">Channel</h2>
+          <p id="ch-info" class="sub"></p>
+          <label class="field left">
+            <span>Name on this phone</span>
+            <input id="ch-name" type="text" maxlength="30" autocomplete="off" />
+          </label>
+          <button id="ch-done" class="btn primary" type="button">Done</button>
+          <button id="ch-delete" class="text-danger" type="button">Delete channel</button>
+        </div>
+      </div>
+
+      <!-- App: what Android needs so a closed Hush can still ring -->
+      <div id="ring-sheet" class="sheet fixed" hidden>
+        <div class="sheet-card menu">
+          <h2>Ring like a phone call</h2>
+          <p class="sub">So Hush can ring you even when it is closed, allow these once:</p>
+          <div id="ring-list" class="audio-list"></div>
+          <p class="hint">Xiaomi, Oppo, Vivo, Realme, OnePlus: also turn on <strong>Autostart</strong> for Hush (Settings → Apps → Hush).</p>
+          <button id="ring-close" class="btn" type="button">Done</button>
         </div>
       </div>
 
