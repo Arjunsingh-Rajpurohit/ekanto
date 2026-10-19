@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Hush</string>
-    <string name="title_activity_main">Hush</string>
+    <string name="app_name">Ekanto</string>
+    <string name="title_activity_main">Ekanto</string>
     <string name="package_name">app.hush.call</string>
     <string name="custom_url_scheme">app.hush.call</string>
 </resources>

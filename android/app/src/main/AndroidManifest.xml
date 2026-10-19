@@ -22,16 +22,26 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- Hush links (WhatsApp, SMS…) open straight in the app. Android checks
+            <!-- Ekanto links (WhatsApp, SMS…) open straight in the app. Android checks
                  https://arjunsingh-rajpurohit.github.io/.well-known/assetlinks.json on install. -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="arjunsingh-rajpurohit.github.io" android:pathPrefix="/hush" />
+                <data
+                    android:scheme="https"
+                    android:host="arjunsingh-rajpurohit.github.io"
+                    android:pathPrefix="/ekanto"
+                />
+                <!-- Links shared before the rename (…/hush/#…) still open in the app. -->
+                <data
+                    android:scheme="https"
+                    android:host="arjunsingh-rajpurohit.github.io"
+                    android:pathPrefix="/hush"
+                />
             </intent-filter>
 
-            <!-- "Open in Hush app" on the website: hushcall://join#<call link> -->
+            <!-- "Open in Ekanto app" on the website: hushcall://join#<call link> -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -40,22 +50,20 @@
             </intent-filter>
         </activity>
 
-        <!-- "Hush call in progress": keeps mic/camera working in the background and allows screen sharing. -->
+        <!-- "Ekanto call in progress": keeps mic/camera working in the background and allows screen sharing. -->
         <service
             android:name=".CallService"
             android:exported="false"
-            android:foregroundServiceType="microphone|camera|mediaProjection" />
+            android:foregroundServiceType="microphone|camera|mediaProjection"
+        />
 
-        <!-- "Hush is ready for calls": lets saved channels ring this phone while Hush is closed. -->
-        <service
-            android:name=".RingService"
-            android:exported="false"
-            android:foregroundServiceType="remoteMessaging" />
+        <!-- "Ekanto is ready for calls": lets saved channels ring this phone while Ekanto is closed. -->
+        <service android:name=".RingService" android:exported="false" android:foregroundServiceType="remoteMessaging" />
 
         <!-- Decline on the ringing notification, and the regular check that keeps ringing working. -->
         <receiver android:name=".RingReceiver" android:exported="false" />
 
-        <!-- After a restart or an update, saved channels can ring again without opening Hush. -->
+        <!-- After a restart or an update, saved channels can ring again without opening Ekanto. -->
         <receiver android:name=".BootReceiver" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />

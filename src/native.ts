@@ -1,9 +1,9 @@
 import { Capacitor, registerPlugin, type PluginListenerHandle } from '@capacitor/core';
 import type { NativeChannel } from './ringing';
 
-/** The Android side of Hush (android/app/src/main/java/app/hush/call). */
+/** The Android side of Ekanto (android/app/src/main/java/app/hush/call). */
 interface HushNative {
-  /** Keeps the call alive (mic, camera) while you use other apps; shows "Hush call in progress". */
+  /** Keeps the call alive (mic, camera) while you use other apps; shows "Ekanto call in progress". */
   startCall(options: { voice: boolean }): Promise<void>;
   endCall(): Promise<void>;
   /** Asks Android for screen-capture permission, then streams the screen as frames. */
@@ -19,7 +19,7 @@ interface HushNative {
   enterFloating(): Promise<{ floating: boolean }>;
   addListener(event: 'floating', fn: (e: { floating: boolean }) => void): Promise<PluginListenerHandle>;
   addListener(event: 'hangUp', fn: () => void): Promise<PluginListenerHandle>;
-  /** Saved channels for the background listener that rings the phone while Hush is closed. */
+  /** Saved channels for the background listener that rings the phone while Ekanto is closed. */
   setChannels(options: { name: string; channels: NativeChannel[] }): Promise<void>;
   ringStatus(): Promise<RingStatus>;
   ringSetting(options: { which: RingSetting }): Promise<RingStatus>;
@@ -129,7 +129,7 @@ export const nativeFloat = {
   onHangUp: (fn: () => void) => plugin.addListener('hangUp', fn),
 };
 
-/** Ringing while Hush is closed (Android): a quiet background listener, and the call screen. */
+/** Ringing while Ekanto is closed (Android): a quiet background listener, and the call screen. */
 export const nativeRing = {
   setChannels: (name: string, channels: NativeChannel[]) => (IN_APP ? plugin.setChannels({ name, channels }).catch(() => undefined) : Promise.resolve()),
   status: () => plugin.ringStatus(),

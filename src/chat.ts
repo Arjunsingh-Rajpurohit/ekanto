@@ -3,7 +3,7 @@ import type { CallSession, Person } from './call';
 /**
  * Chat and files inside a call. Everything travels on each person's private side-channel
  * (phone to phone, encrypted) and lives only in this page's memory: it is never written to disk
- * by Hush, never sent to a server, and wiped when the call ends. Someone who joins later sees
+ * by Ekanto, never sent to a server, and wiped when the call ends. Someone who joins later sees
  * nothing that was sent before they arrived.
  */
 
@@ -41,7 +41,7 @@ const CHUNK = 16 * 1024;
 const HIGH = 1024 * 1024;
 const LOW = 256 * 1024;
 
-/** View-only files open only inside Hush, so only types Hush can show itself qualify. */
+/** View-only files open only inside Ekanto, so only types Ekanto can show itself qualify. */
 export function viewable(mime: string): boolean {
   return /^(image\/(jpeg|png|gif|webp|bmp)|video\/(mp4|webm|ogg)|audio\/|text\/plain$|application\/pdf$)/.test(mime);
 }
@@ -99,7 +99,7 @@ export class Chat {
     const to = this.recipients(people);
     if (!to.length) return 'Nobody is connected yet.';
     if (file.size > MAX_FILE_BYTES) return 'Files can be up to 100 MB.';
-    if (mode === 'view' && !viewable(file.type)) return "This kind of file can't be shown in Hush — send it as Download instead.";
+    if (mode === 'view' && !viewable(file.type)) return "This kind of file can't be shown in Ekanto — send it as Download instead.";
     const item: ChatItem = {
       id: newId(), from: null, at: Date.now(),
       file: { name: file.name.slice(0, 120), size: file.size, mime: file.type || 'application/octet-stream', mode, progress: 0, done: false, failed: false, blob: file },
@@ -210,7 +210,7 @@ export class Chat {
       this.incoming.delete(wire.id);
       const file = f.item.file!;
       if (!f.discard && f.received === file.size) {
-        // A view-only file is kept as plain bytes; Hush only ever shows it, never saves it.
+        // A view-only file is kept as plain bytes; Ekanto only ever shows it, never saves it.
         file.blob = new Blob(f.parts, { type: file.mime });
       } else {
         file.failed = true;

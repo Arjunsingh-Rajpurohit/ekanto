@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Nothing of Hush is copied anywhere: no cloud backup, no copy to a new phone.
+<!-- Nothing of Ekanto is copied anywhere: no cloud backup, no copy to a new phone.
      Saved channel keys stay on this phone only. -->
 <data-extraction-rules>
     <cloud-backup>

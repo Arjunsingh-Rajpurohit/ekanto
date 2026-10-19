@@ -68,7 +68,7 @@ export class ChatPanel {
     const warning = !canView
       ? "View only works for photos, videos, audio, text and PDFs. This file can only be sent as Download."
       : onWeb.length
-        ? `${onWeb.join(', ')} ${onWeb.length === 1 ? 'is' : 'are'} on the website, where a screenshot of a view-only file is possible. The Hush app blocks screenshots.`
+        ? `${onWeb.join(', ')} ${onWeb.length === 1 ? 'is' : 'are'} on the website, where a screenshot of a view-only file is possible. The Ekanto app blocks screenshots.`
         : '';
     $('send-warning').textContent = warning;
     $('send-warning').hidden = !warning;

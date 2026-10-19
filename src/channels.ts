@@ -22,7 +22,7 @@ export interface Channel {
   secret: string;
   /** What this phone calls it ("Priya", "Family"). Each member names it for themselves. */
   name: string;
-  /** Calls in this channel are protected (Hush app only), like the call it was saved from. */
+  /** Calls in this channel are protected (Ekanto app only), like the call it was saved from. */
   appOnly: boolean;
   /** How many people were in the call it was saved from: 2 = a one-to-one channel. */
   size: number;

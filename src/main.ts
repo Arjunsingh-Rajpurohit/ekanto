@@ -304,7 +304,7 @@ async function enterCall(name: string, via?: ChannelVia, camera?: boolean): Prom
   updateMe(name);
   $('waiting-sub').textContent = newChannelName !== null
     ? `Send them the link. When they join, both phones save the channel${newChannelName ? ` “${newChannelName}”` : ''} — after that, just tap to call.`
-    : `Send them the link. This ${callWord(invite)} allows ${peopleText(invite.limit)}${invite.appOnly ? ' and only the Hush app can join' : ''}. The link works for ${LINK_HOURS} hours.`;
+    : `Send them the link. This ${callWord(invite)} allows ${peopleText(invite.limit)}${invite.appOnly ? ' and only the Ekanto app can join' : ''}. The link works for ${LINK_HOURS} hours.`;
   $('waiting-share').hidden = !!via;
   warnedBlocked = false;
 
@@ -507,7 +507,7 @@ async function toggleScreen(): Promise<void> {
   }
   await session?.replaceVideoTrack(sharing.track);
   session?.setMedia({ cam: !!stream?.getVideoTracks()[0], screen: true });
-  toast(IN_APP ? 'Sharing your screen. Hush itself shows as black — open the app you want to show.' : 'Sharing your screen.');
+  toast(IN_APP ? 'Sharing your screen. Ekanto itself shows as black — open the app you want to show.' : 'Sharing your screen.');
   drawControls();
 }
 
@@ -697,7 +697,7 @@ async function callChannel(ch: Channel, voiceCall: boolean): Promise<void> {
   const live = liveCalls.get(ch.id);
   const joining = live && isLive(ch) ? parseInvite(live.call) : null;
   const next = joining && !expired(joining) ? joining : newInvite(null, ch.appOnly, voiceCall);
-  if (next.appOnly && !IN_APP) return toast('This channel is protected — call from the Hush app.');
+  if (next.appOnly && !IN_APP) return toast('This channel is protected — call from the Ekanto app.');
   invite = next;
   clearMissed(ch);
   history.replaceState(null, '', `#${inviteToHash(invite)}`);
@@ -869,13 +869,13 @@ function showIncoming(ch: Channel, ring: Ring): void {
   const from = ring.from.slice(0, 30) || ch.name;
   // In the app the notification rings (with the phone's own ringtone); the website rings itself.
   ringingNow = { ch, ring, timer: setTimeout(missedCall, RING_GAP_MS), stopTone: IN_APP ? undefined : startTone('ring') };
-  $('in-kind').textContent = ring.v ? 'Hush voice call' : 'Hush video call';
+  $('in-kind').textContent = ring.v ? 'Ekanto voice call' : 'Ekanto video call';
   $('in-avatar').textContent = initial(from);
   $('in-name').textContent = from;
   $('in-sub').textContent = ch.name.toLowerCase() === from.toLowerCase() ? 'is calling…' : `is calling · ${ch.name}`;
   $('in-answer').innerHTML = ring.v ? ICON.earpiece : ICON.cam;
   $('in-decline').innerHTML = ICON.end;
-  document.title = `📞 ${from} is calling — Hush`;
+  document.title = `📞 ${from} is calling — Ekanto`;
   show('incoming');
   if (!IN_APP) navigator.vibrate?.([400, 300, 400, 300, 400]);
 }
@@ -927,7 +927,7 @@ function declineRing(): void {
 /** The app was opened from the ring notification: show the call, or answer it at once. */
 async function handleLaunch(): Promise<void> {
   const launch = await nativeRing.takeLaunch();
-  // While Hush was closed: missed calls, and channels the others deleted.
+  // While Ekanto was closed: missed calls, and channels the others deleted.
   const missed = new Map((launch.missed ?? []).map((m) => [m.channel, m.at]));
   const gone = new Map((launch.gone ?? []).map((g) => [g.channel, g.from]));
   if (missed.size || gone.size) {
@@ -1010,7 +1010,7 @@ function openChannelSheet(ch: Channel): void {
   const who = ch.members.length ? `You and ${listNames(ch.members)}` : 'Saved channel';
   $('ch-info').textContent = ch.gone
     ? `${ch.gone} deleted this channel, so calls are off. Delete it here too.`
-    : `${who}${ch.appOnly ? ' · protected' : ''}. Only your phones know its key.${IN_APP ? '' : ' On the website it rings only while Hush is open.'}`;
+    : `${who}${ch.appOnly ? ' · protected' : ''}. Only your phones know its key.${IN_APP ? '' : ' On the website it rings only while Ekanto is open.'}`;
   $<HTMLInputElement>('ch-name').value = ch.name;
   $('ch-name').closest('.field')!.toggleAttribute('hidden', !!ch.gone);
   $('ch-delete').textContent = 'Delete channel';
@@ -1036,12 +1036,12 @@ function deleteChannel(): void {
   toast(`Deleted “${ch.name}”.`);
 }
 
-/* App: what Android needs so a closed Hush still rings */
+/* App: what Android needs so a closed Ekanto still rings */
 
 const RING_ROWS: { which: RingSetting; title: string; why: string }[] = [
   { which: 'notifications', title: 'Notifications', why: 'To show who is calling' },
   { which: 'fullScreen', title: 'Full-screen calls', why: 'To ring on the lock screen' },
-  { which: 'battery', title: 'No battery limit', why: "So Android doesn't put Hush to sleep" },
+  { which: 'battery', title: 'No battery limit', why: "So Android doesn't put Ekanto to sleep" },
 ];
 
 async function drawRingSetup(auto = false): Promise<void> {
@@ -1174,7 +1174,7 @@ $('join-btn').addEventListener('click', () => {
 $('paste').addEventListener('submit', (e) => {
   e.preventDefault();
   const parsed = parseInvite($<HTMLInputElement>('paste-input').value);
-  if (!parsed) return toast("That doesn't look like a Hush call link.");
+  if (!parsed) return toast("That doesn't look like a Ekanto call link.");
   history.replaceState(null, '', `#${inviteToHash(parsed)}`);
   $<HTMLInputElement>('paste-input').value = '';
   route();

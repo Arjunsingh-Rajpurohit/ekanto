@@ -15,12 +15,12 @@ public class MainActivity extends BridgeActivity {
     /** A video call is on: leaving the app shrinks it into a floating window, like WhatsApp. */
     private static volatile boolean floatingAllowed;
     private static MainActivity current;
-    /** Hush is on screen: a ring plays here instead of as a notification. */
+    /** Ekanto is on screen: a ring plays here instead of as a notification. */
     static volatile boolean visible;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        // Hush's own Android code (background calls, screen sharing, sound) — see HushNativePlugin.
+        // Ekanto's own Android code (background calls, screen sharing, sound) — see HushNativePlugin.
         registerPlugin(HushNativePlugin.class);
         super.onCreate(savedInstanceState);
         current = this;
@@ -113,7 +113,7 @@ public class MainActivity extends BridgeActivity {
             try {
                 setPictureInPictureParams(pipParams());
             } catch (Exception ignored) {
-                // Floating windows turned off for Hush in the phone's settings.
+                // Floating windows turned off for Ekanto in the phone's settings.
             }
         }
     }

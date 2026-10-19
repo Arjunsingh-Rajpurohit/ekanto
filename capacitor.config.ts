@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'app.hush.call',
-  appName: 'Hush',
+  appName: 'Ekanto',
   webDir: 'dist',
   android: { allowMixedContent: false },
   plugins: {

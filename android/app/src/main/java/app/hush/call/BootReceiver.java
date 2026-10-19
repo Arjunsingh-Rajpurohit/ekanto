@@ -4,7 +4,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 
-/** After the phone restarts (or Hush is updated), saved channels can ring again without opening Hush. */
+/** After the phone restarts (or Ekanto is updated), saved channels can ring again without opening Ekanto. */
 public class BootReceiver extends BroadcastReceiver {
 
     @Override

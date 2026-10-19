@@ -41,13 +41,13 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 /**
- * Lets a saved channel ring this phone while Hush is closed — like WhatsApp, but without Google's
+ * Lets a saved channel ring this phone while Ekanto is closed — like WhatsApp, but without Google's
  * push service and without a server of our own. It keeps a few quiet connections to the public ring
  * relays, listening on each channel's ring topic for today. A ring it can open (sealed with a
  * channel's key) shows the incoming-call screen; everything else is ignored.
  *
  * Android only lets an app stay connected like this from a "foreground service" with a notification:
- * "Hush is ready for calls". It holds only the ring part of each channel's secret, never a call.
+ * "Ekanto is ready for calls". It holds only the ring part of each channel's secret, never a call.
  */
 public class RingService extends Service {
 
@@ -223,8 +223,8 @@ public class RingService extends Service {
     private void goForeground() {
         createChannels();
         Notification notification = new NotificationCompat.Builder(this, READY_CHANNEL)
-            .setSmallIcon(android.R.drawable.sym_action_call)
-            .setContentTitle("Hush is ready for calls")
+            .setSmallIcon(R.drawable.ic_stat_ekanto)
+            .setContentTitle("Ekanto is ready for calls")
             .setContentText("Your saved channels can ring this phone.")
             .setContentIntent(openApp(0))
             .setOngoing(true)
@@ -243,7 +243,7 @@ public class RingService extends Service {
         NotificationManager m = manager();
         if (m.getNotificationChannel(READY_CHANNEL) == null) {
             NotificationChannel ready = new NotificationChannel(READY_CHANNEL, "Ready for calls", NotificationManager.IMPORTANCE_MIN);
-            ready.setDescription("Shown while Hush waits for calls from your saved channels. You can hide it here.");
+            ready.setDescription("Shown while Ekanto waits for calls from your saved channels. You can hide it here.");
             ready.setShowBadge(false);
             m.createNotificationChannel(ready);
         }
@@ -276,7 +276,7 @@ public class RingService extends Service {
                 if (ring == null || ring.length != 32) continue;
                 Ch ch = new Ch();
                 ch.id = o.optString("id");
-                ch.name = clip(o.optString("name", "Hush"));
+                ch.name = clip(o.optString("name", "Ekanto"));
                 ch.me = o.optString("me");
                 ch.ring = ring;
                 ch.key = RingCrypto.key(ring);
@@ -402,7 +402,7 @@ public class RingService extends Service {
         next.timeout = () -> missed(call, HushNativePlugin.isAlive());
         ringing.put(call, next);
         handler.postDelayed(next.timeout, RING_GAP_MS);
-        // Hush is on screen: the page shows the call and the phone rings. Otherwise: the call notification.
+        // Ekanto is on screen: the page shows the call and the phone rings. Otherwise: the call notification.
         if (MainActivity.visible) ringInApp();
         else notifyIncoming(next);
     }
@@ -416,9 +416,9 @@ public class RingService extends Service {
             new Intent(this, RingReceiver.class).setAction(ACTION_DECLINE).putExtra(EXTRA_CALL, r.call),
             PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, RING_CHANNEL)
-            .setSmallIcon(android.R.drawable.sym_call_incoming)
+            .setSmallIcon(R.drawable.ic_stat_ekanto)
             .setContentTitle(r.from)
-            .setContentText((r.voice ? "Hush voice call" : "Hush video call") + (sameName ? "" : " · " + r.ch.name))
+            .setContentText((r.voice ? "Ekanto voice call" : "Ekanto video call") + (sameName ? "" : " · " + r.ch.name))
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
@@ -483,7 +483,7 @@ public class RingService extends Service {
         MainActivity.setShowOverLock(false);
         boolean sameName = r.ch.name.equalsIgnoreCase(r.from);
         manager().notify(r.id, new NotificationCompat.Builder(this, MISSED_CHANNEL)
-            .setSmallIcon(android.R.drawable.sym_call_missed)
+            .setSmallIcon(R.drawable.ic_stat_ekanto)
             .setContentTitle("Missed call")
             .setContentText(r.from + (sameName ? "" : " · " + r.ch.name))
             .setContentIntent(openApp(r.id))
@@ -545,7 +545,7 @@ public class RingService extends Service {
         }
     }
 
-    /** Hush is on screen: ring with the phone's own ringtone (it respects silent and vibrate mode). */
+    /** Ekanto is on screen: ring with the phone's own ringtone (it respects silent and vibrate mode). */
     private void ringInApp() {
         if (tone != null) return;
         AudioManager audio = getSystemService(AudioManager.class);
@@ -574,7 +574,7 @@ public class RingService extends Service {
 
     /* ---------- Small helpers ---------- */
 
-    /** Remembered for the page, which reads (and clears) it the next time Hush opens. */
+    /** Remembered for the page, which reads (and clears) it the next time Ekanto opens. */
     private void addPending(String list, String[] pairs, String numberKey, long number) {
         try {
             SharedPreferences p = prefs(this);

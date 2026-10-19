@@ -6,10 +6,10 @@
     <!-- Never tell any site where a visitor came from. -->
     <meta name="referrer" content="no-referrer" />
     <meta name="robots" content="noindex, nofollow" />
-    <meta name="theme-color" content="#0b0c0f" />
+    <meta name="theme-color" content="#0b0f17" />
     <meta name="color-scheme" content="dark" />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
-    <title>Hush™ — private video calls</title>
+    <title>Ekanto™ — private calls</title>
   </head>
   <body>
     <main id="app">
@@ -17,8 +17,8 @@
       <section id="home" class="screen pad" hidden>
         <header class="brand">
           <img src="./favicon.svg" alt="" class="logo" />
-          <h1>Hush</h1>
-          <p class="sub">Private video calls. No login. Nothing saved.</p>
+          <h1>Ekanto</h1>
+          <p class="sub">Private calls. No login. Nothing saved.</p>
         </header>
 
         <label class="field">
@@ -49,7 +49,7 @@
 
         <label id="protect-row" class="toggle" hidden>
           <input id="protect" type="checkbox" />
-          <span><strong>Protected call</strong><br>Others can join only from the Hush app: no screenshots, no screen recording, no browser extensions.</span>
+          <span><strong>Protected call</strong><br>Others can join only from the Ekanto app: no screenshots, no screen recording, no browser extensions.</span>
         </label>
 
         <button id="create" class="btn primary big">Create call link</button>
@@ -66,7 +66,7 @@
             <h2>Saved channels</h2>
             <button id="new-channel-mini" class="link-btn" type="button">＋ New</button>
           </div>
-          <button id="ring-setup-btn" class="ring-warn" type="button" hidden>⚠️ Set up ringing, so calls reach you when Hush is closed</button>
+          <button id="ring-setup-btn" class="ring-warn" type="button" hidden>⚠️ Set up ringing, so calls reach you when Ekanto is closed</button>
           <ul id="channel-list" class="channel-list"></ul>
           <button id="new-channel" class="new-channel" type="button">
             <strong>＋ New channel</strong>
@@ -80,9 +80,9 @@
           <li>🚫 No account, no tracking, no recordings.</li>
         </ul>
         <a id="get-app" class="app-promo" hidden target="_blank" rel="noopener noreferrer">
-          📱 <span><strong>Get the Hush app</strong> — blocks screenshots, screen recording and browser extensions.</span>
+          📱 <span><strong>Get the Ekanto app</strong> — blocks screenshots, screen recording and browser extensions.</span>
         </a>
-        <p class="mark">Hush™ · © 2026 Mr.Rajpurohit</p>
+        <p class="mark">Ekanto™ · © 2026 Mr.Rajpurohit</p>
       </section>
 
       <!-- Opened a link -->
@@ -98,7 +98,7 @@
         </label>
         <button id="join-btn" class="btn primary big">Join call</button>
         <p class="hint center-text">Your camera and microphone turn on when you join.</p>
-        <p class="mark">Hush™ · © 2026 Mr.Rajpurohit</p>
+        <p class="mark">Ekanto™ · © 2026 Mr.Rajpurohit</p>
       </section>
 
       <!-- A protected call opened in a browser: it must be joined from the app -->
@@ -106,19 +106,19 @@
         <header class="brand">
           <div class="big-icon">🛡️</div>
           <h1>Protected call</h1>
-          <p class="sub">This call can only be joined from the Hush app. The app blocks screenshots, screen recording and browser extensions, so the call stays private.</p>
+          <p class="sub">This call can only be joined from the Ekanto app. The app blocks screenshots, screen recording and browser extensions, so the call stays private.</p>
         </header>
-        <button id="open-app" class="btn primary big">Open in Hush app</button>
-        <a id="download-app" class="btn center-text" target="_blank" rel="noopener noreferrer" hidden>Get the Hush app (Android)</a>
+        <button id="open-app" class="btn primary big">Open in Ekanto app</button>
+        <a id="download-app" class="btn center-text" target="_blank" rel="noopener noreferrer" hidden>Get the Ekanto app (Android)</a>
         <button id="copy-protected" class="btn">Copy link</button>
-        <p class="hint center-text">Have the app? Tap "Open in Hush app", or open the app and paste the link.</p>
-        <p class="mark">Hush™ · © 2026 Mr.Rajpurohit</p>
+        <p class="hint center-text">Have the app? Tap "Open in Ekanto app", or open the app and paste the link.</p>
+        <p class="mark">Ekanto™ · © 2026 Mr.Rajpurohit</p>
       </section>
 
       <!-- Someone in a saved channel is calling -->
       <section id="incoming" class="screen incoming" hidden>
         <div class="incoming-top">
-          <p id="in-kind" class="hint">Hush video call</p>
+          <p id="in-kind" class="hint">Ekanto video call</p>
           <div id="in-avatar" class="in-avatar" aria-hidden="true">P</div>
           <h1 id="in-name">Priya</h1>
           <p id="in-sub" class="sub">is calling…</p>
@@ -133,7 +133,7 @@
             <span>Answer</span>
           </div>
         </div>
-        <p class="mark">Hush™ · © 2026 Mr.Rajpurohit</p>
+        <p class="mark">Ekanto™ · © 2026 Mr.Rajpurohit</p>
       </section>
 
       <!-- In the call -->
@@ -166,7 +166,7 @@
               <button id="share" class="btn primary">Share link</button>
               <button id="copy" class="btn">Copy</button>
             </div>
-            <p class="mark">Hush™ · © 2026 Mr.Rajpurohit</p>
+            <p class="mark">Ekanto™ · © 2026 Mr.Rajpurohit</p>
           </div>
         </div>
 
@@ -195,12 +195,12 @@
           <div class="sheet-card menu">
             <button id="flip" class="menu-item" type="button"><span class="mi"></span>Switch camera</button>
             <button id="screen" class="menu-item" type="button"><span class="mi"></span><span id="screen-label">Share my screen</span></button>
-            <p id="screen-note" class="hint" hidden>Phone browsers can't share their screen. Use a computer, or the Hush app.</p>
+            <p id="screen-note" class="hint" hidden>Phone browsers can't share their screen. Use a computer, or the Ekanto app.</p>
             <button id="invite" class="menu-item" type="button"><span class="mi"></span>Invite someone</button>
             <button id="save-channel" class="menu-item" type="button"><span class="mi"></span>Save as channel</button>
             <button id="safety-btn" class="menu-item" type="button"><span class="mi">🔒</span>Safety check</button>
             <button id="more-close" class="btn" type="button">Close</button>
-            <p class="mark">Hush™ · © 2026 Mr.Rajpurohit</p>
+            <p class="mark">Ekanto™ · © 2026 Mr.Rajpurohit</p>
           </div>
         </div>
 
@@ -230,7 +230,7 @@
               <span class="ci">📥</span><span><strong>Let them download</strong><br>They can save it. A saved copy stays on their phone.</span>
             </button>
             <button id="send-view" class="choice-row" type="button">
-              <span class="ci">👁️</span><span><strong>View only</strong><br>They can only look at it inside Hush. Gone when the call ends.</span>
+              <span class="ci">👁️</span><span><strong>View only</strong><br>They can only look at it inside Ekanto. Gone when the call ends.</span>
             </button>
             <p id="send-warning" class="warn" hidden></p>
             <button id="send-cancel" class="btn" type="button">Cancel</button>
@@ -297,7 +297,7 @@
         </header>
         <button id="again" class="btn primary big">Start a new call</button>
         <button id="home-btn" class="btn">Home</button>
-        <p class="mark">Hush™ · © 2026 Mr.Rajpurohit</p>
+        <p class="mark">Ekanto™ · © 2026 Mr.Rajpurohit</p>
       </section>
 
       <!-- Back during a call: asked, never hung up by accident -->
@@ -338,13 +338,13 @@
         </div>
       </div>
 
-      <!-- App: what Android needs so a closed Hush can still ring -->
+      <!-- App: what Android needs so a closed Ekanto can still ring -->
       <div id="ring-sheet" class="sheet fixed" hidden>
         <div class="sheet-card menu">
           <h2>Ring like a phone call</h2>
-          <p class="sub">So Hush can ring you even when it is closed, allow these once:</p>
+          <p class="sub">So Ekanto can ring you even when it is closed, allow these once:</p>
           <div id="ring-list" class="audio-list"></div>
-          <p class="hint">Xiaomi, Oppo, Vivo, Realme, OnePlus: also turn on <strong>Autostart</strong> for Hush (Settings → Apps → Hush).</p>
+          <p class="hint">Xiaomi, Oppo, Vivo, Realme, OnePlus: also turn on <strong>Autostart</strong> for Ekanto (Settings → Apps → Ekanto).</p>
           <button id="ring-close" class="btn" type="button">Done</button>
         </div>
       </div>

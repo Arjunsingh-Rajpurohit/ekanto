@@ -33,7 +33,7 @@ function contentSecurityPolicy(): Plugin {
 }
 
 export default defineConfig({
-  // Relative paths work both on GitHub Pages (/hush/) and inside the Android app.
+  // Relative paths work both on GitHub Pages (/ekanto/) and inside the Android app.
   base: './',
   plugins: [contentSecurityPolicy()],
   build: { target: 'es2022', sourcemap: false },

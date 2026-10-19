@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Ekanto door-bubble, white, for the status bar and notifications (knob = a hole). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="320"
+    android:viewportHeight="320">
+    <group android:translateX="-82" android:translateY="-116">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:fillType="evenOdd"
+            android:pathData="M162,220 A94,94 0 0,1 350,220 V388 H206 L134,424 L162,364 Z M282,286 A24,24 0 1,0 330,286 A24,24 0 1,0 282,286 Z" />
+    </group>
+</vector>

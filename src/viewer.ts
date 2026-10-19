@@ -4,7 +4,7 @@ import { Share } from '@capacitor/share';
 import type { ChatFile } from './chat';
 
 /**
- * Shows a file from the chat inside Hush. Nothing is ever navigated to or opened by the browser:
+ * Shows a file from the chat inside Ekanto. Nothing is ever navigated to or opened by the browser:
  * pictures are painted onto a canvas (no "save image" menu), videos and audio play with downloads
  * turned off, text is shown as plain text, PDFs are drawn page by page. A view-only file has no
  * way out of the app except a photo of the screen — or a screenshot on the website.
@@ -81,7 +81,7 @@ export async function saveFile(file: ChatFile): Promise<void> {
   const name = file.name.replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_') || 'file';
   if (!Capacitor.isNativePlatform()) {
     // Always as a plain download, never opened in the browser (a sender could label an HTML
-    // page as a "photo"; opened here, it would run inside Hush).
+    // page as a "photo"; opened here, it would run inside Ekanto).
     const url = URL.createObjectURL(new Blob([file.blob!], { type: 'application/octet-stream' }));
     const a = document.createElement('a');
     a.href = url;

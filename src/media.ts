@@ -49,7 +49,7 @@ export async function cameraTrack(facing: Facing): Promise<MediaStreamTrack> {
   return stream.getVideoTracks()[0];
 }
 
-/** Phone browsers can't share their screen at all; computers and the Hush app can. */
+/** Phone browsers can't share their screen at all; computers and the Ekanto app can. */
 export function canShareScreenInBrowser(): boolean {
   return typeof navigator.mediaDevices?.getDisplayMedia === 'function';
 }

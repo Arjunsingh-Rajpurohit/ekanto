@@ -12,7 +12,7 @@ export interface Invite {
   /** Most people allowed in the call, including the person who made it. Null = no limit. */
   limit: number | null;
   /**
-   * Protected call: joinable only from the Hush app, which blocks screenshots, screen recording
+   * Protected call: joinable only from the Ekanto app, which blocks screenshots, screen recording
    * and has no browser extensions. Link ends in ".p".
    */
   appOnly: boolean;

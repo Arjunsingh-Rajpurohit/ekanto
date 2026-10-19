@@ -11,7 +11,7 @@ import okhttp3.WebSocket;
 import okhttp3.WebSocketListener;
 
 /**
- * One connection to one ring relay, kept open while Hush is closed so a saved channel can ring.
+ * One connection to one ring relay, kept open while Ekanto is closed so a saved channel can ring.
  * It only ever carries sealed rings. Everything runs on the ring service's own thread.
  */
 abstract class RingLink extends WebSocketListener {

@@ -33,7 +33,7 @@ import java.nio.ByteBuffer;
 /**
  * Runs while a call is on. Android lets an app keep using the microphone and camera — and capture
  * the screen — only from a visible "foreground service" with a notification, so this is that:
- * "Hush call in progress". Screen frames go straight to the page (and into the encrypted call);
+ * "Ekanto call in progress". Screen frames go straight to the page (and into the encrypted call);
  * nothing is recorded or stored.
  */
 public class CallService extends Service {
@@ -103,15 +103,15 @@ public class CallService extends Service {
         NotificationManager manager = getSystemService(NotificationManager.class);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && manager.getNotificationChannel(CHANNEL) == null) {
             NotificationChannel channel = new NotificationChannel(CHANNEL, "Calls", NotificationManager.IMPORTANCE_LOW);
-            channel.setDescription("Shown while a Hush call is on");
+            channel.setDescription("Shown while a Ekanto call is on");
             manager.createNotificationChannel(channel);
         }
         Intent open = new Intent(this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent tap = PendingIntent.getActivity(this, 0, open, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         PendingIntent hangUp = PendingIntent.getService(this, 1, intent(this, ACTION_HANG_UP), PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         Notification notification = new NotificationCompat.Builder(this, CHANNEL)
-            .setSmallIcon(android.R.drawable.presence_video_online)
-            .setContentTitle(screen ? "Hush · sharing your screen" : "Hush call in progress")
+            .setSmallIcon(R.drawable.ic_stat_ekanto)
+            .setContentTitle(screen ? "Ekanto · sharing your screen" : "Ekanto call in progress")
             .setContentText("Tap to return to the call")
             .setContentIntent(tap)
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Hang up", hangUp)

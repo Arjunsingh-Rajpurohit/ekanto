@@ -1,6 +1,10 @@
-# Hush — private video calls
+# Ekanto — private calls
 
-Video calls for 2 or more people. No login, no account, nothing saved. Just a name and a link.
+Video and voice calls for 2 or more people. No login, no account, nothing saved. Just a name and a link.
+
+Website: https://arjunsingh-rajpurohit.github.io/ekanto/ · Android app: [ekanto.apk](https://github.com/Arjunsingh-Rajpurohit/ekanto/releases/latest/download/ekanto.apk)
+
+*Ekanto* (Bengali একান্ত, Hindi एकांत) — private, just us. Formerly "Hush"; links made before the rename still open.
 
 ## How it works
 
@@ -25,9 +29,9 @@ Why a copied link can't get anyone in: the channel's key is never in a link. It 
 inside the encrypted call, only to the people in that call. Each call still gets a brand-new secret,
 and the ring's meeting name changes every day.
 
-Ringing while Hush is closed works in the **Android app** (a quiet "Hush is ready for calls" notification
+Ringing while Ekanto is closed works in the **Android app** (a quiet "Ekanto is ready for calls" notification
 keeps it listening — no Google push, no server). Allow **notifications**, **full-screen calls** and
-**no battery limit** once (Hush asks). On Xiaomi/Oppo/Vivo/Realme/OnePlus also turn on **Autostart**.
+**no battery limit** once (Ekanto asks). On Xiaomi/Oppo/Vivo/Realme/OnePlus also turn on **Autostart**.
 The website rings only while it is open.
 
 ## In a call
@@ -35,7 +39,7 @@ The website rings only while it is open.
 | | |
 |---|---|
 | 💬 **Chat** | Messages, photos and files — only for people in the call now. Gone when the call ends. |
-| 📥 / 👁️ **Files** | Sender picks **Download** (they can save it; a saved copy stays on their phone) or **View only** (shown inside Hush only, never saved, gone after the call). Up to 100 MB per file. |
+| 📥 / 👁️ **Files** | Sender picks **Download** (they can save it; a saved copy stays on their phone) or **View only** (shown inside Ekanto only, never saved, gone after the call). Up to 100 MB per file. |
 | 🖥️ **Share screen** | From a computer browser, or the Android app. Phone browsers can't share their screen (no website can). |
 | 🎥 **Camera** | On/off any time — off really switches the camera off. A voice call can turn video on later. |
 | 🔔 **Alerts** | "Ravi joined", and a warning if someone without the key tries to get in. |

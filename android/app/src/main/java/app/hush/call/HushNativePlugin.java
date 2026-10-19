@@ -28,7 +28,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 /**
- * The Android side of Hush, used from src/native.ts:
+ * The Android side of Ekanto, used from src/native.ts:
  * keeps a call alive in the background, and shares the phone's screen into the call.
  */
 @CapacitorPlugin(
@@ -178,7 +178,7 @@ public class HushNativePlugin extends Plugin {
         call.resolve();
     }
 
-    /* ---------- Saved channels: ringing while Hush is closed ---------- */
+    /* ---------- Saved channels: ringing while Ekanto is closed ---------- */
 
     /** The page's saved channels (only their ring part) and your name, for the background listener. */
     @PluginMethod
@@ -223,7 +223,7 @@ public class HushNativePlugin extends Plugin {
             } else if ("fullScreen".equals(which) && Build.VERSION.SDK_INT >= 34) {
                 getActivity().startActivity(new Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, pkg));
             } else if ("battery".equals(which)) {
-                // Hush is not on Google Play, so it may ask this directly: one tap, "Allow".
+                // Ekanto is not on Google Play, so it may ask this directly: one tap, "Allow".
                 getActivity().startActivity(new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, pkg));
             }
         } catch (Exception e) {
