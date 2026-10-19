@@ -21,6 +21,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Hush links (WhatsApp, SMS…) open straight in the app. Android checks
+                 https://arjunsingh-rajpurohit.github.io/.well-known/assetlinks.json on install. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="arjunsingh-rajpurohit.github.io" android:pathPrefix="/hush" />
+            </intent-filter>
+
             <!-- "Open in Hush app" on the website: hushcall://join#<call link> -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
