@@ -32,9 +32,23 @@ function contentSecurityPolicy(): Plugin {
   };
 }
 
+/**
+ * The card a chat app shows for a shared link (WhatsApp, Telegram…): title, line and picture.
+ * Chat apps need the picture's full address. Only this page's address is ever fetched for it —
+ * never the part after the #, so the call's key stays out of every preview.
+ */
+function shareCard(): Plugin {
+  const fromBuild = process.env.VITE_PUBLIC_URL;
+  const base = fromBuild ? new URL(fromBuild.endsWith('/') ? fromBuild : `${fromBuild}/`).href : './';
+  return {
+    name: 'ekanto-share-card',
+    transformIndexHtml: (html) => html.replaceAll('%SHARE_URL%', base),
+  };
+}
+
 export default defineConfig({
   // Relative paths work both on GitHub Pages (/ekanto/) and inside the Android app.
   base: './',
-  plugins: [contentSecurityPolicy()],
+  plugins: [contentSecurityPolicy(), shareCard()],
   build: { target: 'es2022', sourcemap: false },
 });

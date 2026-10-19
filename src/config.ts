@@ -30,6 +30,8 @@ export const APP_SCHEME = 'hushcall';
 /** Where shared links point: the website itself, or (inside the Android app) the website's address. */
 export function publicUrl(): string {
   const fromBuild = env.VITE_PUBLIC_URL as string | undefined;
-  if (fromBuild) return fromBuild.endsWith('/') ? fromBuild : `${fromBuild}/`;
-  return `${location.origin}${location.pathname}`;
+  // Written the standard way (host in lower case): Android matches app links letter for letter,
+  // so a link starting "https://Arjunsingh-…" would open the browser instead of the app.
+  const href = new URL(fromBuild || `${location.origin}${location.pathname}`).href;
+  return href.endsWith('/') ? href : `${href}/`;
 }

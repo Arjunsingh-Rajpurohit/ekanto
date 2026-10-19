@@ -532,8 +532,10 @@ async function stopScreen(): Promise<void> {
 async function shareLink(): Promise<void> {
   $('more-sheet').hidden = true;
   const url = link();
-  const kind = invite?.voice ? 'Join my private voice call' : 'Join my private video call';
-  const text = invite?.reason ? `${kind}: “${invite.reason}”` : kind;
+  // A clear message around the link: what it is, why (if said), and how long it works.
+  const kind = invite?.voice ? 'Join my private voice call on Ekanto' : 'Join my private video call on Ekanto';
+  const text = [`🔒 ${kind}`, invite?.reason ? `“${invite.reason}”` : '', `Works for ${LINK_HOURS} hours · encrypted · no login`]
+    .filter(Boolean).join('\n');
   try {
     if (IN_APP) await Share.share({ title: 'Private call', text, url });
     else if (navigator.share) await navigator.share({ title: 'Private call', text, url });
