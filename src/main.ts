@@ -1247,7 +1247,7 @@ $('viewer-close').addEventListener('click', () => panel?.hideViewer());
 
 // Saved channels
 /** Who can be in a new channel: the call that saves it lets in only this many, so nobody extra gets it. */
-let newChannelSize: number | null = 2;
+let newChannelSize: number | null = null;
 function setChannelSize(n: number | null): void {
   newChannelSize = n;
   for (const b of $('newch-sizes').querySelectorAll<HTMLButtonElement>('button')) {
@@ -1266,7 +1266,7 @@ for (const b of $('newch-sizes').querySelectorAll<HTMLButtonElement>('button')) 
 for (const id of ['new-channel', 'new-channel-mini']) {
   $(id).addEventListener('click', () => {
     $<HTMLInputElement>('newch-name').value = '';
-    setChannelSize(2);
+    setChannelSize(null);
     $('newch-sheet').hidden = false;
     $('newch-name').focus();
   });
