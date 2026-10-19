@@ -103,11 +103,23 @@
 
       <!-- In the call -->
       <section id="call" class="screen call" hidden>
-        <div id="grid" class="grid"></div>
-        <video id="local" class="mirror" autoplay playsinline muted></video>
+        <!-- The call's pictures: big one, grid, strip of small ones, and the floating one you can drag -->
+        <div id="stage" class="stage" data-layout="alone">
+          <div class="main"></div>
+          <div id="grid" class="grid"></div>
+          <div class="strip"></div>
+          <div class="float" data-corner="tr" hidden></div>
+        </div>
 
         <header class="call-top">
-          <button id="status" class="chip" type="button">Starting…</button>
+          <div class="top-row">
+            <button id="status" class="chip" type="button">Starting…</button>
+            <div class="top-actions">
+              <button id="layout-btn" class="mini" type="button" aria-label="Change layout" hidden></button>
+              <button id="pip-btn" class="mini" type="button" aria-label="Pop out video" hidden></button>
+              <button id="full-btn" class="mini" type="button" aria-label="Full screen" hidden></button>
+            </div>
+          </div>
         </header>
 
         <div id="waiting" class="overlay" hidden>

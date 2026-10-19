@@ -268,37 +268,11 @@ h2 {
   overflow: hidden;
 }
 
-.grid {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  gap: 4px;
-  padding: calc(60px + env(safe-area-inset-top)) 4px calc(104px + env(safe-area-inset-bottom));
-  grid-template-columns: 1fr;
-  grid-auto-rows: 1fr;
-}
 
-/* One person fills the screen; more people share it. */
-.grid[data-count='1'] {
-  padding: 0;
-  gap: 0;
-}
 
-.grid[data-count='3'],
-.grid[data-count='4'] {
-  grid-template-columns: 1fr 1fr;
-}
 
-.grid[data-count='5'],
-.grid[data-count='6'] {
-  grid-template-columns: 1fr 1fr;
-}
 
-.grid[data-count='7'],
-.grid[data-count='8'],
-.grid[data-count='9'] {
-  grid-template-columns: 1fr 1fr 1fr;
-}
+
 
 .tile {
   position: relative;
@@ -308,9 +282,6 @@ h2 {
   background: var(--card);
 }
 
-.grid[data-count='1'] .tile {
-  border-radius: 0;
-}
 
 .tile video {
   width: 100%;
@@ -336,10 +307,6 @@ h2 {
   text-overflow: ellipsis;
 }
 
-.grid[data-count='1'] .tile .name {
-  bottom: calc(110px + env(safe-area-inset-bottom));
-  left: 14px;
-}
 
 .tile-wait {
   position: absolute;
@@ -356,29 +323,6 @@ h2 {
 
 .tile.waiting .tile-wait {
   display: flex;
-}
-
-#local {
-  position: absolute;
-  top: calc(64px + env(safe-area-inset-top));
-  right: 12px;
-  width: 26vw;
-  max-width: 140px;
-  aspect-ratio: 3 / 4;
-  object-fit: cover;
-  border-radius: 14px;
-  background: var(--card-2);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  z-index: 4;
-}
-
-#local.mirror {
-  transform: scaleX(-1);
-}
-
-#local.cam-off {
-  opacity: 0.3;
 }
 
 .call-top {
@@ -642,19 +586,8 @@ a.btn {
   background: #0d0e11;
 }
 
-/* A shared screen spans the whole first row. */
-.grid.has-screen .tile.screen {
-  grid-column: 1 / -1;
-}
 
-.grid.has-screen {
-  grid-auto-rows: minmax(0, 1fr);
-}
 
-.grid.has-screen[data-count='2'],
-.grid.has-screen[data-count='3'] {
-  grid-template-rows: 2fr 1fr;
-}
 
 /* ---------- Controls ---------- */
 
@@ -1029,4 +962,210 @@ a.btn {
   border: 0;
   background: var(--danger);
   color: #fff;
+}
+
+/* ---------- Stage: big picture, grid, strip and the floating picture ---------- */
+
+.stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.stage .main,
+.stage .grid,
+.stage .strip {
+  display: none;
+}
+
+/* One other person: they fill the screen. */
+.stage[data-layout='duo'] .main {
+  display: block;
+  flex: 1;
+  min-height: 0;
+}
+
+/* A group: the grid fits between the top chip and the buttons. */
+.stage[data-layout='grid'] .grid {
+  display: grid;
+  flex: 1;
+  min-height: 0;
+  gap: 4px;
+  padding: calc(60px + env(safe-area-inset-top)) 4px calc(100px + env(safe-area-inset-bottom));
+  grid-auto-rows: 1fr;
+  align-content: center;
+}
+
+/* Someone made big: big picture + a strip of the others. */
+.stage[data-layout='focus'] .main {
+  display: block;
+  flex: 1;
+  min-height: 0;
+  margin: calc(56px + env(safe-area-inset-top)) 4px 4px;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.stage[data-layout='focus'] .strip {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 2px 6px calc(100px + env(safe-area-inset-bottom));
+  scrollbar-width: none;
+}
+
+.stage[data-layout='focus'] .strip .tile {
+  flex: none;
+  width: 104px;
+  height: 136px;
+}
+
+/* Computer: the strip goes down the right side, like Meet. */
+@media (min-width: 900px) and (orientation: landscape) {
+  .stage[data-layout='focus'] {
+    flex-direction: row;
+  }
+
+  .stage[data-layout='focus'] .main {
+    margin: calc(60px + env(safe-area-inset-top)) 6px 96px 6px;
+  }
+
+  .stage[data-layout='focus'] .strip {
+    flex-direction: column;
+    width: 230px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 60px 8px 96px 0;
+  }
+
+  .stage[data-layout='focus'] .strip .tile {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 10;
+  }
+}
+
+.stage .main .tile {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+
+.stage[data-layout='focus'] .main .tile {
+  border-radius: 16px;
+}
+
+/* The floating picture: drag it anywhere, it settles in a corner. */
+.float {
+  position: absolute;
+  z-index: 4;
+  width: 28vw;
+  max-width: 150px;
+  aspect-ratio: 3 / 4;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  touch-action: none;
+  cursor: grab;
+  transition: left 0.25s ease, top 0.25s ease, right 0.25s ease, bottom 0.25s ease;
+}
+
+@media (min-width: 900px) {
+  .float {
+    max-width: 240px;
+    aspect-ratio: 16 / 10;
+  }
+}
+
+.float.dragging {
+  transition: none;
+  cursor: grabbing;
+}
+
+.float[data-corner='tr'] { top: calc(64px + env(safe-area-inset-top)); right: 12px; }
+.float[data-corner='tl'] { top: calc(64px + env(safe-area-inset-top)); left: 12px; }
+.float[data-corner='br'] { bottom: calc(108px + env(safe-area-inset-bottom)); right: 12px; }
+.float[data-corner='bl'] { bottom: calc(108px + env(safe-area-inset-bottom)); left: 12px; }
+
+.float .tile {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+
+.float .tile .name {
+  font-size: 11px;
+  left: 6px;
+  bottom: 6px;
+  padding: 2px 8px;
+}
+
+.stage[data-layout='alone'] .float {
+  z-index: 4;
+}
+
+/* Your own camera, mirrored like a mirror (never a shared screen). */
+.tile.mirror video {
+  transform: scaleX(-1);
+}
+
+/* Whoever is talking gets a green ring. */
+.tile.speaking::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 3px #2fb26f;
+  pointer-events: none;
+}
+
+.tile {
+  cursor: pointer;
+}
+
+/* Tap the big picture (one-to-one) to hide the buttons for a clean view. */
+.call.clean .controls,
+.call.clean .call-top {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.controls,
+.call-top {
+  transition: opacity 0.2s ease;
+}
+
+.top-row {
+  width: 100%;
+  max-width: 1100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.top-actions {
+  position: absolute;
+  right: 0;
+  display: flex;
+  gap: 8px;
+}
+
+.mini {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 0;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: rgba(21, 23, 28, 0.72);
+  backdrop-filter: blur(12px);
+}
+
+.mini svg {
+  width: 20px;
+  height: 20px;
 }

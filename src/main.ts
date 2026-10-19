@@ -1,13 +1,15 @@
 import './style.css';
 import { App as NativeApp } from '@capacitor/app';
 import { Share } from '@capacitor/share';
-import { CallSession, type CallState, type Person } from './call';
+import { CallSession, type CallState } from './call';
 import { Chat } from './chat';
 import { ChatPanel } from './chat-ui';
 import { APP_DOWNLOAD_URL, APP_SCHEME, HAS_TURN, publicUrl } from './config';
 import { MAX_PEOPLE, MIN_PEOPLE, SMOOTH_PEOPLE, inviteToHash, newInvite, parseInvite, type Invite } from './invite';
 import { MediaProblem, cameraTrack, canShareScreenInBrowser, openCamera, screenTrack, type Facing } from './media';
 import { IN_APP, nativeCall, nativeScreenTrack } from './native';
+import { SpeakingMeter } from './speaking';
+import { Stage } from './stage';
 import { clearSaved } from './viewer';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -24,6 +26,10 @@ const ICON = {
   chat: svg('<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>'),
   screen: svg('<rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/>'),
   more: svg('<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>'),
+  grid: svg('<rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>'),
+  speaker: svg('<rect width="18" height="12" x="3" y="3" rx="2"/><rect width="5" height="3" x="3" y="18" rx="1"/><rect width="5" height="3" x="10" y="18" rx="1"/><rect width="5" height="3" x="17" y="18" rx="1"/>'),
+  pip: svg('<path d="M21 9V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10c0 1.1.9 2 2 2h4"/><rect width="10" height="7" x="12" y="13" rx="2"/>'),
+  full: svg('<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>'),
   end: svg('<path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.34a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"/><line x1="22" x2="2" y1="2" y2="22"/>'),
 };
 
@@ -43,6 +49,11 @@ let lastState: CallState | null = null;
 let warnedBlocked = false;
 /** The screen being shared, and how to stop it. */
 let sharing: { track: MediaStreamTrack; stop: () => Promise<void> } | null = null;
+/** Your own picture's stream, rebuilt only when its video track changes (so it never flickers). */
+let meView: { trackId: string; stream: MediaStream } | null = null;
+
+const stage = new Stage($('stage'), () => $('call').classList.toggle('clean'));
+const meter = new SpeakingMeter((speaking, loudest) => stage.setSpeaking(speaking, loudest));
 
 /* ---------- Small helpers ---------- */
 
@@ -168,7 +179,9 @@ async function enterCall(name: string): Promise<void> {
       e instanceof MediaProblem ? e.message : 'Please try again.');
   }
   show('call');
-  showLocal();
+  stage.reset();
+  meter.watch('me', stream);
+  updateMe(name);
   $('waiting-sub').textContent = `Send them the link. This ${callWord(invite)} allows ${peopleText(invite.limit)}${invite.appOnly ? ' and only the Hush app can join' : ''}.`;
   warnedBlocked = false;
 
@@ -215,47 +228,23 @@ function render(state: CallState): void {
     toast('🛡️ Someone without the key tried to get in. They were blocked.');
     navigator.vibrate?.([60, 80, 60]);
   }
-  drawGrid(state.people);
+  stage.setPeople(state.people);
+  meter.keep(new Set(['me', ...state.people.map((p) => p.id)]));
+  for (const p of state.people) meter.watch(p.id, p.stream);
+  drawTopActions(state);
   drawStatus(state);
 }
 
-/** One tile per person; tiles are reused so their video doesn't flicker on every update. */
-function drawGrid(people: Person[]): void {
-  const grid = $('grid');
-  // Someone sharing their screen goes first and gets the most room.
-  const ordered = [...people].sort((a, b) => Number(b.screen) - Number(a.screen));
-  grid.dataset['count'] = String(Math.min(ordered.length, 9));
-  grid.classList.toggle('has-screen', ordered.some((p) => p.screen));
-  const keep = new Set(ordered.map((p) => p.id));
-  for (const tile of [...grid.children] as HTMLElement[]) if (!keep.has(tile.dataset['id']!)) tile.remove();
-  for (const person of ordered) {
-    let tile = grid.querySelector<HTMLElement>(`[data-id="${CSS.escape(person.id)}"]`);
-    if (!tile) {
-      tile = document.createElement('div');
-      tile.className = 'tile';
-      tile.dataset['id'] = person.id;
-      const video = document.createElement('video');
-      video.autoplay = true;
-      video.playsInline = true;
-      const avatar = document.createElement('div');
-      avatar.className = 'avatar';
-      const label = document.createElement('span');
-      label.className = 'name';
-      const wait = document.createElement('div');
-      wait.className = 'tile-wait';
-      wait.innerHTML = '<div class="spinner"></div><p>Connecting securely…</p>';
-      tile.append(video, avatar, label, wait);
-    }
-    grid.append(tile);
-    const video = tile.querySelector('video')!;
-    if (video.srcObject !== person.stream) video.srcObject = person.stream;
-    // textContent, never innerHTML: a name is whatever someone typed.
-    tile.querySelector('.name')!.textContent = person.screen ? `${person.name} · sharing screen` : person.name;
-    tile.querySelector('.avatar')!.textContent = (person.name.trim()[0] ?? '?').toUpperCase();
-    tile.classList.toggle('waiting', !person.connected);
-    tile.classList.toggle('no-video', person.cam === false && !person.screen);
-    tile.classList.toggle('screen', person.screen);
-  }
+/** Layout, pop-out and full-screen buttons, only where they make sense. */
+function drawTopActions(state: CallState): void {
+  const layoutBtn = $('layout-btn');
+  layoutBtn.hidden = state.people.length < 2;
+  layoutBtn.innerHTML = stage.getMode() === 'grid' ? ICON.speaker : ICON.grid;
+  layoutBtn.setAttribute('aria-label', stage.getMode() === 'grid' ? 'Speaker view' : 'Grid view');
+  $('pip-btn').innerHTML = ICON.pip;
+  $('pip-btn').hidden = IN_APP || !document.pictureInPictureEnabled || state.people.length === 0;
+  $('full-btn').innerHTML = ICON.full;
+  $('full-btn').hidden = IN_APP || !document.fullscreenEnabled || window.innerWidth < 700;
 }
 
 function drawStatus(state: CallState): void {
@@ -272,14 +261,13 @@ function drawStatus(state: CallState): void {
   }
 }
 
-/** Your own picture in the corner: camera (mirrored), your shared screen, or nothing. */
-function showLocal(): void {
-  const local = $<HTMLVideoElement>('local');
+/** Your own picture: camera (mirrored), your shared screen, or your initial. */
+function updateMe(name = savedName()): void {
   const camera = stream?.getVideoTracks()[0];
-  const track = sharing?.track ?? camera;
-  local.srcObject = track ? new MediaStream([track]) : null;
-  local.hidden = !track;
-  local.classList.toggle('mirror', !sharing && facing === 'user');
+  const track = sharing?.track ?? camera ?? null;
+  if (!track) meView = null;
+  else if (meView?.trackId !== track.id) meView = { trackId: track.id, stream: new MediaStream([track]) };
+  stage.setMe({ stream: meView?.stream ?? null, name: name || 'You', video: !!track, mirror: !sharing && facing === 'user', screen: !!sharing });
 }
 
 function drawControls(): void {
@@ -307,7 +295,7 @@ function drawControls(): void {
   ($('screen') as HTMLButtonElement).disabled = !canShare;
   $('screen-note').hidden = canShare;
   $('screen-label').textContent = sharing ? 'Stop sharing screen' : 'Share my screen';
-  showLocal();
+  updateMe();
 }
 
 /** Camera off really switches the camera off (its light goes out); on starts it again. */
@@ -432,8 +420,12 @@ function finish(): number {
   wakeLock = null;
   void nativeCall.end();
   void clearSaved();
-  $('grid').replaceChildren();
-  $<HTMLVideoElement>('local').srcObject = null;
+  stage.reset();
+  meter.stop();
+  meView = null;
+  $('call').classList.remove('clean');
+  if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
+  if (document.pictureInPictureElement) void document.exitPictureInPicture().catch(() => undefined);
   for (const id of ['sheet', 'more-sheet', 'send-sheet', 'leave-sheet']) $(id).hidden = true;
   lastState = null;
   history.replaceState(null, '', location.pathname);
@@ -583,6 +575,19 @@ $('flip').addEventListener('click', () => {
   void flipCamera();
 });
 $('screen').addEventListener('click', () => void toggleScreen());
+$('layout-btn').addEventListener('click', () => {
+  stage.setMode(stage.getMode() === 'grid' ? 'speaker' : 'grid');
+  if (lastState) drawTopActions(lastState);
+});
+$('full-btn').addEventListener('click', () => {
+  if (document.fullscreenElement) void document.exitFullscreen();
+  else void $('call').requestFullscreen().catch(() => undefined);
+});
+$('pip-btn').addEventListener('click', () => {
+  if (document.pictureInPictureElement) return void document.exitPictureInPicture();
+  const video = stage.mainVideo() ?? document.querySelector<HTMLVideoElement>('#grid video');
+  void video?.requestPictureInPicture().catch(() => toast("This browser can't pop out the video."));
+});
 $('invite').addEventListener('click', () => void shareLink());
 $('safety-btn').addEventListener('click', openSafety);
 for (const id of ['sheet', 'more-sheet', 'send-sheet']) {
