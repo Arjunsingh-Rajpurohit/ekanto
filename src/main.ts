@@ -46,6 +46,23 @@ let sharing: { track: MediaStreamTrack; stop: () => Promise<void> } | null = nul
 
 /* ---------- Small helpers ---------- */
 
+/**
+ * A random secret that stays on this phone, so rejoining a call replaces your old self instead of
+ * showing a second "you". Only per-call tags derived from it ever leave the phone.
+ */
+function deviceKey(): string {
+  try {
+    let key = localStorage.getItem('hush.device');
+    if (!key) {
+      key = crypto.randomUUID() + crypto.randomUUID();
+      localStorage.setItem('hush.device', key);
+    }
+    return key;
+  } catch {
+    return crypto.randomUUID();
+  }
+}
+
 /** The only thing kept on the phone: the name you typed, so you don't type it every time. */
 const NAME_KEY = 'hush.name';
 function savedName(): string {
@@ -163,7 +180,10 @@ async function enterCall(name: string): Promise<void> {
     onChange: render,
     platform: IN_APP ? 'app' : 'web',
     media: { cam: !!stream.getVideoTracks()[0], screen: false },
+    deviceKey: deviceKey(),
   });
+  // The browser's Back button asks first instead of leaving (see 'popstate' below).
+  if (!IN_APP) history.pushState({ hushCall: true }, '', location.href);
   chat = new Chat(session, () => panel?.render());
   panel = new ChatPanel(chat, () => lastState?.people ?? [], toast);
   drawControls();
@@ -414,7 +434,7 @@ function finish(): number {
   void clearSaved();
   $('grid').replaceChildren();
   $<HTMLVideoElement>('local').srcObject = null;
-  for (const id of ['sheet', 'more-sheet', 'send-sheet']) $(id).hidden = true;
+  for (const id of ['sheet', 'more-sheet', 'send-sheet', 'leave-sheet']) $(id).hidden = true;
   lastState = null;
   history.replaceState(null, '', location.pathname);
   return since ? Date.now() - since : 0;
@@ -593,6 +613,17 @@ $('viewer-close').addEventListener('click', () => panel?.hideViewer());
 window.addEventListener('hashchange', () => {
   if (!session) route();
 });
+// Back in a browser during a call: stay on the call and ask.
+window.addEventListener('popstate', () => {
+  if (!session) return;
+  history.pushState({ hushCall: true }, '', location.href);
+  $('leave-sheet').hidden = false;
+});
+$('leave-yes').addEventListener('click', () => {
+  $('leave-sheet').hidden = true;
+  endCall();
+});
+$('leave-no').addEventListener('click', () => ($('leave-sheet').hidden = true));
 // Closing the tab says goodbye, so nobody is left waiting for a ghost.
 window.addEventListener('pagehide', () => session?.leave());
 document.addEventListener('visibilitychange', () => {

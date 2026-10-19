@@ -53,11 +53,17 @@ interface Message {
   name: string;
   /** When the sender joined: the earliest joiners keep their seats when a call is full. */
   joined: number;
+  /**
+   * "Same phone" tag: equal when the same phone rejoins this call, different in every other call
+   * (it is derived from the call's own room), so it can't link anyone's calls together.
+   */
+  tag?: string;
   sdp?: string;
 }
 
 interface Peer {
   id: string;
+  tag: string | undefined;
   name: string;
   joined: number;
   pc: RTCPeerConnection;
@@ -130,6 +136,8 @@ export class CallSession {
   private readonly getLocal: () => MediaStream;
   private readonly onChange: (state: CallState) => void;
   private readonly platform: 'app' | 'web';
+  private readonly deviceKey: string;
+  private tag = '';
   private media: MediaState;
   /** Chat and files: everything on the side-channel that isn't a camera/screen signal. */
   onChannelData: (from: Person, data: string | ArrayBuffer) => void = () => undefined;
@@ -143,6 +151,8 @@ export class CallSession {
     onChange: (state: CallState) => void;
     platform: 'app' | 'web';
     media: MediaState;
+    /** A random secret kept on this phone; only ever used to derive per-call tags. */
+    deviceKey: string;
   }) {
     this.invite = options.invite;
     this.name = options.name;
@@ -151,6 +161,7 @@ export class CallSession {
     this.onChange = options.onChange;
     this.platform = options.platform;
     this.media = options.media;
+    this.deviceKey = options.deviceKey;
   }
 
   /** Tell everyone the camera went on/off or screen sharing started/stopped. */
@@ -190,6 +201,7 @@ export class CallSession {
 
   async start(): Promise<void> {
     this.room = await deriveRoom(this.invite.secret, inviteScope(this.invite));
+    this.tag = await callTag(this.deviceKey, this.room.topic);
     this.joined = Date.now();
     let first = true;
     this.relay.connect(this.room.topic, (data) => void this.receive(data), (count) => {
@@ -226,6 +238,14 @@ export class CallSession {
   leave(): void {
     if (this.ended) return;
     this.ended = true;
+    // Straight down each connection first: it arrives at once, even while this page is closing.
+    for (const peer of this.peers.values()) {
+      try {
+        if (peer.channel.readyState === 'open') peer.channel.send('{"k":"bye"}');
+      } catch {
+        // Already closing.
+      }
+    }
     void this.post({ t: 'bye' });
     clearInterval(this.helloTimer);
     clearTimeout(this.fullTimer);
@@ -265,7 +285,7 @@ export class CallSession {
   private post(message: Pick<Message, 't' | 'to' | 'sdp'>): Promise<void> {
     const room = this.room;
     if (!room) return Promise.resolve();
-    const full: Message = { ...message, from: this.id, ts: Date.now(), name: this.name, joined: this.joined };
+    const full: Message = { ...message, from: this.id, ts: Date.now(), name: this.name, joined: this.joined, tag: this.tag };
     log('out', message.t, short(this.id), '->', message.to ? short(message.to) : 'all',
       message.sdp ? `paths: ${(message.sdp.match(/a=candidate:\S+ \d \S+ \d+ \S+ \d+ typ \w+/g) ?? []).map((c) => c.split(' ').pop()).join(',')}` : '');
     this.sending = this.sending.then(async () => this.relay.send(await seal(room.key, full))).catch(() => undefined);
@@ -328,6 +348,12 @@ export class CallSession {
    * so they all agree on who is in and who is turned away. True = talk to this person.
    */
   private admit(m: Message): boolean {
+    // The same phone rejoining (reload, back button, app restarted): its old self is gone.
+    if (m.tag) {
+      for (const p of [...this.peers.values()]) {
+        if (p.tag === m.tag && p.id !== m.from) this.removePeer(p, null);
+      }
+    }
     const limit = this.invite.limit;
     if (limit) {
       const others = [...this.peers.values()].filter((p) => p.id !== m.from && this.alive(p));
@@ -365,6 +391,10 @@ export class CallSession {
   }
 
   private onChannel(peer: Peer, data: string | ArrayBuffer): void {
+    if (data === '{"k":"bye"}') {
+      if (this.peers.get(peer.id) === peer) this.removePeer(peer, `${peer.name} left`);
+      return;
+    }
     if (typeof data === 'string' && data.startsWith('{"k":"hi"')) {
       try {
         const hi = JSON.parse(data) as { platform?: string; cam?: boolean; screen?: boolean };
@@ -396,7 +426,7 @@ export class CallSession {
     const channel = pc.createDataChannel('hush', { negotiated: true, id: 0, ordered: true });
     channel.binaryType = 'arraybuffer';
     const peer: Peer = {
-      id: m.from, name: m.name?.slice(0, 30) || 'Guest', joined: m.joined, pc,
+      id: m.from, tag: m.tag, name: m.name?.slice(0, 30) || 'Guest', joined: m.joined, pc,
       stream: null, connected: false, safety: null, route: null, lastHeard: Date.now(), announced: false,
       channel, cam: null, screen: false, platform: null,
     };
@@ -405,7 +435,12 @@ export class CallSession {
       this.sayHi(peer);
       this.publish();
     };
-    channel.onclose = () => this.publish();
+    // The side-channel only closes when their connection is gone for good (hung up, page closed).
+    channel.onclose = () => {
+      setTimeout(() => {
+        if (this.peers.get(peer.id) === peer && !this.ended) this.removePeer(peer, `${peer.name} left`);
+      }, 1500);
+    };
     channel.onmessage = (e) => this.onChannel(peer, e.data);
     const local = this.getLocal();
     for (const track of local.getAudioTracks()) pc.addTrack(track, local);
@@ -512,6 +547,7 @@ export class CallSession {
   }
 
   private removePeer(peer: Peer, news: string | null): void {
+    if (this.peers.get(peer.id) !== peer) return;
     this.dropPeer(peer);
     this.peers.delete(peer.id);
     this.state.news = news;
@@ -550,6 +586,13 @@ export class CallSession {
       sender.setParameters(params).catch(() => undefined);
     }
   }
+}
+
+/** HMAC(device key, room): stable for this phone in this call, unrelated across calls. */
+async function callTag(deviceKey: string, topic: string): Promise<string> {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(deviceKey), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const mac = new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`tag|${topic}`)));
+  return toBase64Url(mac.slice(0, 12));
 }
 
 /** The video slot's sender, whether it currently carries a camera, a screen, or nothing. */

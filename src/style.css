@@ -1024,3 +1024,9 @@ a.btn {
   margin-top: 14px;
   padding-top: 0;
 }
+
+.btn.danger-btn {
+  border: 0;
+  background: var(--danger);
+  color: #fff;
+}
