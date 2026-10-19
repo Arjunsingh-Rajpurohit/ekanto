@@ -105,11 +105,24 @@ function updateFloating(state: CallState | null): void {
   }
 }
 
+/**
+ * The app's outputs: whatever the phone reports, and always Speaker and Phone (earpiece) — the
+ * choice must never vanish because the phone was slow to answer, or answered with just one.
+ */
+function appOutputs(): AudioRoutes {
+  const reported = appRoutes?.routes ?? [];
+  const order: AudioRoute[] = ['bluetooth', 'wired', 'earpiece', 'speaker'];
+  const all = order.filter((r) => reported.includes(r) || r === 'earpiece' || r === 'speaker');
+  // Until the phone says, the usual start: earpiece for a voice call, speaker with video.
+  return { routes: all, current: appRoutes?.current ?? (stream?.getVideoTracks()[0] ? 'speaker' : 'earpiece') };
+}
+
 function drawAudioButton(): void {
   const btn = $<HTMLButtonElement>('audio-btn');
   if (IN_APP) {
-    btn.hidden = !appRoutes || appRoutes.routes.length < 2;
-    const route = ROUTE[appRoutes?.current ?? 'speaker'];
+    // Always there during a call, from its first moment.
+    btn.hidden = !session;
+    const route = ROUTE[appOutputs().current];
     btn.innerHTML = ICON[route.icon];
     btn.setAttribute('aria-label', `Sound: ${route.label}`);
   } else {
@@ -140,8 +153,9 @@ function drawAudioSheet(): void {
     b.addEventListener('click', pick);
     return b;
   };
-  if (IN_APP && appRoutes) {
-    list.replaceChildren(...appRoutes.routes.map((r) => item(ROUTE[r].label, ICON[ROUTE[r].icon], r === appRoutes!.current, () => {
+  if (IN_APP) {
+    const outputs = appOutputs();
+    list.replaceChildren(...outputs.routes.map((r) => item(ROUTE[r].label, ICON[ROUTE[r].icon], r === outputs.current, () => {
       void nativeAudio.set(r).then((now) => {
         appRoutes = now;
         drawAudioButton();
@@ -332,9 +346,10 @@ async function enterCall(name: string, via?: ChannelVia, camera?: boolean): Prom
   chat = new Chat(session, () => panel?.render());
   panel = new ChatPanel(chat, () => lastState?.people ?? [], toast);
   drawControls();
+  // Sound first: the speaker/earpiece choice is there from the call's first moment.
+  void startAudio(!stream.getVideoTracks()[0]);
   await session.start();
   if (via) startChannelCall(via);
-  void startAudio(!stream.getVideoTracks()[0]);
   void keepAwake();
   clock = setInterval(() => lastState && drawStatus(lastState), 1000);
 }
