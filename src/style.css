@@ -1198,3 +1198,22 @@ a.btn {
     height: 52px;
   }
 }
+
+/* The app's floating window: just the video, nothing else. */
+body.floating .controls,
+body.floating .call-top,
+body.floating .stage .float,
+body.floating .stage .strip,
+body.floating .tile .name,
+body.floating .toast,
+body.floating .chat,
+body.floating .sheet {
+  display: none !important;
+}
+
+body.floating .stage[data-layout='grid'] .grid,
+body.floating .stage[data-layout='focus'] .main {
+  padding: 0;
+  margin: 0;
+  gap: 2px;
+}

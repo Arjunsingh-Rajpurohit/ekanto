@@ -41,6 +41,7 @@ public class CallService extends Service {
     static final String ACTION_CALL = "app.hush.call.CALL";
     static final String ACTION_SCREEN = "app.hush.call.SCREEN";
     static final String ACTION_STOP_SCREEN = "app.hush.call.STOP_SCREEN";
+    static final String ACTION_HANG_UP = "app.hush.call.HANG_UP";
     static final String EXTRA_CODE = "code";
     static final String EXTRA_DATA = "data";
 
@@ -73,6 +74,10 @@ public class CallService extends Service {
             // The screen-capture type must be in place before the capture starts.
             goForeground(true);
             startCapture(intent.getIntExtra(EXTRA_CODE, 0), intent.getParcelableExtra(EXTRA_DATA));
+        } else if (ACTION_HANG_UP.equals(action)) {
+            // The page hangs up properly (says goodbye, wipes the chat) and then stops this service.
+            HushNativePlugin.emitHangUp();
+            return START_NOT_STICKY;
         } else if (ACTION_STOP_SCREEN.equals(action)) {
             stopCapture();
             goForeground(false);
@@ -98,11 +103,14 @@ public class CallService extends Service {
         }
         Intent open = new Intent(this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent tap = PendingIntent.getActivity(this, 0, open, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+        PendingIntent hangUp = PendingIntent.getService(this, 1, intent(this, ACTION_HANG_UP), PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         Notification notification = new NotificationCompat.Builder(this, CHANNEL)
             .setSmallIcon(android.R.drawable.presence_video_online)
             .setContentTitle(screen ? "Hush · sharing your screen" : "Hush call in progress")
             .setContentText("Tap to return to the call")
             .setContentIntent(tap)
+            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Hang up", hangUp)
+            .setCategory(NotificationCompat.CATEGORY_CALL)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .build();

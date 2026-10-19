@@ -50,6 +50,21 @@ public class HushNativePlugin extends Plugin {
         plugin.notifyListeners("frame", frame);
     }
 
+    /** The call shrank into (or came back from) the floating window. */
+    static void emitFloating(boolean floating) {
+        HushNativePlugin plugin = instance;
+        if (plugin == null) return;
+        JSObject event = new JSObject();
+        event.put("floating", floating);
+        plugin.notifyListeners("floating", event);
+    }
+
+    /** "Hang up" tapped in the notification. */
+    static void emitHangUp() {
+        HushNativePlugin plugin = instance;
+        if (plugin != null) plugin.notifyListeners("hangUp", new JSObject());
+    }
+
     /** Android stopped the screen share (from its own notification or "Stop sharing"). */
     static void emitScreenStopped() {
         HushNativePlugin plugin = instance;
@@ -70,6 +85,7 @@ public class HushNativePlugin extends Plugin {
     @PluginMethod
     public void endCall(PluginCall call) {
         audio.stop();
+        MainActivity.setFloatingAllowed(false);
         getContext().stopService(new Intent(getContext(), CallService.class));
         call.resolve();
     }
@@ -84,6 +100,21 @@ public class HushNativePlugin extends Plugin {
     public void setAudioRoute(PluginCall call) {
         if (audio.select(call.getString("route"))) call.resolve(routes());
         else call.reject("That output isn't available");
+    }
+
+    /** A video is showing: leaving the app floats the call in a small window. */
+    @PluginMethod
+    public void setFloating(PluginCall call) {
+        MainActivity.setFloatingAllowed(call.getBoolean("allowed", false));
+        call.resolve();
+    }
+
+    /** Back during a video call: float instead of leaving. False when not possible. */
+    @PluginMethod
+    public void enterFloating(PluginCall call) {
+        JSObject out = new JSObject();
+        out.put("floating", MainActivity.enterFloating());
+        call.resolve(out);
     }
 
     /** The camera went on/off: earpiece-and-screen-off behaviour follows. */

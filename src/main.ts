@@ -7,7 +7,7 @@ import { ChatPanel } from './chat-ui';
 import { APP_DOWNLOAD_URL, APP_SCHEME, HAS_TURN, publicUrl } from './config';
 import { MAX_PEOPLE, MIN_PEOPLE, SMOOTH_PEOPLE, inviteToHash, newInvite, parseInvite, type Invite } from './invite';
 import { MediaProblem, cameraTrack, canShareScreenInBrowser, openCamera, screenTrack, type Facing } from './media';
-import { IN_APP, nativeAudio, nativeCall, nativeScreenTrack, type AudioRoute, type AudioRoutes } from './native';
+import { IN_APP, nativeAudio, nativeCall, nativeFloat, nativeScreenTrack, type AudioRoute, type AudioRoutes } from './native';
 import type { PluginListenerHandle } from '@capacitor/core';
 import { SpeakingMeter } from './speaking';
 import { Stage } from './stage';
@@ -86,6 +86,16 @@ async function startAudio(voiceStart: boolean): Promise<void> {
     webOutputs = devices.filter((d) => d.kind === 'audiooutput' && d.deviceId !== 'communications');
   }
   drawAudioButton();
+}
+
+/** Video anywhere in the call: then leaving the app floats it in a small window. */
+let floatAllowed = false;
+function updateFloating(state: CallState | null): void {
+  const video = !!stream?.getVideoTracks()[0] || !!sharing || !!state?.people.some((p) => p.cam || p.screen);
+  if (video !== floatAllowed) {
+    floatAllowed = video;
+    void nativeFloat.allow(video);
+  }
 }
 
 function drawAudioButton(): void {
@@ -322,6 +332,7 @@ function render(state: CallState): void {
   for (const p of state.people) meter.watch(p.id, p.stream);
   drawTopActions(state);
   drawStatus(state);
+  updateFloating(state);
 }
 
 /** Layout, pop-out and full-screen buttons, only where they make sense. */
@@ -509,6 +520,8 @@ function finish(): number {
   void wakeLock?.release().catch(() => undefined);
   wakeLock = null;
   void nativeCall.end();
+  floatAllowed = false;
+  document.body.classList.remove('floating');
   void routeListener?.remove();
   routeListener = null;
   appRoutes = null;
@@ -745,6 +758,10 @@ function openFromOutside(url: string | undefined): void {
 }
 
 if (IN_APP) {
+  void nativeFloat.onChange((floating) => document.body.classList.toggle('floating', floating));
+  void nativeFloat.onHangUp(() => {
+    if (session) endCall();
+  });
   void NativeApp.addListener('appUrlOpen', (e) => openFromOutside(e.url));
   void NativeApp.getLaunchUrl().then((r) => openFromOutside(r?.url));
   void NativeApp.addListener('backButton', () => {
@@ -753,7 +770,14 @@ if (IN_APP) {
     if (!$('viewer').hidden) return panel?.hideViewer();
     for (const id of ['send-sheet', 'more-sheet', 'audio-sheet', 'sheet']) if (!$(id).hidden) return void ($(id).hidden = true);
     if (!$('chat').hidden) return panel?.closePanel();
-    if (session) return void NativeApp.minimizeApp();
+    // In a call, Back never hangs up: a video call floats in a small window, a voice call keeps
+    // going in the background (the notification brings it back).
+    if (session) {
+      void nativeFloat.enter().then((floated) => {
+        if (!floated) void NativeApp.minimizeApp();
+      });
+      return;
+    }
     if (!$('home').hidden) return void NativeApp.exitApp();
     show('home');
   });

@@ -14,6 +14,10 @@ interface HushNative {
   setAudioRoute(options: { route: AudioRoute }): Promise<AudioRoutes>;
   setVoiceCall(options: { voice: boolean }): Promise<void>;
   addListener(event: 'audioRoutes', fn: (r: AudioRoutes) => void): Promise<PluginListenerHandle>;
+  setFloating(options: { allowed: boolean }): Promise<void>;
+  enterFloating(): Promise<{ floating: boolean }>;
+  addListener(event: 'floating', fn: (e: { floating: boolean }) => void): Promise<PluginListenerHandle>;
+  addListener(event: 'hangUp', fn: () => void): Promise<PluginListenerHandle>;
 }
 
 export type AudioRoute = 'speaker' | 'earpiece' | 'bluetooth' | 'wired';
@@ -86,3 +90,11 @@ export async function nativeScreenTrack(onStopped: () => void): Promise<{ track:
     },
   };
 }
+
+/** The app's floating video window (Android picture-in-picture) and the notification's Hang up. */
+export const nativeFloat = {
+  allow: (allowed: boolean) => (IN_APP ? plugin.setFloating({ allowed }).catch(() => undefined) : Promise.resolve()),
+  enter: () => plugin.enterFloating().then((r) => r.floating).catch(() => false),
+  onChange: (fn: (floating: boolean) => void) => plugin.addListener('floating', (e) => fn(e.floating)),
+  onHangUp: (fn: () => void) => plugin.addListener('hangUp', fn),
+};
