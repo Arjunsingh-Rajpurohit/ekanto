@@ -1128,8 +1128,16 @@ for (const b of $('sizes').querySelectorAll<HTMLButtonElement>('button')) {
     setSize(b.dataset['n'] ? Number(b.dataset['n']) : null);
   });
 }
+/** Typed above the most a call can hold: show the most at once, and say why (not a silent change). */
+function capPeople(input: HTMLInputElement): void {
+  if (Math.round(Number(input.value)) <= MAX_PEOPLE) return;
+  input.value = String(MAX_PEOPLE);
+  toast(`${MAX_PEOPLE} is the most. With no server, every phone sends video to every other — more can't keep up.`);
+}
+
 $('size-custom').addEventListener('input', () => {
   const input = $<HTMLInputElement>('size-custom');
+  capPeople(input);
   const n = Math.round(Number(input.value));
   if (input.value === '') return setSize(null);
   setSize(Number.isFinite(n) ? Math.min(MAX_PEOPLE, Math.max(MIN_PEOPLE, n)) : null);
@@ -1271,6 +1279,7 @@ for (const b of $('newch-sizes').querySelectorAll<HTMLButtonElement>('button')) 
 // Your own number, 2–20 — the same as the home screen's "#".
 $('newch-custom').addEventListener('input', () => {
   const input = $<HTMLInputElement>('newch-custom');
+  capPeople(input);
   const n = Math.round(Number(input.value));
   if (input.value === '') return setChannelSize(null);
   setChannelSize(Number.isFinite(n) ? Math.min(MAX_PEOPLE, Math.max(MIN_PEOPLE, n)) : null);
