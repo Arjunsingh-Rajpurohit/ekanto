@@ -1177,14 +1177,67 @@ a.btn {
   transform: scaleX(-1);
 }
 
-/* Whoever is talking gets a green ring. */
-.tile.speaking::after {
+/* Whoever is talking: a soft white ripple — from the edges of their picture, or out from their
+   initial when the camera is off. */
+.tile.speaking:not(.no-video)::after {
   content: '';
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  box-shadow: inset 0 0 0 3px #2fb26f;
   pointer-events: none;
+  animation: edge-ripple 1.4s ease-out infinite;
+}
+
+@keyframes edge-ripple {
+  0% { box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.9); }
+  100% { box-shadow: inset 0 0 0 14px rgba(255, 255, 255, 0); }
+}
+
+.tile.no-video.speaking .avatar::before,
+.tile.no-video.speaking .avatar::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 1.7em;
+  height: 1.7em;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  /* "both": the second ring waits, centred and invisible, for its turn. */
+  animation: ripple 1.6s ease-out infinite both;
+}
+
+.tile.no-video.speaking .avatar::after {
+  animation-delay: 0.8s;
+}
+
+/* One-to-one: the name sits above the call buttons, not under them. */
+.stage[data-layout='duo'] .main .tile .name {
+  bottom: calc(112px + env(safe-area-inset-bottom));
+}
+
+@keyframes ripple {
+  0% { transform: translate(-50%, -50%) scale(0.85); opacity: 0.8; }
+  100% { transform: translate(-50%, -50%) scale(2.3); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile.speaking:not(.no-video)::after,
+  .tile.no-video.speaking .avatar::before,
+  .tile.no-video.speaking .avatar::after {
+    animation: none;
+  }
+
+  .tile.speaking:not(.no-video)::after {
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.9);
+  }
+
+  .tile.no-video.speaking .avatar::before {
+    transform: translate(-50%, -50%) scale(1.2);
+  }
 }
 
 .tile {

@@ -87,12 +87,12 @@ export class Stage {
   /** Plays everyone's sound on this output (speakers, headset…). Computers only. */
   setSink(deviceId: string): void {
     this.sink = deviceId;
-    for (const [id, tile] of this.tiles) if (id !== ME) this.applySink(tile.querySelector('video')!);
+    for (const [id, tile] of this.tiles) if (id !== ME) this.applySink(tile.querySelector('audio')!);
   }
 
-  private applySink(video: HTMLVideoElement): void {
-    const v = video as HTMLVideoElement & { setSinkId?: (id: string) => Promise<void>; sinkId?: string };
-    if (v.setSinkId && v.sinkId !== this.sink) void v.setSinkId(this.sink).catch(() => undefined);
+  private applySink(audio: HTMLAudioElement): void {
+    const a = audio as HTMLAudioElement & { setSinkId?: (id: string) => Promise<void>; sinkId?: string };
+    if (a.setSinkId && a.sinkId !== this.sink) void a.setSinkId(this.sink).catch(() => undefined);
   }
 
   reset(): void {
@@ -157,8 +157,9 @@ export class Stage {
     arrange(this.strip, wanted.strip);
     arrange(this.float, wanted.float);
     for (const tile of this.tiles.values()) {
-      const video = tile.querySelector('video')!;
-      if (video.paused && video.srcObject) void video.play().catch(() => undefined);
+      for (const media of tile.querySelectorAll<HTMLMediaElement>('video, audio')) {
+        if (media.paused && media.srcObject) void media.play().catch(() => undefined);
+      }
     }
     this.float.hidden = !this.float.firstElementChild;
     this.float.dataset['corner'] = this.corner;
@@ -174,10 +175,10 @@ export class Stage {
       const video = document.createElement('video');
       video.autoplay = true;
       video.playsInline = true;
-      if (id === ME) {
-        video.muted = true;
-        video.id = 'local';
-      }
+      // Pictures are silent: each person's sound has its own player (below). In a voice call no
+      // picture ever arrives, and a video player waiting for one never starts the sound either.
+      video.muted = true;
+      if (id === ME) video.id = 'local';
       const avatar = document.createElement('div');
       avatar.className = 'avatar';
       const label = document.createElement('span');
@@ -186,8 +187,13 @@ export class Stage {
       wait.className = 'tile-wait';
       wait.innerHTML = '<div class="spinner"></div><p>Connecting securely…</p>';
       tile.append(video, avatar, label, wait);
+      if (id !== ME) {
+        const audio = document.createElement('audio');
+        audio.autoplay = true;
+        tile.append(audio);
+        if (this.sink) this.applySink(audio);
+      }
       tile.addEventListener('click', () => this.tap(id));
-      if (id !== ME && this.sink) this.applySink(video);
       this.tiles.set(id, tile);
     }
     const video = tile.querySelector('video')!;
@@ -204,6 +210,15 @@ export class Stage {
     } else {
       const p = this.people.find((x) => x.id === id)!;
       if (video.srcObject !== p.stream) video.srcObject = p.stream;
+      // Their sound: a stream of just their audio, rebuilt only when that audio really changes.
+      const audio = tile.querySelector('audio')!;
+      const sound = p.stream?.getAudioTracks() ?? [];
+      const key = sound.map((t) => t.id).join();
+      if (audio.dataset['tracks'] !== key) {
+        audio.dataset['tracks'] = key;
+        audio.srcObject = sound.length ? new MediaStream(sound) : null;
+        if (sound.length) void audio.play().catch(() => undefined);
+      }
       tile.querySelector('.name')!.textContent = p.screen ? `${p.name} · sharing screen` : p.name;
       tile.querySelector('.avatar')!.textContent = (p.name.trim()[0] ?? '?').toUpperCase();
       tile.classList.toggle('waiting', !p.connected);

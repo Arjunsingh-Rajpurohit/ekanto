@@ -1,6 +1,6 @@
 /**
  * Who is talking right now, from the sound levels of each stream — all measured on this phone,
- * nothing sent anywhere. Drives the green ring and the "speaker" layout.
+ * nothing sent anywhere. Drives the speaking ripple and the "speaker" layout.
  */
 export class SpeakingMeter {
   private ctx: AudioContext | null = null;
