@@ -529,20 +529,13 @@ async function stopScreen(): Promise<void> {
   drawControls();
 }
 
-/**
- * The invite around the link: what it is, why (if said) and how long it works. Chat apps' preview
- * card is the same for every link (it never sees the part after the #), so the reason travels here.
- */
-function inviteText(): string {
-  const kind = invite?.voice ? 'Join my private voice call on Ekanto' : 'Join my private video call on Ekanto';
-  return [`🔒 ${kind}`, invite?.reason ? `“${invite.reason}”` : '', `Works for ${LINK_HOURS} hours · encrypted · no login`]
-    .filter(Boolean).join('\n');
-}
-
 async function shareLink(): Promise<void> {
   $('more-sheet').hidden = true;
   const url = link();
-  const text = inviteText();
+  // A clear message around the link: what it is, why (if said), and how long it works.
+  const kind = invite?.voice ? 'Join my private voice call on Ekanto' : 'Join my private video call on Ekanto';
+  const text = [`🔒 ${kind}`, invite?.reason ? `“${invite.reason}”` : '', `Works for ${LINK_HOURS} hours · encrypted · no login`]
+    .filter(Boolean).join('\n');
   try {
     if (IN_APP) await Share.share({ title: 'Private call', text, url });
     else if (navigator.share) await navigator.share({ title: 'Private call', text, url });
@@ -552,12 +545,10 @@ async function shareLink(): Promise<void> {
   }
 }
 
-/** Copies the whole invite (message + link), so a pasted invite shows the reason too. */
 async function copyLink(): Promise<void> {
-  const invitation = `${inviteText()}\n${link()}`;
   try {
-    await navigator.clipboard.writeText(invitation);
-    toast('Invite copied — send it only to the people you want.');
+    await navigator.clipboard.writeText(link());
+    toast('Link copied — send it only to the people you want.');
   } catch {
     toast(link());
   }
