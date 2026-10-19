@@ -90,6 +90,14 @@ final class RingCrypto {
         }
     }
 
+    /** One short line (as cleanReason in invite.ts): no control characters, at most 60 characters. Null = none. */
+    static String cleanReason(String text) {
+        if (text == null) return null;
+        String line = text.replaceAll("[\\p{Cntrl}]+", " ").replaceAll("\\s+", " ").trim();
+        if (line.codePointCount(0, line.length()) > 60) line = line.substring(0, line.offsetByCodePoints(0, 60)).trim();
+        return line.isEmpty() ? null : line;
+    }
+
     /* Base64url without padding — written out, because java.util.Base64 needs Android 8. */
 
     private static final char[] ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_".toCharArray();

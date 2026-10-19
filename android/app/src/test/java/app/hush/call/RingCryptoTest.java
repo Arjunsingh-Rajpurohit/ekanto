@@ -41,6 +41,16 @@ public class RingCryptoTest {
     }
 
     @Test
+    public void reasonIsOneShortLine() {
+        assertEquals("Dinner plans?", RingCrypto.cleanReason("  Dinner\n plans?  "));
+        assertNull(RingCrypto.cleanReason("   "));
+        assertNull(RingCrypto.cleanReason(null));
+        String longOne = new String(new char[200]).replace('\0', 'x');
+        assertEquals(60, RingCrypto.cleanReason(longOne).length());
+        assertEquals("खाना कब बनेगा? 🍲", RingCrypto.cleanReason("खाना कब बनेगा? 🍲"));
+    }
+
+    @Test
     public void base64UrlRoundTrips() {
         for (int n = 0; n < 40; n++) {
             byte[] bytes = new byte[n];

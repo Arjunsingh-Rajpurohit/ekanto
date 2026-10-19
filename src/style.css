@@ -967,6 +967,54 @@ a.btn {
   padding-top: 0;
 }
 
+/* "Dinner plans?" — why a call was made, shown in quotes. */
+.why {
+  width: fit-content;
+  margin: 10px auto 0;
+  max-width: 100%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--accent-soft);
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+/* Quick reasons to tap instead of typing. */
+.picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.picks button {
+  border: 1px solid var(--line);
+  background: var(--card-2);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+#callwhy-go {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+#callwhy-go svg {
+  width: 20px;
+  height: 20px;
+}
+
+.picks button.on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
 .text-danger {
   border: 0;
   background: none;

@@ -71,13 +71,14 @@ public class HushNativePlugin extends Plugin {
     }
 
     /** The app was opened from the ringing notification: the call screen, or "Answer". */
-    static synchronized void setLaunch(String action, String call, String channel, String from, boolean voice) {
+    static synchronized void setLaunch(String action, String call, String channel, String from, boolean voice, String why) {
         JSObject l = new JSObject();
         l.put("action", action);
         l.put("call", call);
         l.put("channel", channel);
         l.put("from", from);
         l.put("voice", voice);
+        if (why != null) l.put("why", why);
         launch = l;
         HushNativePlugin plugin = instance;
         if (plugin != null) plugin.notifyListeners("launch", new JSObject());

@@ -1,4 +1,4 @@
-import { fromBase64Url, newSecret } from './crypto';
+import { fromBase64Url, newSecret, toBase64Url } from './crypto';
 
 /**
  * What a link carries after the #: the call's secret, the people limit, whether it is a
@@ -20,6 +20,18 @@ export interface Invite {
   voice: boolean;
   /** The hour (since 1970, UTC) the link stops letting people in. Null = an old link without one. */
   expires: number | null;
+  /** Why the call: "Dinner plans?". Shown before joining. Null = none given. Link ends in ".r…". */
+  reason: string | null;
+}
+
+/** A reason is one short line: e.g. "Dinner plans?". */
+export const MAX_REASON = 60;
+
+/** One clean line: no control characters, no runs of spaces, at most MAX_REASON characters. */
+export function cleanReason(text: string | null | undefined): string | null {
+  const line = [...(text ?? '').replace(/[\u0000-\u001f\u007f-\u009f]+/g, ' ').replace(/\s+/g, ' ').trim()]
+    .slice(0, MAX_REASON).join('').trim();
+  return line || null;
 }
 
 export const MIN_PEOPLE = 2;
@@ -31,20 +43,25 @@ export const LINK_HOURS = 24;
 
 const HOUR = 3600 * 1000;
 
-export function newInvite(limit: number | null, appOnly = false, voice = false, now = Date.now()): Invite {
-  return { secret: newSecret(), limit, appOnly, voice, expires: Math.ceil(now / HOUR) + LINK_HOURS };
+export function newInvite(limit: number | null, appOnly = false, voice = false, now = Date.now(), reason: string | null = null): Invite {
+  return { secret: newSecret(), limit, appOnly, voice, expires: Math.ceil(now / HOUR) + LINK_HOURS, reason: cleanReason(reason) };
 }
+
+const reasonCode = (reason: string) => toBase64Url(new TextEncoder().encode(reason));
 
 export function inviteToHash(invite: Invite): string {
   return `${invite.secret}${invite.limit ? `.${invite.limit}` : ''}${invite.appOnly ? '.p' : ''}${invite.voice ? '.v' : ''}`
-    + (invite.expires ? `.e${invite.expires.toString(36)}` : '');
+    + (invite.expires ? `.e${invite.expires.toString(36)}` : '')
+    + (invite.reason ? `.r${reasonCode(invite.reason)}` : '');
 }
 
 /** Everything the link's creator chose, mixed into the call's key so the link can't be edited. */
 export function inviteScope(invite: Invite): string {
   // Links made before expiry existed keep their exact old key.
   return `limit=${invite.limit ?? 'none'}|app=${invite.appOnly ? 1 : 0}|voice=${invite.voice ? 1 : 0}`
-    + (invite.expires ? `|exp=${invite.expires}` : '');
+    + (invite.expires ? `|exp=${invite.expires}` : '')
+    // The reason too: someone forwarding the link can't change what it says and keep the call.
+    + (invite.reason ? `|why=${reasonCode(invite.reason)}` : '');
 }
 
 /** True once the link's day is over: nobody new can come in with it. */
@@ -55,7 +72,7 @@ export function expired(invite: Invite, now = Date.now()): boolean {
 /** Null for anything that isn't a well-formed link: broken, cut short, or tampered with. */
 export function parseInvite(text: string): Invite | null {
   const hash = text.includes('#') ? text.slice(text.lastIndexOf('#') + 1) : text.trim();
-  const m = hash.match(/^([A-Za-z0-9_-]{43})(?:\.(\d{1,2}))?(\.p)?(\.v)?(?:\.e([0-9a-z]{1,8}))?$/);
+  const m = hash.match(/^([A-Za-z0-9_-]{43})(?:\.(\d{1,2}))?(\.p)?(\.v)?(?:\.e([0-9a-z]{1,8}))?(?:\.r([A-Za-z0-9_-]{1,400}))?$/);
   if (!m) return null;
   try {
     if (fromBase64Url(m[1]).length !== 32) return null;
@@ -65,5 +82,15 @@ export function parseInvite(text: string): Invite | null {
   const limit = m[2] === undefined ? null : Number(m[2]);
   if (limit !== null && (limit < MIN_PEOPLE || limit > MAX_PEOPLE)) return null;
   const expires = m[5] === undefined ? null : parseInt(m[5], 36);
-  return { secret: m[1], limit, appOnly: m[3] === '.p', voice: m[4] === '.v', expires };
+  let reason: string | null = null;
+  if (m[6] !== undefined) {
+    try {
+      reason = new TextDecoder('utf-8', { fatal: true }).decode(fromBase64Url(m[6]));
+    } catch {
+      return null;
+    }
+    // Only exactly what Ekanto writes: anything longer or odd was not made here.
+    if (cleanReason(reason) !== reason) return null;
+  }
+  return { secret: m[1], limit, appOnly: m[3] === '.p', voice: m[4] === '.v', expires, reason };
 }

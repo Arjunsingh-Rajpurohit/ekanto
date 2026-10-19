@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { deriveRoom, fingerprintOf, newSecret, open, safetyEmojis, seal } from './crypto';
-import { expired, inviteScope, inviteToHash, newInvite, parseInvite } from './invite';
+import { cleanReason, expired, inviteScope, inviteToHash, newInvite, parseInvite } from './invite';
 
 describe('sealed messages', () => {
   it('open with the same link, never with another', async () => {
@@ -92,6 +92,41 @@ describe('24-hour links', () => {
     const real = await deriveRoom(invite.secret, inviteScope(invite));
     const stretched = await deriveRoom(invite.secret, inviteScope({ ...invite, expires: invite.expires! + 24 * 365 }));
     expect(stretched.topic).not.toBe(real.topic);
+  });
+});
+
+describe('call reason in the link', () => {
+  it('round-trips, in any language', () => {
+    for (const why of ['Dinner plans?', 'खाना कब बनेगा? 🍲', 'Quick question']) {
+      const invite = newInvite(2, false, true, Date.now(), why);
+      expect(parseInvite(`https://x.github.io/ekanto/#${inviteToHash(invite)}`)?.reason).toBe(why);
+    }
+  });
+
+  it('is cleaned to one short line', () => {
+    expect(cleanReason('  hi\n\tthere  ')).toBe('hi there');
+    expect(cleanReason('   ')).toBeNull();
+    expect([...cleanReason('x'.repeat(200))!]).toHaveLength(60);
+  });
+
+  it('editing the reason in a forwarded link leads to a different, empty call', async () => {
+    const invite = newInvite(2, false, false, Date.now(), 'Dinner plans?');
+    const real = await deriveRoom(invite.secret, inviteScope(invite));
+    const edited = parseInvite(inviteToHash({ ...invite, reason: 'Send money now' }))!;
+    expect((await deriveRoom(edited.secret, inviteScope(edited))).topic).not.toBe(real.topic);
+  });
+
+  it('a link without a reason keeps its exact old key', () => {
+    const invite = newInvite(3);
+    expect(invite.reason).toBeNull();
+    expect(inviteScope(invite)).not.toContain('why=');
+  });
+
+  it('a broken or oversized reason means a broken link', () => {
+    const base = inviteToHash(newInvite(2));
+    expect(parseInvite(`${base}.r!!`)).toBeNull();
+    const tooLong = Buffer.from('y'.repeat(100)).toString('base64url');
+    expect(parseInvite(`${base}.r${tooLong}`)).toBeNull();
   });
 });
 

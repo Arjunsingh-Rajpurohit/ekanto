@@ -61,6 +61,7 @@ public class RingService extends Service {
     static final String EXTRA_CHANNEL = "channel";
     static final String EXTRA_FROM = "from";
     static final String EXTRA_VOICE = "voice";
+    static final String EXTRA_WHY = "why";
 
     static final String PREFS = "hush.ring";
     private static final String READY_CHANNEL = "ready";
@@ -93,6 +94,8 @@ public class RingService extends Service {
         String call;
         String from;
         boolean voice;
+        /** Why they are calling, if they said ("Dinner plans?"). Null = not given. */
+        String reason;
         int id;
         boolean notified;
         Runnable timeout;
@@ -372,7 +375,7 @@ public class RingService extends Service {
             String from = clip(m.optString("from", ch.name));
             if (ch.me.equals(m.optString("by"))) return;
             if (!"gone".equals(t) && Math.abs(System.currentTimeMillis() - m.optLong("ts")) > MAX_AGE_MS) return;
-            if ("ring".equals(t) && call != null) ring(ch, call, from, m.optBoolean("v"));
+            if ("ring".equals(t) && call != null) ring(ch, call, from, m.optBoolean("v"), RingCrypto.cleanReason(m.optString("r", "")));
             else if ("cancel".equals(t) && call != null && ringing.containsKey(call)) missed(call, pageAlive);
             else if ("gone".equals(t)) gone(ch, from, pageAlive);
         } catch (Exception ignored) {
@@ -382,7 +385,7 @@ public class RingService extends Service {
 
     /* ---------- Ringing ---------- */
 
-    private void ring(Ch ch, String call, String from, boolean voice) {
+    private void ring(Ch ch, String call, String from, boolean voice, String reason) {
         if (ch.gone || handled.contains(call)) return;
         Ringing r = ringing.get(call);
         if (r != null) {
@@ -398,6 +401,7 @@ public class RingService extends Service {
         next.call = call;
         next.from = from;
         next.voice = voice;
+        next.reason = reason;
         next.id = 1000 + (call.hashCode() & 0xffff);
         next.timeout = () -> missed(call, HushNativePlugin.isAlive());
         ringing.put(call, next);
@@ -415,13 +419,22 @@ public class RingService extends Service {
         PendingIntent decline = PendingIntent.getBroadcast(this, r.id + 2,
             new Intent(this, RingReceiver.class).setAction(ACTION_DECLINE).putExtra(EXTRA_CALL, r.call),
             PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+        String kind = (r.voice ? "Ekanto voice call" : "Ekanto video call") + (sameName ? "" : " · " + r.ch.name);
+        // On a locked phone it says only who is calling; why ("Dinner plans?") shows once unlocked.
+        Notification locked = new NotificationCompat.Builder(this, RING_CHANNEL)
+            .setSmallIcon(R.drawable.ic_stat_ekanto)
+            .setContentTitle(r.from)
+            .setContentText(kind)
+            .build();
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, RING_CHANNEL)
             .setSmallIcon(R.drawable.ic_stat_ekanto)
             .setContentTitle(r.from)
-            .setContentText((r.voice ? "Ekanto voice call" : "Ekanto video call") + (sameName ? "" : " · " + r.ch.name))
+            .setContentText(r.reason != null ? "“" + r.reason + "”" : kind)
+            .setSubText(r.reason != null ? kind : null)
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setPriority(NotificationCompat.PRIORITY_MAX)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setVisibility(r.reason != null ? NotificationCompat.VISIBILITY_PRIVATE : NotificationCompat.VISIBILITY_PUBLIC)
+            .setPublicVersion(locked)
             .setOngoing(true)
             .setAutoCancel(false)
             .setContentIntent(full)
@@ -445,7 +458,8 @@ public class RingService extends Service {
             .putExtra(EXTRA_CALL, r.call)
             .putExtra(EXTRA_CHANNEL, r.ch.id)
             .putExtra(EXTRA_FROM, r.from)
-            .putExtra(EXTRA_VOICE, r.voice);
+            .putExtra(EXTRA_VOICE, r.voice)
+            .putExtra(EXTRA_WHY, r.reason);
     }
 
     private void moveRingsToNotifications() {
@@ -485,13 +499,16 @@ public class RingService extends Service {
         manager().notify(r.id, new NotificationCompat.Builder(this, MISSED_CHANNEL)
             .setSmallIcon(R.drawable.ic_stat_ekanto)
             .setContentTitle("Missed call")
-            .setContentText(r.from + (sameName ? "" : " · " + r.ch.name))
+            .setContentText(r.from + (sameName ? "" : " · " + r.ch.name) + (r.reason != null ? " — “" + r.reason + "”" : ""))
             .setContentIntent(openApp(r.id))
             .setCategory(NotificationCompat.CATEGORY_MISSED_CALL)
             .setAutoCancel(true)
             .build());
         // The page marks it on the channel itself when it's open; otherwise it reads it later.
-        if (!pageAlive) addPending("missed", new String[] { "channel", r.ch.id }, "at", System.currentTimeMillis());
+        if (!pageAlive) {
+            addPending("missed", r.reason != null ? new String[] { "channel", r.ch.id, "why", r.reason } : new String[] { "channel", r.ch.id },
+                "at", System.currentTimeMillis());
+        }
     }
 
     private void gone(Ch ch, String from, boolean pageAlive) {

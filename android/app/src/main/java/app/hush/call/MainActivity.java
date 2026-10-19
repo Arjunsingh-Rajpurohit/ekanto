@@ -58,7 +58,8 @@ public class MainActivity extends BridgeActivity {
         String call = intent.getStringExtra(RingService.EXTRA_CALL);
         showOverLock(true);
         HushNativePlugin.setLaunch(answer ? "answer" : "incoming", call, intent.getStringExtra(RingService.EXTRA_CHANNEL),
-            intent.getStringExtra(RingService.EXTRA_FROM), intent.getBooleanExtra(RingService.EXTRA_VOICE, false));
+            intent.getStringExtra(RingService.EXTRA_FROM), intent.getBooleanExtra(RingService.EXTRA_VOICE, false),
+            intent.getStringExtra(RingService.EXTRA_WHY));
         if (answer) RingService.stopRinging(call, true);
         // Handled once: turning the phone around must not answer it again.
         intent.setAction(Intent.ACTION_MAIN);

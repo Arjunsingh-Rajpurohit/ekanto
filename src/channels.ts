@@ -33,6 +33,8 @@ export interface Channel {
   gone?: string;
   /** When the last call was missed (shown on the channel until the next call). */
   missed?: number;
+  /** Why that missed call was made, if the caller said. */
+  missedWhy?: string;
 }
 
 /** What travels on a channel's ring topic, sealed with the ring key. */
@@ -52,6 +54,8 @@ export interface Ring {
   ts: number;
   /** Voice call (camera off at the start). */
   v?: boolean;
+  /** Why the caller is calling ("Dinner plans?"), if they said. Sealed like the rest of the ring. */
+  r?: string;
 }
 
 const enc = new TextEncoder();

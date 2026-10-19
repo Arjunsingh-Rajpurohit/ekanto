@@ -130,6 +130,8 @@ export class CallSession {
   private fullTimer?: ReturnType<typeof setTimeout>;
   private sending: Promise<void> = Promise.resolve();
   private ended = false;
+  /** People who said goodbye: a late message from them (relays can deliver out of order) is not a return. */
+  private gone = new Set<string>();
   private readonly invite: Invite;
   private readonly name: string;
   private readonly relayOnly: boolean;
@@ -305,6 +307,9 @@ export class CallSession {
     }
     // Our own echo, meant for someone else, or an old replay.
     if (m.from === this.id || (m.to && m.to !== this.id) || Math.abs(Date.now() - m.ts) > MAX_AGE_MS) return;
+    // This phone's own earlier self (before a reload or rejoin): a late message from it is not a person.
+    if (m.tag && m.tag === this.tag) return;
+    if (this.gone.has(m.from)) return;
     log('in', m.t, short(m.from), '->', short(this.id));
     const known = this.peers.get(m.from);
     if (known) known.lastHeard = Date.now();
@@ -326,6 +331,7 @@ export class CallSession {
         return;
       }
       case 'bye': {
+        this.gone.add(m.from);
         const peer = this.peers.get(m.from);
         if (peer) this.removePeer(peer, `${peer.name} left`);
         return;
@@ -394,6 +400,7 @@ export class CallSession {
 
   private onChannel(peer: Peer, data: string | ArrayBuffer): void {
     if (data === '{"k":"bye"}') {
+      this.gone.add(peer.id);
       if (this.peers.get(peer.id) === peer) this.removePeer(peer, `${peer.name} left`);
       return;
     }

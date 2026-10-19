@@ -47,6 +47,11 @@
           <p id="size-note" class="hint"></p>
         </div>
 
+        <label class="field">
+          <span>Reason <em class="muted">(optional)</em></span>
+          <input id="reason" type="text" maxlength="60" autocomplete="off" placeholder="e.g. Dinner plans, Quick question" />
+        </label>
+
         <label id="protect-row" class="toggle" hidden>
           <input id="protect" type="checkbox" />
           <span><strong>Protected call</strong><br>Others can join only from the Ekanto app: no screenshots, no screen recording, no browser extensions.</span>
@@ -91,6 +96,7 @@
           <img src="./favicon.svg" alt="" class="logo" />
           <h1>Private call</h1>
           <p id="join-sub" class="sub">You're invited to a private video call.</p>
+          <p id="join-why" class="why" hidden></p>
         </header>
         <label class="field">
           <span>Your name</span>
@@ -122,6 +128,7 @@
           <div id="in-avatar" class="in-avatar" aria-hidden="true">P</div>
           <h1 id="in-name">Priya</h1>
           <p id="in-sub" class="sub">is calling…</p>
+          <p id="in-why" class="why" hidden></p>
         </div>
         <div class="incoming-actions">
           <div class="in-action">
@@ -162,6 +169,7 @@
             <div class="pulse" aria-hidden="true"></div>
             <h2 id="waiting-title">Waiting for others</h2>
             <p id="waiting-sub" class="sub">Send them the link.</p>
+            <p id="waiting-why" class="why" hidden></p>
             <div id="waiting-share" class="row">
               <button id="share" class="btn primary">Share link</button>
               <button id="copy" class="btn">Copy</button>
@@ -341,6 +349,24 @@
       </div>
 
       <!-- One channel: rename or delete -->
+      <!-- Calling a channel: say why first (optional); they see it while it rings -->
+      <div id="callwhy-sheet" class="sheet fixed" hidden>
+        <div class="sheet-card">
+          <h2 id="callwhy-title">Call</h2>
+          <label class="field left">
+            <span>Why are you calling? <em class="muted">(optional)</em></span>
+            <input id="callwhy" type="text" maxlength="60" autocomplete="off" enterkeyhint="send" placeholder="They see it while it rings" />
+          </label>
+          <div id="callwhy-picks" class="picks">
+            <button type="button">Urgent</button>
+            <button type="button">Quick question</button>
+            <button type="button">Just saying hi</button>
+          </div>
+          <button id="callwhy-go" class="btn primary" type="button">Call</button>
+          <button id="callwhy-cancel" class="btn" type="button">Cancel</button>
+        </div>
+      </div>
+
       <div id="ch-sheet" class="sheet fixed" hidden>
         <div class="sheet-card">
           <h2 id="ch-title">Channel</h2>

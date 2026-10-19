@@ -9,7 +9,7 @@ import {
 import { Chat } from './chat';
 import { ChatPanel } from './chat-ui';
 import { APP_DOWNLOAD_URL, APP_SCHEME, HAS_TURN, publicUrl } from './config';
-import { LINK_HOURS, MAX_PEOPLE, MIN_PEOPLE, SMOOTH_PEOPLE, expired, inviteToHash, newInvite, parseInvite, type Invite } from './invite';
+import { LINK_HOURS, MAX_PEOPLE, MIN_PEOPLE, SMOOTH_PEOPLE, cleanReason, expired, inviteToHash, newInvite, parseInvite, type Invite } from './invite';
 import { MediaProblem, cameraTrack, canShareScreenInBrowser, openCamera, screenTrack, type Facing } from './media';
 import { IN_APP, nativeAudio, nativeCall, nativeFloat, nativeRing, nativeScreenTrack, type AudioRoute, type AudioRoutes, type RingSetting } from './native';
 import { Ringing } from './ringing';
@@ -268,15 +268,19 @@ function route(): void {
   if (parsed.appOnly && !IN_APP) return show('protected');
   $('join-sub').textContent = `You're invited to a ${parsed.appOnly ? 'protected' : 'private'} ${callWord(parsed)} — ${peopleText(parsed.limit)}.`;
   $('join-btn').textContent = parsed.voice ? 'Join voice call' : 'Join call';
+  showWhy('join-why', parsed.reason);
   $<HTMLInputElement>('join-name').value = savedName();
   show('join');
 }
 
 /** A new channel brings its own people limit and protection; otherwise the home screen's are used. */
-function startNew(limit: number | null = size, appOnly = IN_APP && $<HTMLInputElement>('protect').checked): void {
+function startNew(limit: number | null = size, appOnly = IN_APP && $<HTMLInputElement>('protect').checked,
+  reason = cleanReason($<HTMLInputElement>('reason').value)): void {
   const name = $<HTMLInputElement>('name').value.trim();
   saveName(name);
-  invite = newInvite(limit, appOnly, voice);
+  invite = newInvite(limit, appOnly, voice, Date.now(), reason);
+  // A reason belongs to one call: the next call starts with an empty box.
+  $<HTMLInputElement>('reason').value = '';
   history.replaceState(null, '', `#${inviteToHash(invite)}`);
   void enterCall(name);
 }
@@ -288,6 +292,8 @@ interface ChannelVia {
   ch: Channel;
   caller: boolean;
   joinedLive?: boolean;
+  /** Why the caller is calling, if they said ("Dinner plans?"). */
+  reason?: string | null;
 }
 
 /** `via`: the call was made or answered from a saved channel. `camera` overrides the call's own choice. */
@@ -307,6 +313,7 @@ async function enterCall(name: string, via?: ChannelVia, camera?: boolean): Prom
     ? `Send them the link. When they join, both phones save the channel${newChannelName ? ` “${newChannelName}”` : ''} — after that, just tap to call.`
     : `Send them the link. This ${callWord(invite)} allows ${peopleText(invite.limit)}${invite.appOnly ? ' and only the Ekanto app can join' : ''}. The link works for ${LINK_HOURS} hours.`;
   $('waiting-share').hidden = !!via;
+  showWhy('waiting-why', via ? via.reason ?? null : invite.reason);
   warnedBlocked = false;
 
   session = new CallSession({
@@ -525,7 +532,8 @@ async function stopScreen(): Promise<void> {
 async function shareLink(): Promise<void> {
   $('more-sheet').hidden = true;
   const url = link();
-  const text = invite?.voice ? 'Join my private voice call' : 'Join my private video call';
+  const kind = invite?.voice ? 'Join my private voice call' : 'Join my private video call';
+  const text = invite?.reason ? `${kind}: “${invite.reason}”` : kind;
   try {
     if (IN_APP) await Share.share({ title: 'Private call', text, url });
     else if (navigator.share) await navigator.share({ title: 'Private call', text, url });
@@ -638,6 +646,8 @@ const liveCalls = new Map<string, { call: string; people: Map<string, number> }>
 let channelCall: {
   ch: Channel;
   hash: string;
+  /** Why this call: rides in every ring, so their phone shows it. */
+  reason: string | null;
   caller: boolean;
   connected: boolean;
   started: number;
@@ -687,11 +697,41 @@ function drawChannels(): void {
   $('new-channel').hidden = channels.length > 0;
   $('channel-list').replaceChildren(...channels.map((ch) => channelRow(ch, isLive(ch), { voice: ICON.earpiece, video: ICON.cam }, {
     open: openChannelSheet,
-    call: (c, v) => void callChannel(c, v),
+    call: askWhy,
   })));
 }
 
-async function callChannel(ch: Channel, voiceCall: boolean): Promise<void> {
+/* Saying why before calling a channel (optional) */
+
+let whyFor: { ch: Channel; voice: boolean } | null = null;
+
+/** Tapped call on a channel: ask why first — unless a call is already on there, then just join it. */
+function askWhy(ch: Channel, voiceCall: boolean): void {
+  if (session || ch.gone) return;
+  if (isLive(ch)) return void callChannel(ch, voiceCall);
+  whyFor = { ch, voice: voiceCall };
+  $('callwhy-title').textContent = `Call ${ch.name}`;
+  $<HTMLInputElement>('callwhy').value = '';
+  for (const b of $('callwhy-picks').querySelectorAll('button')) b.classList.remove('on');
+  $('callwhy-go').innerHTML = `${voiceCall ? ICON.earpiece : ICON.cam}<span>${voiceCall ? 'Voice call' : 'Video call'}</span>`;
+  $('callwhy-sheet').hidden = false;
+}
+
+function callWithWhy(): void {
+  const w = whyFor;
+  whyFor = null;
+  $('callwhy-sheet').hidden = true;
+  if (w) void callChannel(w.ch, w.voice, cleanReason($<HTMLInputElement>('callwhy').value));
+}
+
+/** Writes "“Dinner plans?”" into a line, or hides it when there is no reason. */
+function showWhy(id: string, reason: string | null | undefined): void {
+  const clean = cleanReason(reason);
+  $(id).textContent = clean ? `“${clean}”` : '';
+  $(id).hidden = !clean;
+}
+
+async function callChannel(ch: Channel, voiceCall: boolean, reason: string | null = null): Promise<void> {
   if (session || ch.gone) return;
   const name = $<HTMLInputElement>('name').value.trim() || savedName();
   saveName(name);
@@ -702,18 +742,18 @@ async function callChannel(ch: Channel, voiceCall: boolean): Promise<void> {
   invite = next;
   clearMissed(ch);
   history.replaceState(null, '', `#${inviteToHash(invite)}`);
-  await enterCall(name, { ch, caller: next !== joining, joinedLive: next === joining }, !voiceCall);
+  await enterCall(name, { ch, caller: next !== joining, joinedLive: next === joining, reason: next === joining ? null : reason }, !voiceCall);
 }
 
 function clearMissed(ch: Channel): void {
-  if (ch.missed) storeChannels(channels.map((c) => (c.id === ch.id ? { ...c, missed: undefined } : c)));
+  if (ch.missed) storeChannels(channels.map((c) => (c.id === ch.id ? { ...c, missed: undefined, missedWhy: undefined } : c)));
 }
 
 /** In a channel's call: the caller rings the members; everyone tells them the call is on. */
 function startChannelCall(via: ChannelVia): void {
   if (!invite) return;
   const call = inviteToHash(invite);
-  const cc: NonNullable<typeof channelCall> = { ch: via.ch, hash: call, caller: false, connected: false, started: Date.now() };
+  const cc: NonNullable<typeof channelCall> = { ch: via.ch, hash: call, reason: cleanReason(via.reason), caller: false, connected: false, started: Date.now() };
   channelCall = cc;
   ringing.hold(cc.ch.id);
   if (via.caller) startRinging(cc);
@@ -735,7 +775,7 @@ function startRinging(cc: NonNullable<typeof channelCall>): void {
   $('waiting-title').textContent = `Calling ${cc.ch.name}…`;
   $('waiting-sub').textContent = 'Their phone is ringing.';
   $('status').textContent = 'Ringing…';
-  const ringOnce = () => void ringing.send(cc.ch, { t: 'ring', call: cc.hash, from: myName(), v: invite?.voice });
+  const ringOnce = () => void ringing.send(cc.ch, { t: 'ring', call: cc.hash, from: myName(), v: invite?.voice, ...(cc.reason ? { r: cc.reason } : {}) });
   ringOnce();
   cc.stopTone = startTone('back');
   cc.ringTimer = setInterval(() => {
@@ -874,6 +914,7 @@ function showIncoming(ch: Channel, ring: Ring): void {
   $('in-avatar').textContent = initial(from);
   $('in-name').textContent = from;
   $('in-sub').textContent = ch.name.toLowerCase() === from.toLowerCase() ? 'is calling…' : `is calling · ${ch.name}`;
+  showWhy('in-why', ring.r);
   $('in-answer').innerHTML = ring.v ? ICON.earpiece : ICON.cam;
   $('in-decline').innerHTML = ICON.end;
   document.title = `📞 ${from} is calling — Ekanto`;
@@ -892,9 +933,10 @@ function endRinging(): void {
 
 function missedCall(): void {
   const ch = ringingNow?.ch;
+  const why = cleanReason(ringingNow?.ring.r) ?? undefined;
   endRinging();
   // The app's notification turns into "Missed call" by itself.
-  if (ch) storeChannels(channels.map((c) => (c.id === ch.id ? { ...c, missed: Date.now() } : c)));
+  if (ch) storeChannels(channels.map((c) => (c.id === ch.id ? { ...c, missed: Date.now(), missedWhy: why } : c)));
 }
 
 function answerRing(): void {
@@ -910,7 +952,8 @@ function answerRing(): void {
   history.replaceState(null, '', `#${call}`);
   if (chosen.appOnly && !IN_APP) return show('protected');
   clearMissed(ch);
-  void enterCall(savedName(), { ch, caller: false });
+  // The reason stays in view while it connects.
+  void enterCall(savedName(), { ch, caller: false, reason: ring.r });
 }
 
 function declineRing(): void {
@@ -929,18 +972,20 @@ function declineRing(): void {
 async function handleLaunch(): Promise<void> {
   const launch = await nativeRing.takeLaunch();
   // While Ekanto was closed: missed calls, and channels the others deleted.
-  const missed = new Map((launch.missed ?? []).map((m) => [m.channel, m.at]));
+  const missed = new Map((launch.missed ?? []).map((m) => [m.channel, m]));
   const gone = new Map((launch.gone ?? []).map((g) => [g.channel, g.from]));
   if (missed.size || gone.size) {
     storeChannels(channels.map((c) => ({
       ...c,
-      missed: missed.has(c.id) ? Math.max(missed.get(c.id)!, c.missed ?? 0) : c.missed,
+      ...(missed.has(c.id) && missed.get(c.id)!.at > (c.missed ?? 0)
+        ? { missed: missed.get(c.id)!.at, missedWhy: cleanReason(missed.get(c.id)!.why) ?? undefined }
+        : {}),
       gone: gone.has(c.id) ? String(gone.get(c.id)).slice(0, 30) || 'Someone' : c.gone,
     })));
   }
   const ch = channels.find((c) => c.id === launch.channel);
   if (!launch.action || !launch.call || !ch || session) return;
-  const ring: Ring = { t: 'ring', call: launch.call, from: launch.from || ch.name, by: '', ts: Date.now(), v: launch.voice };
+  const ring: Ring = { t: 'ring', call: launch.call, from: launch.from || ch.name, by: '', ts: Date.now(), v: launch.voice, r: cleanReason(launch.why) ?? undefined };
   if (ringingNow?.ring.call !== launch.call) {
     endRinging();
     showIncoming(ch, ring);
@@ -1229,7 +1274,7 @@ $('pip-btn').addEventListener('click', () => {
 });
 $('invite').addEventListener('click', () => void shareLink());
 $('safety-btn').addEventListener('click', openSafety);
-for (const id of ['sheet', 'more-sheet', 'send-sheet', 'audio-sheet', 'leave-sheet', 'save-sheet', 'ask-sheet', 'newch-sheet', 'ch-sheet', 'ring-sheet']) {
+for (const id of ['sheet', 'more-sheet', 'send-sheet', 'audio-sheet', 'leave-sheet', 'save-sheet', 'ask-sheet', 'newch-sheet', 'ch-sheet', 'ring-sheet', 'callwhy-sheet']) {
   $(id).addEventListener('click', (e) => {
     if (e.target === $(id)) $(id).hidden = true;
   });
@@ -1303,7 +1348,7 @@ $('newch-cancel').addEventListener('click', () => ($('newch-sheet').hidden = tru
 $('newch-start').addEventListener('click', () => {
   $('newch-sheet').hidden = true;
   newChannelName = $<HTMLInputElement>('newch-name').value.trim().slice(0, 30);
-  startNew(newChannelSize, IN_APP && $<HTMLInputElement>('newch-protect').checked);
+  startNew(newChannelSize, IN_APP && $<HTMLInputElement>('newch-protect').checked, null);
 });
 $('ch-done').addEventListener('click', () => {
   const name = $<HTMLInputElement>('ch-name').value.trim().slice(0, 30);
@@ -1343,6 +1388,17 @@ $('ask-no').addEventListener('click', () => {
   if (a) session?.sendTo(a.from.id, '{"k":"chan-no"}');
 });
 $('in-answer').addEventListener('click', answerRing);
+$('callwhy-go').addEventListener('click', callWithWhy);
+$('callwhy-cancel').addEventListener('click', () => ($('callwhy-sheet').hidden = true));
+$('callwhy').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') callWithWhy();
+});
+for (const b of $('callwhy-picks').querySelectorAll<HTMLButtonElement>('button')) {
+  b.addEventListener('click', () => {
+    $<HTMLInputElement>('callwhy').value = b.textContent ?? '';
+    for (const o of $('callwhy-picks').querySelectorAll('button')) o.classList.toggle('on', o === b);
+  });
+}
 $('in-decline').addEventListener('click', declineRing);
 drawChannels();
 void syncChannels();
@@ -1391,7 +1447,7 @@ if (IN_APP) {
     // Back closes whatever is open on top; in the call itself it keeps the call going in the
     // background (it never hangs up by accident).
     if (!$('viewer').hidden) return panel?.hideViewer();
-    for (const id of ['send-sheet', 'more-sheet', 'audio-sheet', 'sheet', 'save-sheet', 'ask-sheet', 'newch-sheet', 'ch-sheet', 'ring-sheet']) {
+    for (const id of ['send-sheet', 'more-sheet', 'audio-sheet', 'sheet', 'save-sheet', 'ask-sheet', 'newch-sheet', 'ch-sheet', 'ring-sheet', 'callwhy-sheet']) {
       if (!$(id).hidden) return void ($(id).hidden = true);
     }
     // A ringing call keeps ringing (in the notification) — Back never declines by accident.

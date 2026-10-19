@@ -45,8 +45,10 @@ export interface Launch {
   channel?: string;
   from?: string;
   voice?: boolean;
+  /** Why they are calling, if they said. */
+  why?: string;
   /** Heard while the page wasn't running. */
-  missed?: { channel: string; at: number }[];
+  missed?: { channel: string; at: number; why?: string }[];
   gone?: { channel: string; from: string }[];
 }
 
