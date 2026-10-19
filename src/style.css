@@ -1405,7 +1405,8 @@ body.floating .stage[data-layout='focus'] .main {
   z-index: 20;
 }
 
-.sheet-card .field.left {
+.sheet-card .field.left,
+.sheet-card .toggle {
   text-align: left;
 }
 

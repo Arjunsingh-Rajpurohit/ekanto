@@ -272,11 +272,11 @@ function route(): void {
   show('join');
 }
 
-/** `limit`: how many people may join (a new channel brings its own; otherwise the home screen's). */
-function startNew(limit: number | null = size): void {
+/** A new channel brings its own people limit and protection; otherwise the home screen's are used. */
+function startNew(limit: number | null = size, appOnly = IN_APP && $<HTMLInputElement>('protect').checked): void {
   const name = $<HTMLInputElement>('name').value.trim();
   saveName(name);
-  invite = newInvite(limit, IN_APP && $<HTMLInputElement>('protect').checked, voice);
+  invite = newInvite(limit, appOnly, voice);
   history.replaceState(null, '', `#${inviteToHash(invite)}`);
   void enterCall(name);
 }
@@ -1094,7 +1094,7 @@ function hideIp(): boolean {
 
 function addHideIpToggles(): void {
   if (!HAS_TURN) return;
-  for (const before of ['create', 'join-btn']) {
+  for (const before of ['create', 'join-btn', 'newch-start']) {
     const label = document.createElement('label');
     label.className = 'toggle';
     const box = document.createElement('input');
@@ -1152,6 +1152,7 @@ addHideIpToggles();
 
 // Protected calls are created in the app; the website points people to the app instead.
 $('protect-row').hidden = !IN_APP;
+$('newch-protect-row').hidden = !IN_APP;
 if (!IN_APP && APP_DOWNLOAD_URL) {
   for (const id of ['get-app', 'download-app']) {
     $<HTMLAnchorElement>(id).href = APP_DOWNLOAD_URL;
@@ -1292,6 +1293,7 @@ for (const id of ['new-channel', 'new-channel-mini']) {
   $(id).addEventListener('click', () => {
     $<HTMLInputElement>('newch-name').value = '';
     $<HTMLInputElement>('newch-custom').value = '';
+    $<HTMLInputElement>('newch-protect').checked = false;
     setChannelSize(null);
     $('newch-sheet').hidden = false;
     $('newch-name').focus();
@@ -1301,7 +1303,7 @@ $('newch-cancel').addEventListener('click', () => ($('newch-sheet').hidden = tru
 $('newch-start').addEventListener('click', () => {
   $('newch-sheet').hidden = true;
   newChannelName = $<HTMLInputElement>('newch-name').value.trim().slice(0, 30);
-  startNew(newChannelSize);
+  startNew(newChannelSize, IN_APP && $<HTMLInputElement>('newch-protect').checked);
 });
 $('ch-done').addEventListener('click', () => {
   const name = $<HTMLInputElement>('ch-name').value.trim().slice(0, 30);
