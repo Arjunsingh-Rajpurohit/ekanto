@@ -272,10 +272,11 @@ function route(): void {
   show('join');
 }
 
-function startNew(): void {
+/** `limit`: how many people may join (a new channel brings its own; otherwise the home screen's). */
+function startNew(limit: number | null = size): void {
   const name = $<HTMLInputElement>('name').value.trim();
   saveName(name);
-  invite = newInvite(size, IN_APP && $<HTMLInputElement>('protect').checked, voice);
+  invite = newInvite(limit, IN_APP && $<HTMLInputElement>('protect').checked, voice);
   history.replaceState(null, '', `#${inviteToHash(invite)}`);
   void enterCall(name);
 }
@@ -1245,9 +1246,27 @@ $('send-cancel').addEventListener('click', () => panel?.cancelSend());
 $('viewer-close').addEventListener('click', () => panel?.hideViewer());
 
 // Saved channels
+/** Who can be in a new channel: the call that saves it lets in only this many, so nobody extra gets it. */
+let newChannelSize: number | null = 2;
+function setChannelSize(n: number | null): void {
+  newChannelSize = n;
+  for (const b of $('newch-sizes').querySelectorAll<HTMLButtonElement>('button')) {
+    const on = (b.dataset['n'] ? Number(b.dataset['n']) : null) === n;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-checked', String(on));
+  }
+  $('newch-note').textContent = n === 2
+    ? 'Just the two of you. Nobody else can join and get it.'
+    : n ? `Up to ${n} people, including you. Nobody else can join and get it.`
+      : 'Anyone you send the link to can join and get it.';
+}
+for (const b of $('newch-sizes').querySelectorAll<HTMLButtonElement>('button')) {
+  b.addEventListener('click', () => setChannelSize(b.dataset['n'] ? Number(b.dataset['n']) : null));
+}
 for (const id of ['new-channel', 'new-channel-mini']) {
   $(id).addEventListener('click', () => {
     $<HTMLInputElement>('newch-name').value = '';
+    setChannelSize(2);
     $('newch-sheet').hidden = false;
     $('newch-name').focus();
   });
@@ -1256,7 +1275,7 @@ $('newch-cancel').addEventListener('click', () => ($('newch-sheet').hidden = tru
 $('newch-start').addEventListener('click', () => {
   $('newch-sheet').hidden = true;
   newChannelName = $<HTMLInputElement>('newch-name').value.trim().slice(0, 30);
-  startNew();
+  startNew(newChannelSize);
 });
 $('ch-done').addEventListener('click', () => {
   const name = $<HTMLInputElement>('ch-name').value.trim().slice(0, 30);

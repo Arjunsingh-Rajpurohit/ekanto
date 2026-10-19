@@ -319,6 +319,17 @@
             <span>Channel name</span>
             <input id="newch-name" type="text" maxlength="30" autocomplete="off" placeholder="e.g. Wife, Family" />
           </label>
+          <div class="field left">
+            <span>How many people? <em class="muted">(including you)</em></span>
+            <div id="newch-sizes" class="sizes five" role="radiogroup" aria-label="How many people">
+              <button type="button" data-n="2" role="radio">2</button>
+              <button type="button" data-n="3" role="radio">3</button>
+              <button type="button" data-n="4" role="radio">4</button>
+              <button type="button" data-n="6" role="radio">6</button>
+              <button type="button" data-n="" role="radio">Any</button>
+            </div>
+            <p id="newch-note" class="hint"></p>
+          </div>
           <button id="newch-start" class="btn primary" type="button">Start call &amp; get link</button>
           <button id="newch-cancel" class="btn" type="button">Cancel</button>
         </div>
