@@ -34,7 +34,6 @@ export interface RowIcons {
 export function channelRow(ch: Channel, live: boolean, icons: RowIcons, actions: RowActions): HTMLLIElement {
   const li = document.createElement('li');
   let line: string;
-  let second = '';
   let state = '';
   if (ch.gone) {
     line = `${ch.gone} removed you`;
@@ -43,8 +42,7 @@ export function channelRow(ch: Channel, live: boolean, icons: RowIcons, actions:
     line = '● In a call now — tap to join';
     state = 'live';
   } else if (ch.missed) {
-    line = `Missed · ${timeText(ch.missed)} — tap to call back`;
-    second = ch.missedWhy ?? '';
+    line = `Missed · ${timeText(ch.missed)}${ch.missedWhy ? ` · ${ch.missedWhy}` : ''}`;
     state = 'missed';
   } else {
     line = ch.members.length ? `You and ${listNames(ch.members)}` : 'Saved';
@@ -65,12 +63,6 @@ export function channelRow(ch: Channel, live: boolean, icons: RowIcons, actions:
   const small = document.createElement('small');
   small.textContent = line;
   text.append(name, small);
-  if (second) {
-    const why = document.createElement('small');
-    why.className = 'ch-why';
-    why.textContent = second;
-    text.append(why);
-  }
   main.append(avatar, text);
   // A missed call is called back with one tap on the row (video); otherwise the row opens options.
   main.addEventListener('click', () => (state === 'missed' ? actions.call(ch, false) : actions.open(ch)));

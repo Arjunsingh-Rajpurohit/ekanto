@@ -1498,7 +1498,7 @@ for (const el of document.querySelectorAll<HTMLElement>('.web-only')) el.hidden 
 setTab('calls');
 drawMe();
 if (!IN_APP && APP_DOWNLOAD_URL) {
-  for (const id of ['get-app', 'get-app-row', 'get-app-card', 'download-app']) {
+  for (const id of ['get-app', 'get-app-row', 'download-app']) {
     $<HTMLAnchorElement>(id).href = APP_DOWNLOAD_URL;
     $(id).hidden = false;
   }

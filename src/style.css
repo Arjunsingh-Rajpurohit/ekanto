@@ -86,14 +86,14 @@ button {
 
 h1 {
   margin: 10px 0 6px;
-  font-size: 1.765rem;
+  font-size: 30px;
   font-weight: 700;
   letter-spacing: -0.02em;
 }
 
 h2 {
   margin: 0 0 6px;
-  font-size: 1.176rem;
+  font-size: 20px;
   letter-spacing: -0.01em;
 }
 
@@ -111,7 +111,7 @@ h2 {
 
 .hint {
   margin: 0;
-  font-size: 0.882rem;
+  font-size: 13.5px;
   color: var(--ink-2);
   line-height: 1.45;
 }
@@ -125,7 +125,7 @@ h2 {
 }
 
 .field > span {
-  font-size: 0.882rem;
+  font-size: 14px;
   font-weight: 600;
 }
 
@@ -137,7 +137,7 @@ h2 {
   background: var(--card);
   border-radius: 14px;
   padding: 14px 16px;
-  font-size: 0.941rem;
+  font-size: 16px;
   outline: none;
   transition: border-color 0.15s;
 }
@@ -159,7 +159,7 @@ h2 {
   border-radius: 12px;
   border: 1px solid var(--line);
   background: var(--card);
-  font-size: 0.941rem;
+  font-size: 16px;
   font-weight: 600;
   text-align: center;
   padding: 0;
@@ -183,7 +183,7 @@ h2 {
   border-radius: 14px;
   background: var(--card);
   border: 1px solid var(--line);
-  font-size: 0.882rem;
+  font-size: 14px;
   color: var(--ink-2);
   line-height: 1.45;
 }
@@ -205,7 +205,7 @@ h2 {
   background: var(--card-2);
   border-radius: 14px;
   padding: 13px 18px;
-  font-size: 0.941rem;
+  font-size: 16px;
   font-weight: 600;
   transition: transform 0.08s, background 0.15s;
 }
@@ -219,7 +219,7 @@ h2 {
 
 .btn.big {
   padding: 17px;
-  font-size: 1rem;
+  font-size: 17px;
 }
 
 .btn:active,
@@ -239,12 +239,12 @@ h2 {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  font-size: 0.882rem;
+  font-size: 14px;
   color: var(--ink-2);
 }
 
 .big-icon {
-  font-size: 3.176rem;
+  font-size: 54px;
 }
 
 /* ---------- Call ---------- */
@@ -288,7 +288,7 @@ h2 {
   border-radius: 99px;
   background: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(8px);
-  font-size: 0.882rem;
+  font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
@@ -306,7 +306,7 @@ h2 {
   gap: 4px;
   background: var(--card);
   color: var(--ink-2);
-  font-size: 0.882rem;
+  font-size: 14px;
 }
 
 .tile.waiting .tile-wait {
@@ -328,7 +328,7 @@ h2 {
   border: 0;
   border-radius: 99px;
   padding: 9px 16px;
-  font-size: 0.882rem;
+  font-size: 14.5px;
   font-weight: 600;
   background: rgba(21, 23, 28, 0.72);
   backdrop-filter: blur(12px);
@@ -559,7 +559,7 @@ h2 {
 }
 
 .safety .emojis {
-  font-size: 1.882rem;
+  font-size: 32px;
   letter-spacing: 4px;
 }
 
@@ -582,7 +582,7 @@ h2 {
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   text-align: center;
-  font-size: 0.882rem;
+  font-size: 15px;
   overflow-wrap: anywhere;
 }
 
@@ -659,7 +659,7 @@ a.btn {
   border: 0;
   border-radius: 14px;
   background: var(--card-2);
-  font-size: 0.941rem;
+  font-size: 16px;
   font-weight: 600;
   text-align: left;
 }
@@ -734,7 +734,7 @@ a.btn {
 .chat-empty {
   margin: auto;
   color: var(--ink-2);
-  font-size: 0.882rem;
+  font-size: 14px;
   text-align: center;
 }
 
@@ -742,7 +742,7 @@ a.btn {
   max-width: 82%;
   padding: 9px 12px 6px;
   border-radius: 16px;
-  font-size: 0.882rem;
+  font-size: 15px;
   line-height: 1.4;
   overflow-wrap: anywhere;
 }
@@ -767,7 +767,7 @@ a.btn {
 
 .bubble .who {
   display: block;
-  font-size: 0.882rem;
+  font-size: 12px;
   font-weight: 700;
   color: #9fc0ff;
   margin-bottom: 2px;
@@ -775,7 +775,7 @@ a.btn {
 
 .bubble time {
   display: block;
-  font-size: 0.882rem;
+  font-size: 11px;
   opacity: 0.6;
   text-align: right;
   margin-top: 2px;
@@ -790,7 +790,7 @@ a.btn {
 }
 
 .file-icon {
-  font-size: 1.529rem;
+  font-size: 26px;
 }
 
 .file-info {
@@ -851,7 +851,7 @@ a.btn {
   background: var(--bg);
   border-radius: 20px;
   padding: 11px 14px;
-  font-size: 0.941rem;
+  font-size: 16px;
   outline: none;
 }
 
@@ -861,7 +861,7 @@ a.btn {
   border-radius: 50%;
   border: 0;
   background: var(--card-2);
-  font-size: 1.176rem;
+  font-size: 20px;
   flex: none;
 }
 
@@ -877,14 +877,14 @@ a.btn {
   border: 1px solid var(--line);
   background: var(--card-2);
   text-align: left;
-  font-size: 0.882rem;
+  font-size: 14px;
   line-height: 1.45;
   color: var(--ink-2);
 }
 
 .choice-row strong {
   color: var(--ink);
-  font-size: 0.941rem;
+  font-size: 16px;
 }
 
 .choice-row:disabled {
@@ -892,7 +892,7 @@ a.btn {
 }
 
 .ci {
-  font-size: 1.412rem;
+  font-size: 24px;
 }
 
 .warn {
@@ -901,7 +901,7 @@ a.btn {
   border-radius: 12px;
   background: rgba(229, 72, 77, 0.12);
   color: #ffb4b6;
-  font-size: 0.882rem;
+  font-size: 14px;
   line-height: 1.4;
   text-align: left;
 }
@@ -972,7 +972,7 @@ a.btn {
   margin: 0;
   padding: 14px;
   white-space: pre-wrap;
-  font-size: 0.882rem;
+  font-size: 14px;
   color: var(--ink);
 }
 
@@ -981,7 +981,7 @@ a.btn {
   margin: auto 0 0;
   padding-top: 18px;
   text-align: center;
-  font-size: 0.882rem;
+  font-size: 12px;
   letter-spacing: 0.02em;
   color: var(--ink-2);
   opacity: 0.75;
@@ -1002,7 +1002,7 @@ a.btn {
   border-radius: 12px;
   background: var(--accent-soft);
   color: var(--ink);
-  font-size: 0.941rem;
+  font-size: 16px;
   font-weight: 600;
   line-height: 1.4;
   overflow-wrap: anywhere;
@@ -1020,7 +1020,7 @@ a.btn {
   background: var(--card-2);
   border-radius: 999px;
   padding: 8px 14px;
-  font-size: 0.882rem;
+  font-size: 14px;
   font-weight: 600;
 }
 
@@ -1046,7 +1046,7 @@ a.btn {
   background: none;
   padding: 6px;
   color: #ff7a7e;
-  font-size: 0.882rem;
+  font-size: 15px;
   font-weight: 600;
 }
 
@@ -1188,7 +1188,7 @@ a.btn {
 }
 
 .float .tile .name {
-  font-size: 0.882rem;
+  font-size: 11px;
   left: 6px;
   bottom: 6px;
   padding: 2px 8px;
@@ -1418,7 +1418,7 @@ body.floating .stage[data-layout='focus'] .main {
   border-radius: 50%;
   display: grid;
   place-items: center;
-  font-size: 1.059rem;
+  font-size: 18px;
   font-weight: 700;
   color: #fff;
   background: linear-gradient(160deg, #2a3444, #141a24);
@@ -1433,14 +1433,14 @@ body.floating .stage[data-layout='focus'] .main {
 }
 
 .ch-text strong {
-  font-size: 0.941rem;
+  font-size: 16px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .ch-text small {
-  font-size: 0.882rem;
+  font-size: 13px;
   color: var(--ink-2);
   white-space: nowrap;
   overflow: hidden;
@@ -1564,7 +1564,7 @@ body.floating .stage[data-layout='focus'] .main {
   border-radius: 50%;
   display: grid;
   place-items: center;
-  font-size: 2.824rem;
+  font-size: 48px;
   font-weight: 700;
   color: #fff;
   background: linear-gradient(160deg, #2a3444, #141a24);
@@ -1591,7 +1591,7 @@ body.floating .stage[data-layout='focus'] .main {
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  font-size: 0.882rem;
+  font-size: 14px;
   color: var(--ink-2);
 }
 
@@ -1652,7 +1652,7 @@ body.floating .stage[data-layout='focus'] .main {
 
 .topbar h1 {
   margin: 0;
-  font-size: 1.235rem;
+  font-size: 21px;
 }
 
 .topbar-tools {
@@ -1668,7 +1668,7 @@ body.floating .stage[data-layout='focus'] .main {
   border-radius: 50%;
   border: 0;
   background: #2a3444;
-  font-size: 0.882rem;
+  font-size: 15px;
   font-weight: 700;
 }
 
@@ -1716,7 +1716,7 @@ body.floating .stage[data-layout='focus'] .main {
 .pane-title,
 .group-label {
   margin: 6px 2px 0;
-  font-size: 0.882rem;
+  font-size: 13px;
   font-weight: 700;
   color: #cfd3da;
 }
@@ -1753,13 +1753,13 @@ body.floating .stage[data-layout='focus'] .main {
 
 .empty h2 {
   margin: 14px 0 0;
-  font-size: 1.235rem;
+  font-size: 21px;
 }
 
 .empty .sub {
   max-width: 320px;
   margin-bottom: 8px;
-  font-size: 0.882rem;
+  font-size: 14.5px;
 }
 
 .empty .btn {
@@ -1827,7 +1827,7 @@ body.floating .stage[data-layout='focus'] .main {
   border-radius: 10px;
   background: none;
   color: #cfd3da;
-  font-size: 0.882rem;
+  font-size: 15px;
   font-weight: 600;
 }
 
@@ -1845,7 +1845,7 @@ body.floating .stage[data-layout='focus'] .main {
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--card);
-  font-size: 0.882rem;
+  font-size: 15px;
   font-weight: 600;
   text-align: left;
 }
@@ -1854,13 +1854,13 @@ body.floating .stage[data-layout='focus'] .main {
 .row-item small {
   margin-left: auto;
   color: #8b93a1;
-  font-size: 0.882rem;
+  font-size: 13px;
   font-weight: 500;
 }
 
 .chev {
   color: #6b7383;
-  font-size: 1.176rem;
+  font-size: 20px;
   line-height: 1;
 }
 
@@ -1873,7 +1873,7 @@ body.floating .stage[data-layout='focus'] .main {
   background: none;
   padding: 8px 0 2px;
   color: #cfd3da;
-  font-size: 0.882rem;
+  font-size: 15px;
   font-weight: 600;
 }
 
@@ -1897,7 +1897,7 @@ body.floating .stage[data-layout='focus'] .main {
 .me-row .ch-avatar {
   width: 48px;
   height: 48px;
-  font-size: 1.118rem;
+  font-size: 19px;
 }
 
 .me-text {
@@ -1909,7 +1909,7 @@ body.floating .stage[data-layout='focus'] .main {
 }
 
 .me-text strong {
-  font-size: 0.941rem;
+  font-size: 16px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1917,7 +1917,7 @@ body.floating .stage[data-layout='focus'] .main {
 
 .me-text small {
   color: var(--ink-2);
-  font-size: 0.882rem;
+  font-size: 13px;
 }
 
 .group {
@@ -1940,7 +1940,7 @@ body.floating .stage[data-layout='focus'] .main {
   border: 0;
   background: none;
   color: var(--ink);
-  font-size: 0.882rem;
+  font-size: 15px;
   font-weight: 600;
   text-align: left;
   text-decoration: none;
@@ -2045,7 +2045,7 @@ input.switch:focus-visible {
   border: 0;
   background: none;
   color: #9aa3b1;
-  font-size: 0.882rem;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -2084,7 +2084,7 @@ input.switch:focus-visible {
   }
 
   .topbar h1 {
-    font-size: 1.294rem;
+    font-size: 22px;
   }
 
   #settings-btn {
@@ -2100,7 +2100,7 @@ input.switch:focus-visible {
     border-radius: 12px;
     background: var(--card);
     color: var(--ink);
-    font-size: 0.882rem;
+    font-size: 14px;
     font-weight: 600;
     text-decoration: none;
   }
@@ -2139,7 +2139,7 @@ input.switch:focus-visible {
     display: block;
     margin: 0 0 2px;
     color: var(--ink);
-    font-size: 1.176rem;
+    font-size: 20px;
   }
 
   .calls-pane .channel-list {
@@ -2184,7 +2184,7 @@ input.switch:focus-visible {
     margin: auto 0 0;
     padding: 28px 16px calc(20px + env(safe-area-inset-bottom));
     color: var(--ink-2);
-    font-size: 0.882rem;
+    font-size: 12.5px;
     text-align: center;
   }
 
@@ -2218,7 +2218,7 @@ input.switch:focus-visible {
 
   .drawer-head h2 {
     margin: 0;
-    font-size: 1.235rem;
+    font-size: 21px;
   }
 
   .drawer-shade {
@@ -2242,15 +2242,15 @@ input.switch:focus-visible {
 
 /* 17px base and rem text, so the phone's large-text setting grows every word. */
 html {
-  font-size: 1rem;
+  font-size: 16px;
 }
 
 body {
-  font-size: 1rem;
+  font-size: 16px;
 }
 
 .sub {
-  font-size: 1rem;
+  font-size: 16px;
 }
 
 .hint,
@@ -2271,11 +2271,11 @@ body {
 .home-foot,
 .tabbar span,
 .ch-why {
-  font-size: 0.94rem;
+  font-size: 15px;
 }
 
 .in-action {
-  font-size: 1.06rem;
+  font-size: 17px;
   font-weight: 700;
   color: #fff;
   gap: 12px;
@@ -2289,7 +2289,7 @@ body {
 .in-kind {
   margin: 0;
   color: var(--ink-2);
-  font-size: 1rem;
+  font-size: 16px;
 }
 
 /* Incoming: two big buttons, far apart, with Answer and Decline in bold white. */
@@ -2326,7 +2326,7 @@ body {
 }
 
 .ctl-label {
-  font-size: 0.82rem;
+  font-size: 13px;
   font-weight: 600;
   color: #fff;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
@@ -2351,7 +2351,7 @@ body {
 
 /* The waiting card: the next step reads at a glance, WhatsApp first. */
 .waiting-sub {
-  font-size: 1.06rem;
+  font-size: 17px;
   color: var(--ink);
 }
 
@@ -2418,43 +2418,6 @@ body {
   border: 1px solid rgba(74, 222, 128, 0.3);
 }
 
-/* Empty Calls tab: one calm line, one button, a quiet link, and the app card on the website. */
-.empty .ready {
-  font-size: 1.18rem;
-  font-weight: 600;
-  line-height: 1.4;
-  max-width: 320px;
-}
-
-.get-app-card {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  width: 100%;
-  max-width: 340px;
-  padding: 12px 16px;
-  border-radius: 14px;
-  background: var(--card);
-  border: 1px solid var(--line);
-  color: var(--ink);
-  text-decoration: none;
-  text-align: left;
-}
-
-.get-app-card span {
-  color: var(--ink-2);
-  font-size: 0.94rem;
-}
-
-/* Limit who can join: four numbers, "Other…", then the default in full. */
-.sizes {
-  grid-template-columns: repeat(5, 1fr);
-}
-
-.sizes .any {
-  grid-column: 1 / -1;
-}
-
 /* Join screen: the IP switch under a small "More options" row. */
 .more-row {
   width: 100%;
@@ -2466,7 +2429,7 @@ body {
 .more-row summary {
   cursor: pointer;
   color: var(--ink-2);
-  font-size: 0.94rem;
+  font-size: 15px;
   text-align: center;
   padding: 10px;
   list-style: none;
@@ -2542,20 +2505,11 @@ body {
   }
 
   .calls-pane .empty-logo,
-  .calls-pane .empty .sub,
-  .calls-pane .get-app-card span {
+  .calls-pane .empty .sub {
     display: none;
   }
 
-  .calls-pane .empty .ready {
-    flex: 0 0 100%;
-    margin: 0 0 4px;
-    font-size: 1rem;
-    max-width: none;
-  }
-
   .calls-pane .empty .btn,
-  .calls-pane .empty .get-app-card,
   .calls-pane .empty .text-link {
     width: auto;
     max-width: none;
