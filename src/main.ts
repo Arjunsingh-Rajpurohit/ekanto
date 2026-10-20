@@ -534,7 +534,7 @@ function drawControls(): void {
     b.disabled = disabled;
   };
   set('mic', audio?.enabled === false ? ICON.micOff : ICON.mic, audio?.enabled === false, audio?.enabled === false ? 'Unmute' : 'Mute', !audio);
-  set('cam', camOn ? ICON.cam : ICON.camOff, !camOn, camOn ? 'Camera off' : 'Camera on');
+  set('cam', camOn ? ICON.cam : ICON.camOff, !camOn, camOn ? 'Turn camera off' : 'Turn camera on');
   set('chat-btn', ICON.chat, false, 'Chat');
   set('more', ICON.more, false, 'More');
   set('end', ICON.end, false, 'End call');
