@@ -10,7 +10,7 @@ import { Chat } from './chat';
 import { ChatPanel } from './chat-ui';
 import { APP_DOWNLOAD_URL, APP_SCHEME, HAS_TURN, publicUrl } from './config';
 import { LINK_HOURS, MAX_PEOPLE, MIN_PEOPLE, SMOOTH_PEOPLE, cleanReason, expired, inviteToHash, newInvite, parseInvite, type Invite } from './invite';
-import { MediaProblem, cameraTrack, canShareScreenInBrowser, openCamera, screenTrack, type Facing } from './media';
+import { MediaProblem, NOISE_KEY, cameraTrack, canShareScreenInBrowser, micCleanup, noiseOn, openCamera, screenTrack, type Facing } from './media';
 import { IN_APP, nativeAudio, nativeCall, nativeFloat, nativeRing, nativeScreenTrack, type AudioRoute, type AudioRoutes, type RingSetting } from './native';
 import { Ringing } from './ringing';
 import type { PluginListenerHandle } from '@capacitor/core';
@@ -1240,6 +1240,21 @@ function hideIp(): boolean {
   }
 }
 
+/* ---------- Sound: remove background noise (applied to a live mic at once) ---------- */
+
+function addNoiseToggle(): void {
+  const box = $('noise') as HTMLInputElement;
+  box.checked = noiseOn();
+  box.addEventListener('change', () => {
+    try {
+      localStorage.setItem(NOISE_KEY, box.checked ? '1' : '0');
+    } catch {
+      // Not remembered, still applied to this call.
+    }
+    stream?.getAudioTracks()[0]?.applyConstraints(micCleanup(box.checked)).catch(() => {});
+  });
+}
+
 function addHideIpToggles(): void {
   if (!HAS_TURN) return;
   for (const before of ['join-btn', 'newch-start']) {
@@ -1301,6 +1316,7 @@ $('size-custom').addEventListener('change', () => {
 setKind(false);
 setSize(null);
 addHideIpToggles();
+addNoiseToggle();
 
 // Protected calls are created in the app; the website points people to the app instead.
 $('protect-row').hidden = !IN_APP;
