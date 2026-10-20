@@ -212,13 +212,12 @@
           <div class="card">
             <div class="pulse" aria-hidden="true"></div>
             <h2 id="waiting-title">Waiting for others</h2>
-            <p id="waiting-sub" class="sub waiting-sub">Nobody has joined yet. Send them the link.</p>
-            <p id="waiting-detail" class="hint" hidden></p>
+            <p id="waiting-sub" class="sub">Send them the link.</p>
             <p id="waiting-why" class="why" hidden></p>
             <div id="waiting-share" class="share-col">
               <a id="whatsapp" class="btn whatsapp" target="_blank" rel="noopener noreferrer">Send on WhatsApp</a>
               <div class="row">
-                <button id="share" class="btn">Share another way</button>
+                <button id="share" class="btn">Share</button>
                 <button id="copy" class="btn">Copy</button>
               </div>
             </div>
@@ -226,14 +225,16 @@
         </div>
 
         <footer class="controls">
-          <div class="ctl"><button id="mic" class="round" type="button" aria-label="Mute"></button><span id="mic-label" class="ctl-label">Mute</span></div>
-          <div class="ctl"><button id="cam" class="round" type="button" aria-label="Camera"></button><span id="cam-label" class="ctl-label">Camera</span></div>
-          <div class="ctl"><button id="audio-btn" class="round" type="button" aria-label="Speaker"></button><span id="audio-btn-label" class="ctl-label">Speaker</span></div>
-          <div class="ctl"><button id="chat-btn" class="round" type="button" aria-label="Chat">
-            <span id="chat-badge" class="badge" hidden></span>
-          </button><span id="chat-btn-label" class="ctl-label">Chat</span></div>
-          <div class="ctl"><button id="more" class="round" type="button" aria-label="More"></button><span id="more-label" class="ctl-label">More</span></div>
-          <div class="ctl end-ctl"><button id="end" class="round danger" type="button" aria-label="End"></button><span id="end-label" class="ctl-label">End</span></div>
+          <div class="bar">
+            <button id="mic" class="round" type="button" aria-label="Mute microphone"></button>
+            <button id="cam" class="round" type="button" aria-label="Turn camera off"></button>
+            <button id="audio-btn" class="round" type="button" aria-label="Sound output"></button>
+            <button id="chat-btn" class="round" type="button" aria-label="Chat">
+              <span id="chat-badge" class="badge" hidden></span>
+            </button>
+            <button id="more" class="round" type="button" aria-label="More"></button>
+            <button id="end" class="round danger" type="button" aria-label="End call"></button>
+          </div>
         </footer>
         <!-- Camera or mic blocked: stays until dismissed, says where to fix it -->
         <div id="blocked" class="blocked" role="alert" hidden><p id="blocked-text"></p><button id="blocked-close" class="btn small" type="button">Dismiss</button></div>

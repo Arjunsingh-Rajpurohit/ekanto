@@ -434,11 +434,10 @@ async function enterCall(name: string, via?: ChannelVia, camera?: boolean): Prom
   stage.reset();
   meter.watch('me', stream);
   updateMe(name);
-  $('waiting-sub').textContent = 'Nobody has joined yet. Send them the link.';
-  $('waiting-detail').textContent = newChannelName !== null
-    ? `When they join, both phones save each other${newChannelName ? ` as “${newChannelName}”` : ''} — after that, just tap to call.`
-    : `This ${callWord(invite)} allows ${peopleText(invite.limit)}${invite.appOnly ? ' and only the Ekanto app can join' : ''}. The link works for ${LINK_HOURS} hours.`;
-  $('waiting-detail').hidden = false;
+  // One short line; the limit and the 24 hours travel in the shared text, not on this screen.
+  $('waiting-sub').textContent = newChannelName !== null
+    ? 'Send them the link — when they join, both phones save each other.'
+    : 'Send them the link.';
   $('waiting-share').hidden = !!via;
   $<HTMLAnchorElement>('whatsapp').href = `https://wa.me/?text=${encodeURIComponent(`${inviteText()}\n${link()}`)}`;
   showWhy('waiting-why', via ? via.reason ?? null : invite.reason);
@@ -588,14 +587,12 @@ function drawControls(): void {
     b.classList.toggle('off', off);
     b.setAttribute('aria-label', label);
     b.disabled = disabled;
-    const text = document.getElementById(`${id}-label`);
-    if (text) text.textContent = label;
   };
-  set('mic', audio?.enabled === false ? ICON.micOff : ICON.mic, audio?.enabled === false, audio?.enabled === false ? 'Muted' : 'Mute', !audio);
-  set('cam', camOn ? ICON.cam : ICON.camOff, !camOn, camOn ? 'Camera' : 'Camera off');
+  set('mic', audio?.enabled === false ? ICON.micOff : ICON.mic, audio?.enabled === false, audio?.enabled === false ? 'Unmute' : 'Mute microphone', !audio);
+  set('cam', camOn ? ICON.cam : ICON.camOff, !camOn, camOn ? 'Turn camera off' : 'Turn camera on');
   set('chat-btn', ICON.chat, false, 'Chat');
   set('more', ICON.more, false, 'More');
-  set('end', ICON.end, false, 'End');
+  set('end', ICON.end, false, 'End call');
   $('flip').querySelector('.mi')!.innerHTML = ICON.flip;
   $('screen').querySelector('.mi')!.innerHTML = ICON.screen;
   $('invite').querySelector('.mi')!.innerHTML = ICON.invite;
