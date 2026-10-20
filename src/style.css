@@ -1464,15 +1464,43 @@ body.floating .stage[data-layout='focus'] .main {
   opacity: 0.3;
 }
 
-.ring-warn {
+.ring-health {
+  align-self: flex-start;
+  margin: 0 0 8px;
+  padding: 6px 12px;
   border: 0;
-  border-radius: 12px;
-  padding: 10px 12px;
-  background: rgba(255, 207, 92, 0.12);
-  color: #ffcf5c;
-  font-size: 0.882rem;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 13px;
   font-weight: 600;
-  text-align: left;
+  cursor: pointer;
+}
+.ring-health::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  vertical-align: 1px;
+}
+.ring-health.ok {
+  color: #2e9e5b;
+  background: rgba(46, 158, 91, 0.12);
+}
+.ring-health.warn {
+  color: #c27a00;
+  background: rgba(240, 160, 0, 0.14);
+}
+.ring-fix {
+  margin-left: auto;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #111;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 /* Home sheets sit over a page that can scroll. */

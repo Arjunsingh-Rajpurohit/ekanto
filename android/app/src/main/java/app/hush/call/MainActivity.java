@@ -54,6 +54,12 @@ public class MainActivity extends BridgeActivity {
     private void handleCallIntent(Intent intent) {
         String action = intent == null ? null : intent.getAction();
         boolean answer = RingService.ACTION_ANSWER.equals(action);
+        if (RingService.ACTION_TEST_SEEN.equals(action)) {
+            // The test ring was seen: that is all it had to prove.
+            RingService.decline(RingService.TEST_CALL);
+            intent.setAction(Intent.ACTION_MAIN);
+            return;
+        }
         if (!answer && !RingService.ACTION_INCOMING.equals(action)) return;
         String call = intent.getStringExtra(RingService.EXTRA_CALL);
         showOverLock(true);

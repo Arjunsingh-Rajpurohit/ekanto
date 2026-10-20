@@ -1226,18 +1226,25 @@ const RING_ROWS: { which: RingSetting; title: string; why: string }[] = [
   { which: 'notifications', title: 'Notifications', why: 'To show who is calling' },
   { which: 'fullScreen', title: 'Full-screen calls', why: 'To ring on the lock screen' },
   { which: 'battery', title: 'No battery limit', why: "So Android doesn't put Ekanto to sleep" },
+  { which: 'exactAlarms', title: 'Exact alarms', why: 'So a sleeping phone still rings' },
+  { which: 'autostart', title: 'Autostart', why: 'So this phone lets Ekanto wake up' },
 ];
 
 async function drawRingSetup(auto = false): Promise<void> {
   if (!IN_APP) return;
-  const status = await nativeRing.status().catch(() => null);
-  if (!status) return;
-  const missing = RING_ROWS.some((r) => !status[r.which]);
-  $('ring-setup-btn').hidden = !missing || !channels.length;
+  const health = await nativeRing.health().catch(() => null);
+  if (!health) return;
+  const missing = !health.ready;
+  const problems = new Map(health.problems.map((p) => [p.code, p]));
+  // One quiet line on the Calls tab: green when it can ring, amber with "fix" when it may not.
+  const line = $('ring-health');
+  line.hidden = !channels.length;
+  line.className = `ring-health ${missing ? 'warn' : 'ok'}`;
+  line.textContent = missing ? 'May miss calls — fix' : 'Ready to ring';
   $('ringing-row').hidden = false;
-  $('ringing-state').textContent = missing ? 'Set up ›' : '✓ Ready';
+  $('ringing-state').textContent = missing ? 'May miss calls ›' : '✓ Ready';
   $('ringing-state').className = missing ? 'warn-text' : 'ok';
-  // Shown by itself once, the first time a channel is saved; after that from "Set up ringing".
+  // Shown by itself once, the first time a channel is saved; after that from the Calls line or Settings.
   if (auto && missing && channels.length) {
     try {
       if (!localStorage.getItem('hush.ringAsked')) {
@@ -1245,23 +1252,44 @@ async function drawRingSetup(auto = false): Promise<void> {
         $('ring-sheet').hidden = false;
       }
     } catch {
-      // Not remembered: the yellow button stays.
+      // Not remembered: the amber line stays.
     }
   }
-  $('ring-list').replaceChildren(...RING_ROWS.map((r) => {
+  // Autostart is only a row on phones that have the switch (Xiaomi, Oppo, …).
+  const rows = RING_ROWS.filter((r) => r.which !== 'autostart' || health.maker);
+  $('ring-list').replaceChildren(...rows.map((r) => {
+    const problem = problems.get(r.which);
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = `menu-item${status[r.which] ? ' on' : ''}`;
-    b.disabled = status[r.which];
-    b.innerHTML = `<span class="mi">${status[r.which] ? '✅' : '⚠️'}</span>`;
+    b.className = `menu-item${problem ? '' : ' on'}`;
+    b.disabled = !problem;
+    b.innerHTML = `<span class="mi">${problem ? '⚠️' : '✅'}</span>`;
     const text = document.createElement('span');
     const strong = document.createElement('strong');
-    strong.textContent = r.title;
-    text.append(strong, document.createElement('br'), r.why);
+    strong.textContent = problem ? problem.title : r.title;
+    // Wrong: say what is wrong and which switch fixes it. Fine: say why it matters.
+    text.append(strong, document.createElement('br'), r.which === 'autostart' && problem && !health.autostartKnown
+      ? `${health.maker} hides this switch: Settings → Apps → Ekanto → Autostart`
+      : problem ? `Turn on: ${r.title}` : r.why);
     b.append(text);
+    if (problem) {
+      const fix = document.createElement('small');
+      fix.className = 'ring-fix';
+      fix.textContent = problem.fix;
+      b.append(fix);
+    }
     b.addEventListener('click', () => void nativeRing.allow(r.which).then(() => drawRingSetup()).catch(() => undefined));
     return b;
   }));
+  $('ring-hint').hidden = !health.maker || !problems.has('autostart');
+}
+
+/** "Test ring": in a minute the phone rings by itself, so they can lock it and see it work. */
+function startTestRing(): void {
+  nativeRing.test(60000).then(() => {
+    $('ring-sheet').hidden = true;
+    toast('Lock your phone. It rings in 1 minute.');
+  }).catch(() => toast("Couldn't start the test ring."));
 }
 
 /* ---------- Extra privacy: hide your IP (only when a backup relay is set up) ---------- */
@@ -1595,10 +1623,11 @@ $('ch-done').addEventListener('click', () => {
   if (ch && name && name !== ch.name) storeChannels(channels.map((c) => (c.id === ch.id ? { ...c, name } : c)));
 });
 $('ch-delete').addEventListener('click', deleteChannel);
-$('ring-setup-btn').addEventListener('click', () => {
+$('ring-health').addEventListener('click', () => {
   $('ring-sheet').hidden = false;
   void drawRingSetup();
 });
+$('ring-test').addEventListener('click', startTestRing);
 $('ring-close').addEventListener('click', () => ($('ring-sheet').hidden = true));
 $('save-channel').addEventListener('click', openSaveSheet);
 $('save-no').addEventListener('click', () => ($('save-sheet').hidden = true));

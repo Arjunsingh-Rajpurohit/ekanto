@@ -18,6 +18,10 @@ public class RingReceiver extends BroadcastReceiver {
             PowerManager power = context.getSystemService(PowerManager.class);
             power.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "hush:ring-check").acquire(15000);
             if (!RingService.keepAlive() && RingService.hasChannels(context)) RingService.start(context);
+        } else if (RingService.ACTION_TEST_RING.equals(action)) {
+            PowerManager power = context.getSystemService(PowerManager.class);
+            power.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "hush:ring-test").acquire(15000);
+            RingService.testRing(context);
         }
     }
 }

@@ -53,6 +53,11 @@ public class RingService extends Service {
 
     static final String ACTION_START = "app.hush.call.RING_START";
     static final String ACTION_KEEPALIVE = "app.hush.call.RING_KEEPALIVE";
+    /** "Test ring" in the ring sheet: rings this phone from the service itself, no relay. */
+    static final String ACTION_TEST_RING = "app.hush.call.RING_TEST";
+    /** The test ring's full-screen page: just opens Ekanto and closes the test. */
+    static final String ACTION_TEST_SEEN = "app.hush.call.RING_TEST_SEEN";
+    static final String TEST_CALL = "test-ring";
     static final String ACTION_DECLINE = "app.hush.call.RING_DECLINE";
     /** Opening the app for a ring: the call screen, or "Answer" in the notification. */
     static final String ACTION_INCOMING = "app.hush.call.INCOMING";
@@ -157,6 +162,48 @@ public class RingService extends Service {
         MainActivity.setShowOverLock(false);
     }
 
+    /** "Test ring": ring this phone in about a minute, so the user can lock it and watch. */
+    static void scheduleTestRing(Context context, long delayMs) {
+        PendingIntent pi = PendingIntent.getBroadcast(context, 4, new Intent(context, RingReceiver.class).setAction(ACTION_TEST_RING),
+            PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+        wakeAt(context, SystemClock.elapsedRealtime() + delayMs, pi);
+    }
+
+    /** The test alarm went off: ring now, through the same path a real call takes. */
+    static void testRing(Context context) {
+        RingService s = instance;
+        if (s != null) {
+            s.handler.post(s::testRingNow);
+            return;
+        }
+        // The service was not running (that is what the test is for): start it and ring once it is up.
+        try {
+            ContextCompat.startForegroundService(context, new Intent(context, RingService.class).setAction(ACTION_TEST_RING));
+        } catch (Exception ignored) {
+            // Android refused a background start: the health check names what to fix.
+        }
+    }
+
+    /**
+     * Wakes the phone at that time. From Android 12 only an exact alarm may start a foreground service from
+     * the background; an inexact one is delivered but the start is refused, so a sleeping phone stops ringing.
+     */
+    static void wakeAt(Context context, long elapsedAt, PendingIntent pi) {
+        AlarmManager alarms = context.getSystemService(AlarmManager.class);
+        if (canExactAlarm(context)) alarms.setExactAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, elapsedAt, pi);
+        else alarms.setAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, elapsedAt, pi);
+    }
+
+    /** Below Android 12 every alarm is exact; from 12 the user allows it once ("Alarms & reminders"). */
+    static boolean canExactAlarm(Context context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true;
+        try {
+            return context.getSystemService(AlarmManager.class).canScheduleExactAlarms();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     /** The phone woke for its regular check. */
     static boolean keepAlive() {
         RingService s = instance;
@@ -197,9 +244,21 @@ public class RingService extends Service {
         goForeground();
         String action = intent == null ? ACTION_START : intent.getAction();
         if (ACTION_KEEPALIVE.equals(action)) handler.post(this::keepAliveNow);
+        else if (ACTION_TEST_RING.equals(action)) handler.post(() -> {
+            reload();
+            testRingNow();
+        });
         else handler.post(this::reload);
         // Android may stop it to free memory: it comes back by itself.
         return START_STICKY;
+    }
+
+    /** Swiped away from Recents: some phones kill the service with it. Come back a moment later. */
+    @Override
+    public void onTaskRemoved(Intent rootIntent) {
+        // Through the receiver, which starts us as a foreground service (a plain start is refused from the background).
+        if (hasChannels(this)) wakeAt(this, SystemClock.elapsedRealtime() + 3000, keepAliveIntent());
+        super.onTaskRemoved(rootIntent);
     }
 
     @Override
@@ -329,9 +388,8 @@ public class RingService extends Service {
     }
 
     private void scheduleKeepAlive() {
-        // Allowed even while the phone is idle ("Doze"), about every 10 minutes at most.
-        getSystemService(AlarmManager.class).setAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP,
-            SystemClock.elapsedRealtime() + KEEPALIVE_MS, keepAliveIntent());
+        // Allowed even while the phone is idle ("Doze"); exact when the user allowed it, so it may restart us.
+        wakeAt(this, SystemClock.elapsedRealtime() + KEEPALIVE_MS, keepAliveIntent());
     }
 
     private PendingIntent keepAliveIntent() {
@@ -411,13 +469,41 @@ public class RingService extends Service {
         else notifyIncoming(next);
     }
 
+    private void testRingNow() {
+        if (ringing.containsKey(TEST_CALL) || CallService.running) return;
+        handled.remove(TEST_CALL);
+        Ch ch = new Ch();
+        ch.id = TEST_CALL;
+        ch.name = "Test ring";
+        Ringing next = new Ringing();
+        next.ch = ch;
+        next.call = TEST_CALL;
+        next.from = "Test ring";
+        next.voice = true;
+        next.reason = "If you see this, Ekanto can ring you.";
+        next.id = 1000 + (TEST_CALL.hashCode() & 0xffff);
+        // No "Missed call" for a test: it simply stops.
+        next.timeout = () -> stopRingingNow(TEST_CALL);
+        ringing.put(TEST_CALL, next);
+        handler.postDelayed(next.timeout, 30000);
+        notifyIncoming(next);
+    }
+
+    private boolean isTest(Ringing r) {
+        return TEST_CALL.equals(r.call);
+    }
+
     private void notifyIncoming(Ringing r) {
         boolean sameName = r.ch.name.equalsIgnoreCase(r.from);
         Person caller = new Person.Builder().setName(r.from).setImportant(true).build();
-        PendingIntent full = PendingIntent.getActivity(this, r.id, callIntent(ACTION_INCOMING, r), PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
-        PendingIntent answer = PendingIntent.getActivity(this, r.id + 1, callIntent(ACTION_ANSWER, r), PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         PendingIntent decline = PendingIntent.getBroadcast(this, r.id + 2,
             new Intent(this, RingReceiver.class).setAction(ACTION_DECLINE).putExtra(EXTRA_CALL, r.call),
+            PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+        // A test ring has no caller: every button just closes it and opens Ekanto.
+        Intent seen = isTest(r) ? callIntent(ACTION_TEST_SEEN, r) : null;
+        PendingIntent full = PendingIntent.getActivity(this, r.id, seen != null ? seen : callIntent(ACTION_INCOMING, r),
+            PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+        PendingIntent answer = PendingIntent.getActivity(this, r.id + 1, seen != null ? seen : callIntent(ACTION_ANSWER, r),
             PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         String kind = (r.voice ? "Ekanto voice call" : "Ekanto video call") + (sameName ? "" : " · " + r.ch.name);
         // On a locked phone it says only who is calling; why ("Dinner plans?") shows once unlocked.
@@ -477,6 +563,12 @@ public class RingService extends Service {
         handled.add(call);
         Ringing r = ringing.remove(call);
         if (r != null) clear(r);
+        if (r != null && isTest(r)) afterTest();
+    }
+
+    /** A test ring started the service on a phone with no saved channel: nothing left to listen for. */
+    private void afterTest() {
+        if (!hasChannels(this)) stopSelf();
     }
 
     private void declineNow(String call) {
@@ -484,6 +576,10 @@ public class RingService extends Service {
         Ringing r = ringing.remove(call);
         if (r == null) return;
         clear(r);
+        if (isTest(r)) {
+            afterTest();
+            return;
+        }
         // Twice, a moment apart: a lost "no" would leave them ringing until time runs out.
         send(r.ch, "decline", call);
         handler.postDelayed(() -> send(r.ch, "decline", call), 2000);
