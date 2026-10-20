@@ -242,7 +242,10 @@ public class HushNativePlugin extends Plugin {
     }
 
     private void openNotificationSettings() {
-        Intent intent = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, getContext().getPackageName());
+        // The per-app notification page exists from Android 8; older phones get the app's details page.
+        Intent intent = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+            ? new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, getContext().getPackageName())
+            : new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getContext().getPackageName()));
         getActivity().startActivity(intent);
     }
 
