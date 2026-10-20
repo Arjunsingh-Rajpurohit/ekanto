@@ -97,6 +97,7 @@
             <p class="group-label">Sound</p>
             <div class="group">
               <label id="noise-row" class="row-item"><span>Remove background noise</span><input id="noise" type="checkbox" class="switch" /></label>
+              <label id="lowdata-row" class="row-item"><span>Use less data</span><input id="lowdata" type="checkbox" class="switch" /></label>
               <div class="row-item web-only"><span>Speaker / headset</span><small>Chosen in the call</small></div>
             </div>
             <p id="app-label" class="group-label">App</p>
@@ -185,6 +186,8 @@
         <header class="call-top">
           <div class="top-row">
             <button id="status" class="chip" type="button">Starting…</button>
+            <!-- Shown only while this phone sends less (weak network or the "Use less data" setting); a tap restores -->
+            <button id="lowdata-chip" class="chip low" type="button" hidden></button>
             <div class="top-actions">
               <button id="layout-btn" class="mini" type="button" aria-label="Change layout" hidden></button>
               <button id="pip-btn" class="mini" type="button" aria-label="Pop out video" hidden></button>

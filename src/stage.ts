@@ -1,6 +1,10 @@
-import type { Person } from './call';
+import type { Bars, Person } from './call';
 
 const ME = 'me';
+/** A crossed-out microphone, for a muted person's tile. */
+const MUTED_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+  + '<line x1="2" x2="22" y1="2" y2="22"/><path d="M18.89 13.23A7.12 7.12 0 0 0 19 12v-2"/><path d="M5 10v2a7 7 0 0 0 12 5"/>'
+  + '<path d="M15 9.34V5a3 3 0 0 0-5.68-1.33"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12"/><line x1="12" x2="12" y1="19" y2="22"/></svg>';
 
 /** What the stage needs to know about your own picture. */
 export interface Me {
@@ -35,6 +39,8 @@ export class Stage {
   private corner: 'tl' | 'tr' | 'bl' | 'br' = 'tr';
   /** Output device for everyone else's sound (computers only; '' = default). */
   private sink = '';
+  /** Your own signal bars (the weakest of your connections). */
+  private myBars: Bars = null;
   private readonly root: HTMLElement;
   private readonly main: HTMLElement;
   private readonly grid: HTMLElement;
@@ -56,6 +62,12 @@ export class Stage {
   setMe(me: Me): void {
     this.me = me;
     this.layout();
+  }
+
+  setMyBars(bars: Bars): void {
+    if (bars === this.myBars) return;
+    this.myBars = bars;
+    this.drawTile(ME);
   }
 
   setPeople(people: Person[]): void {
@@ -183,10 +195,15 @@ export class Stage {
       avatar.className = 'avatar';
       const label = document.createElement('span');
       label.className = 'name';
+      // Name text, then the 3-bar signal glyph. The text is set with textContent (names are typed).
+      label.innerHTML = '<span class="nm"></span><span class="bars" aria-hidden="true"><i></i><i></i><i></i></span>';
+      const muted = document.createElement('span');
+      muted.className = 'muted-badge';
+      muted.innerHTML = MUTED_ICON;
       const wait = document.createElement('div');
       wait.className = 'tile-wait';
       wait.innerHTML = '<div class="spinner"></div><p>Connecting securely…</p>';
-      tile.append(video, avatar, label, wait);
+      tile.append(video, avatar, label, muted, wait);
       if (id !== ME) {
         const audio = document.createElement('audio');
         audio.autoplay = true;
@@ -201,7 +218,8 @@ export class Stage {
       const me = this.me;
       if (video.srcObject !== me.stream) video.srcObject = me.stream;
       // textContent, never innerHTML: names are whatever people typed.
-      tile.querySelector('.name')!.textContent = me.screen ? 'You · sharing screen' : 'You';
+      tile.querySelector('.nm')!.textContent = me.screen ? 'You · sharing screen' : 'You';
+      this.drawBars(tile, this.myBars);
       tile.querySelector('.avatar')!.textContent = (me.name.trim()[0] ?? 'Y').toUpperCase();
       tile.classList.toggle('no-video', !me.video);
       tile.classList.toggle('mirror', me.mirror);
@@ -219,9 +237,15 @@ export class Stage {
         audio.srcObject = sound.length ? new MediaStream(sound) : null;
         if (sound.length) void audio.play().catch(() => undefined);
       }
-      tile.querySelector('.name')!.textContent = p.screen ? `${p.name} · sharing screen` : p.name;
+      const tag = p.screen ? `${p.name} · sharing screen` : p.name;
+      tile.querySelector('.nm')!.textContent = p.mic === false ? `${tag} · Muted` : tag;
+      this.drawBars(tile, p.bars);
+      tile.classList.toggle('muted', p.mic === false);
       tile.querySelector('.avatar')!.textContent = (p.name.trim()[0] ?? '?').toUpperCase();
-      tile.classList.toggle('waiting', !p.connected);
+      // A dropped connection dims them while a new path is found; only a person never yet
+      // connected shows the "Connecting securely…" curtain.
+      tile.classList.toggle('reconnecting', p.reconnecting);
+      tile.classList.toggle('waiting', !p.connected && !p.reconnecting);
       // Until their 'hi' says otherwise, a stream with no live picture is a camera that is off:
       // the connection comes up a moment before the side-channel, and a black tile hides their name.
       const livePicture = (p.stream?.getVideoTracks() ?? []).some((t) => t.readyState === 'live' && !t.muted);
@@ -230,6 +254,13 @@ export class Stage {
     }
     tile.classList.toggle('speaking', this.speaking.has(id));
     tile.classList.toggle('pinned', this.pinned === id);
+  }
+
+  /** The 3-bar glyph in the name tag: hidden until measured. */
+  private drawBars(tile: HTMLElement, bars: Bars): void {
+    const glyph = tile.querySelector<HTMLElement>('.bars')!;
+    glyph.hidden = bars === null;
+    glyph.dataset['bars'] = bars === null ? '' : String(bars);
   }
 
   private tap(id: string): void {
