@@ -858,6 +858,8 @@ function startChannelCall(via: ChannelVia): void {
   const call = inviteToHash(invite);
   const cc: NonNullable<typeof channelCall> = { ch: via.ch, hash: call, reason: cleanReason(via.reason), caller: false, connected: false, started: Date.now() };
   channelCall = cc;
+  // The controls were drawn before this call knew its channel: hide "Save as channel" now.
+  drawControls();
   ringing.hold(cc.ch.id);
   if (via.caller) startRinging(cc);
   else $('waiting-sub').textContent = 'Connecting…';
