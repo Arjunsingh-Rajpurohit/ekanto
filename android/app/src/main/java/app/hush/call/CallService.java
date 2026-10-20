@@ -200,13 +200,15 @@ public class CallService extends Service {
         }
     }
 
-    private void stopCapture() {
+    // Android's own "Stop casting" releases on the capture thread while the page's stop runs on main:
+    // one at a time, so neither tears down what the other already freed.
+    private synchronized void stopCapture() {
         MediaProjection current = projection;
         releaseCapture();
         if (current != null) current.stop();
     }
 
-    private void releaseCapture() {
+    private synchronized void releaseCapture() {
         if (display != null) display.release();
         if (reader != null) reader.close();
         if (thread != null) thread.quitSafely();
