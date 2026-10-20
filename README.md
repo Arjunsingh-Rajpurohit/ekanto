@@ -8,8 +8,11 @@ Website: https://arjunsingh-rajpurohit.github.io/ekanto/ · Android app: [ekanto
 
 ## How it works
 
-1. Type your name, pick **Video** or **Voice**, pick how many people can join (2, 3, 4… or "Any"),
-   tap **Create call link**.
+Three tabs on a phone — **Calls** (saved channels), **Link** (a one-time call link), **Settings**
+(your name, Hide my IP). On a computer, Calls and Link sit side by side and ⚙️ opens Settings.
+
+1. **Link** tab: pick **Video** or **Voice**, how many people can join (2, 3, 4… or "Any"), an optional
+   reason, tap **Create call link**. The first time, it asks your name.
 2. Send the link (WhatsApp, SMS…). Others tap it, type a name, tap **Join call**.
 3. Tap the green 🔒 chip to compare **safety emojis**. Same 5 on both phones = nobody is in between.
 
@@ -19,7 +22,7 @@ A link works for **24 hours**. After that it opens nothing — an old link found
 
 For people you call often (e.g. you and your wife): save a channel once, then just tap it. No new links.
 
-1. **＋ New channel** → name it → send the link. When they join, both phones save it.
+1. **Calls** tab → **＋** → name it → send the link. When they join, both phones save it.
    (Or in any call: **⋯ → Save as channel**.)
 2. Next time: tap 📞 or 🎥 on the channel. Their phone **rings** like WhatsApp — **Answer** / **Decline**.
    Missed calls show on the channel. If a call is already on, the channel says **In a call now** — tap to join.

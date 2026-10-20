@@ -24,81 +24,108 @@
   </head>
   <body>
     <main id="app">
-      <!-- Home: name, how many people, create -->
-      <section id="home" class="screen pad" hidden>
-        <header class="brand">
-          <img src="./favicon.svg" alt="" class="logo" />
-          <h1>Ekanto</h1>
-          <p class="sub">Private calls. No login. Nothing saved.</p>
+      <!-- Home. A phone: three tabs (Calls · Link · Settings). A computer: Calls and Link side by side,
+           Settings in a side panel. Each fits the screen without scrolling. -->
+      <section id="home" class="screen home" data-tab="calls" hidden>
+        <header class="topbar">
+          <div class="topbar-brand">
+            <img src="./favicon.svg" alt="" class="logo-sm" />
+            <h1 id="home-title">Ekanto</h1>
+          </div>
+          <div class="topbar-tools">
+            <a id="get-app" class="tool-btn" target="_blank" rel="noopener noreferrer" hidden>📱 Get the app</a>
+            <button id="settings-btn" class="tool-icon" type="button" aria-label="Settings"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
+            <button id="me-btn" class="me-btn" type="button" aria-label="Your name">?</button>
+          </div>
         </header>
 
-        <label class="field">
-          <span>Your name</span>
-          <input id="name" type="text" maxlength="30" autocomplete="off" placeholder="What should others see?" />
-        </label>
+        <div class="panes">
+          <!-- Calls: saved channels, tap to ring them -->
+          <section id="tab-calls" class="pane calls-pane" aria-label="Saved channels">
+            <h2 class="pane-title">Saved channels</h2>
+            <button id="ring-setup-btn" class="ring-warn" type="button" hidden>⚠️ Set up ringing, so calls reach you when Ekanto is closed</button>
+            <ul id="channel-list" class="channel-list"></ul>
+            <div id="calls-empty" class="empty">
+              <img src="./favicon.svg" alt="" class="empty-logo" />
+              <h2>No saved channels yet</h2>
+              <p class="sub">Save the people you call often. Next time, just tap to call — it rings their phone. No links.</p>
+              <button id="new-channel" class="btn primary" type="button">＋ New channel</button>
+              <button id="go-link" class="btn with-icon" type="button"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><span>Start a one-time call link</span></button>
+            </div>
+            <div class="calls-foot">
+              <p id="web-ring-note" class="hint" hidden>On the website, channels ring only while this page is open. The app rings anytime.</p>
+              <button id="new-channel-fab" class="fab" type="button" aria-label="New channel" hidden><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+            </div>
+          </section>
 
-        <div class="field">
-          <span>Call type</span>
-          <div id="kinds" class="kinds" role="radiogroup" aria-label="Call type">
-            <button type="button" data-kind="video" role="radio" class="on" aria-checked="true">🎥 Video call</button>
-            <button type="button" data-kind="voice" role="radio" aria-checked="false">📞 Voice call</button>
-          </div>
+          <!-- Link: a one-time call link to send -->
+          <section id="tab-link" class="pane link-pane" aria-label="Call link">
+            <h2 class="pane-title">Call link</h2>
+            <div id="kinds" class="seg" role="radiogroup" aria-label="Call type">
+              <button type="button" data-kind="video" role="radio" class="on" aria-checked="true">🎥 Video</button>
+              <button type="button" data-kind="voice" role="radio" aria-checked="false">📞 Voice</button>
+            </div>
+            <div class="field">
+              <span>How many people? <em class="muted">(incl. you)</em></span>
+              <div id="sizes" class="sizes" role="radiogroup" aria-label="How many people">
+                <button type="button" data-n="2" role="radio">2</button>
+                <button type="button" data-n="3" role="radio">3</button>
+                <button type="button" data-n="4" role="radio">4</button>
+                <button type="button" data-n="6" role="radio">6</button>
+                <button type="button" data-n="" role="radio" class="on">Any</button>
+                <input id="size-custom" type="number" inputmode="numeric" min="2" max="20" placeholder="#" aria-label="Type a number" />
+              </div>
+              <p id="size-note" class="hint" hidden></p>
+            </div>
+            <label class="field">
+              <span>Reason <em class="muted">(optional)</em></span>
+              <input id="reason" type="text" maxlength="60" autocomplete="off" placeholder="e.g. Dinner plans" />
+            </label>
+            <button id="options-btn" class="opt-row" type="button" hidden>
+              <span>More options</span><small id="options-sum"></small><span class="chev" aria-hidden="true">›</span>
+            </button>
+            <div class="grow"></div>
+            <button id="create" class="btn primary big" type="button">Create call link</button>
+            <button id="paste-btn" class="text-link" type="button"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><span>Have a link? Paste it</span></button>
+          </section>
+
+          <!-- Settings: a tab on a phone, a side panel on a computer -->
+          <section id="tab-settings" class="pane settings-pane" aria-label="Settings">
+            <div class="drawer-head">
+              <h2>Settings</h2>
+              <button id="settings-close" class="tool-icon" type="button" aria-label="Close settings"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+            </div>
+            <button id="name-row" class="me-row" type="button">
+              <span id="me-avatar" class="ch-avatar">?</span>
+              <span class="me-text"><strong id="me-name">Add your name</strong><small>Your name in calls · tap to change</small></span>
+              <span class="chev" aria-hidden="true">›</span>
+            </button>
+            <p class="group-label">Privacy</p>
+            <div class="group">
+              <label id="hide-ip-row" class="row-item hide-ip" hidden><span>Hide my IP address</span><input type="checkbox" class="switch" /></label>
+              <button id="privacy-btn" class="row-item" type="button"><span>How Ekanto keeps calls private</span><span class="chev" aria-hidden="true">›</span></button>
+            </div>
+            <p class="group-label web-only">Sound</p>
+            <div class="group web-only">
+              <div class="row-item"><span>Speaker / headset</span><small>Chosen in the call</small></div>
+            </div>
+            <p id="app-label" class="group-label">App</p>
+            <div id="app-group" class="group">
+              <button id="ringing-row" class="row-item" type="button" hidden><span>Ringing</span><small id="ringing-state"></small></button>
+              <a id="get-app-row" class="row-item" target="_blank" rel="noopener noreferrer" hidden><span>Get the Ekanto app</span><small>Android</small><span class="chev" aria-hidden="true">›</span></a>
+            </div>
+            <p class="mark">Ekanto™ · © 2026 Mr.Rajpurohit</p>
+          </section>
         </div>
 
-        <div class="field">
-          <span>How many people? <em class="muted">(including you)</em></span>
-          <div id="sizes" class="sizes" role="radiogroup" aria-label="How many people">
-            <button type="button" data-n="2" role="radio">2</button>
-            <button type="button" data-n="3" role="radio">3</button>
-            <button type="button" data-n="4" role="radio">4</button>
-            <button type="button" data-n="6" role="radio">6</button>
-            <button type="button" data-n="" role="radio" class="on">Any</button>
-            <input id="size-custom" type="number" inputmode="numeric" min="2" max="20" placeholder="#" aria-label="Type a number" />
-          </div>
-          <p id="size-note" class="hint"></p>
-        </div>
+        <p class="home-foot">🔒 Phone to phone, encrypted · no login · nothing saved · Ekanto™ · © 2026 Mr.Rajpurohit</p>
 
-        <label class="field">
-          <span>Reason <em class="muted">(optional)</em></span>
-          <input id="reason" type="text" maxlength="60" autocomplete="off" placeholder="e.g. Dinner plans, Quick question" />
-        </label>
-
-        <label id="protect-row" class="toggle" hidden>
-          <input id="protect" type="checkbox" />
-          <span><strong>Protected call</strong><br>Others can join only from the Ekanto app: no screenshots, no screen recording, no browser extensions.</span>
-        </label>
-
-        <button id="create" class="btn primary big">Create call link</button>
-
-        <div class="or"><span>or</span></div>
-        <form id="paste" class="paste">
-          <input id="paste-input" type="url" inputmode="url" autocomplete="off" placeholder="Paste a call link" aria-label="Call link" />
-          <button class="btn" type="submit">Join</button>
-        </form>
-
-        <!-- Saved channels: call the same people again with one tap, it rings their phone -->
-        <section id="channels" class="channels" aria-label="Saved channels">
-          <div id="channels-head" class="channels-head">
-            <h2>Saved channels</h2>
-            <button id="new-channel-mini" class="link-btn" type="button">＋ New</button>
-          </div>
-          <button id="ring-setup-btn" class="ring-warn" type="button" hidden>⚠️ Set up ringing, so calls reach you when Ekanto is closed</button>
-          <ul id="channel-list" class="channel-list"></ul>
-          <button id="new-channel" class="new-channel" type="button">
-            <strong>＋ New channel</strong>
-            <span>Call the same people again with one tap. No links.</span>
-          </button>
-        </section>
-
-        <ul class="promises">
-          <li>🔒 Video and voice go phone to phone, encrypted.</li>
-          <li>🔑 The key is only in your link — no server ever sees it.</li>
-          <li>🚫 No account, no tracking, no recordings.</li>
-        </ul>
-        <a id="get-app" class="app-promo" hidden target="_blank" rel="noopener noreferrer">
-          📱 <span><strong>Get the Ekanto app</strong> — blocks screenshots, screen recording and browser extensions.</span>
-        </a>
-        <p class="mark">Ekanto™ · © 2026 Mr.Rajpurohit</p>
+        <nav id="tabbar" class="tabbar" aria-label="Sections">
+          <button type="button" data-tab="calls" class="on"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span>Calls</span></button>
+          <button type="button" data-tab="link"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><span>Link</span></button>
+          <button type="button" data-tab="settings"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg><span>Settings</span></button>
+        </nav>
+        <div id="drawer-shade" class="drawer-shade"></div>
       </section>
 
       <!-- Opened a link -->
@@ -351,11 +378,66 @@
             <p id="newch-note" class="hint"></p>
           </div>
           <label id="newch-protect-row" class="toggle" hidden>
-            <input id="newch-protect" type="checkbox" />
+            <input id="newch-protect" type="checkbox" class="switch" />
             <span><strong>Protected channel</strong><br>Its calls work only in the Ekanto app: no screenshots, no screen recording, no browser extensions.</span>
           </label>
           <button id="newch-start" class="btn primary" type="button">Start call &amp; get link</button>
           <button id="newch-cancel" class="btn" type="button">Cancel</button>
+        </div>
+      </div>
+
+      <!-- Link › More options -->
+      <div id="options-sheet" class="sheet fixed" hidden>
+        <div class="sheet-card">
+          <h2>More options</h2>
+          <label id="protect-row" class="toggle" hidden>
+            <input id="protect" type="checkbox" class="switch" />
+            <span><strong>Protected call</strong><br>Only the Ekanto app can join. No screenshots or screen recording.</span>
+          </label>
+          <label id="options-hide-ip" class="toggle hide-ip" hidden>
+            <input type="checkbox" class="switch" />
+            <span><strong>Hide my IP address</strong><br>Goes through the relay so nobody sees where you are. A little slower.</span>
+          </label>
+          <button id="options-done" class="btn primary" type="button">Done</button>
+        </div>
+      </div>
+
+      <!-- Have a link? -->
+      <div id="paste-sheet" class="sheet fixed" hidden>
+        <div class="sheet-card">
+          <h2>Join with a link</h2>
+          <form id="paste" class="paste" novalidate>
+            <input id="paste-input" type="url" inputmode="url" autocomplete="off" placeholder="Paste the call link" aria-label="Call link" />
+            <button class="btn primary" type="submit">Join</button>
+          </form>
+          <button id="paste-cancel" class="btn" type="button">Cancel</button>
+        </div>
+      </div>
+
+      <!-- Your name: the only thing kept on this phone -->
+      <div id="name-sheet" class="sheet fixed" hidden>
+        <div class="sheet-card">
+          <h2>Your name</h2>
+          <p class="sub">What others see in calls. It stays on this phone.</p>
+          <label class="field left">
+            <span>Name</span>
+            <input id="name" type="text" maxlength="30" autocomplete="off" enterkeyhint="done" placeholder="e.g. Arjun" />
+          </label>
+          <button id="name-save" class="btn primary" type="button">Save</button>
+          <button id="name-cancel" class="btn" type="button">Cancel</button>
+        </div>
+      </div>
+
+      <div id="privacy-sheet" class="sheet fixed" hidden>
+        <div class="sheet-card">
+          <h2>How Ekanto keeps calls private</h2>
+          <ul class="promises">
+            <li>🔒 Video and voice go phone to phone, encrypted.</li>
+            <li>🔑 The key is only in your link — no server ever sees it.</li>
+            <li>⏰ A link works for 24 hours, then opens nothing.</li>
+            <li>🚫 No account, no tracking, no recordings. Chat and files vanish when the call ends.</li>
+          </ul>
+          <button id="privacy-close" class="btn" type="button">Close</button>
         </div>
       </div>
 

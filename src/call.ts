@@ -145,6 +145,8 @@ export class CallSession {
   private media: MediaState;
   /** Chat and files: everything on the side-channel that isn't a camera/screen signal. */
   onChannelData: (from: Person, data: string | ArrayBuffer) => void = () => undefined;
+  /** Someone's chat line just opened (a moment after their video, more over the relay). */
+  onChannelOpen: (id: string) => void = () => undefined;
   /** "Save this call as a channel" and the answers to it ({"k":"chan…"}), phone to phone. */
   onControl: (from: Person, message: Record<string, unknown>) => void = () => undefined;
 
@@ -460,6 +462,7 @@ export class CallSession {
     this.peers.set(peer.id, peer);
     channel.onopen = () => {
       this.sayHi(peer);
+      this.onChannelOpen(peer.id);
       this.publish();
     };
     // The side-channel only closes when their connection is gone for good (hung up, page closed).

@@ -69,6 +69,8 @@ export class Chat {
   /** Bytes announced by each sender so far in this call. */
   private takenFrom = new Map<string, number>();
   private queues = new Map<string, Promise<void>>();
+  /** Messages for people whose chat line is still opening: sent the moment it opens. */
+  private waiting = new Map<string, string[]>();
   private readonly session: CallSession;
   private readonly onChange: () => void;
 
@@ -76,6 +78,11 @@ export class Chat {
     this.session = session;
     this.onChange = onChange;
     session.onChannelData = (from, data) => this.receive(from, data);
+    session.onChannelOpen = (id) => {
+      const wires = this.waiting.get(id) ?? [];
+      this.waiting.delete(id);
+      for (const wire of wires) this.session.sendTo(id, wire);
+    };
   }
 
   /** People a message would reach right now. */
@@ -86,10 +93,13 @@ export class Chat {
   sendText(text: string, people: Person[]): boolean {
     const clean = text.trim().slice(0, 2000);
     const to = this.recipients(people);
-    if (!clean || !to.length) return false;
+    // In the call but their chat line not open yet (it opens a moment after the video): it waits.
+    const soon = people.filter((p) => !p.channelOpen);
+    if (!clean || (!to.length && !soon.length)) return false;
     const id = newId();
     const wire = JSON.stringify({ k: 'msg', id, text: clean } satisfies Wire);
     for (const p of to) this.session.sendTo(p.id, wire);
+    for (const p of soon) this.waiting.set(p.id, [...(this.waiting.get(p.id) ?? []), wire].slice(-50));
     this.add({ id, from: null, at: Date.now(), text: clean });
     return true;
   }
@@ -146,6 +156,7 @@ export class Chat {
     this.incoming.clear();
     this.takenFrom.clear();
     this.queues.clear();
+    this.waiting.clear();
     this.unread = 0;
   }
 

@@ -155,7 +155,7 @@ h2 {
 
 .sizes button,
 .sizes input {
-  height: 48px;
+  height: 46px;
   border-radius: 12px;
   border: 1px solid var(--line);
   background: var(--card);
@@ -225,22 +225,6 @@ h2 {
 .btn:active,
 .round:active {
   transform: scale(0.97);
-}
-
-.or {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: var(--ink-2);
-  font-size: 13px;
-}
-
-.or::before,
-.or::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--line);
 }
 
 .paste {
@@ -527,51 +511,12 @@ h2 {
   overflow-wrap: anywhere;
 }
 
-.app-promo {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  padding: 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--ink-2);
-  font-size: 14px;
-  line-height: 1.45;
-  text-decoration: none;
-}
-
-.app-promo strong {
-  color: var(--ink);
-}
-
 a.btn {
   color: var(--ink);
   text-decoration: none;
 }
 
 /* ---------- Call type ---------- */
-
-.kinds {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
-.kinds button {
-  height: 50px;
-  border-radius: 12px;
-  border: 1px solid var(--line);
-  background: var(--card);
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.kinds .on {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-  color: #fff;
-}
 
 /* ---------- Tiles: camera off, screen share ---------- */
 
@@ -1338,33 +1283,6 @@ body.floating .stage[data-layout='focus'] .main {
 
 /* ---------- Saved channels ---------- */
 
-.channels {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.channels-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.channels-head h2 {
-  margin: 0;
-  font-size: 16px;
-}
-
-.link-btn {
-  border: 0;
-  background: none;
-  padding: 4px 0;
-  color: var(--accent);
-  font-size: 15px;
-  font-weight: 600;
-}
-
 .channel-list {
   list-style: none;
   margin: 0;
@@ -1471,23 +1389,6 @@ body.floating .stage[data-layout='focus'] .main {
   opacity: 0.3;
 }
 
-.new-channel {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 14px;
-  border: 1px dashed rgba(255, 255, 255, 0.18);
-  border-radius: var(--radius);
-  background: transparent;
-  font-size: 16px;
-}
-
-.new-channel span {
-  font-size: 13px;
-  color: var(--ink-2);
-}
-
 .ring-warn {
   border: 0;
   border-radius: 12px;
@@ -1502,7 +1403,7 @@ body.floating .stage[data-layout='focus'] .main {
 /* Home sheets sit over a page that can scroll. */
 .sheet.fixed {
   position: fixed;
-  z-index: 20;
+  z-index: 28;
 }
 
 .sheet-card .field.left,
@@ -1586,5 +1487,620 @@ body.floating .stage[data-layout='focus'] .main {
 @media (prefers-reduced-motion: reduce) {
   .in-avatar {
     animation: none;
+  }
+}
+
+/* ---------- Home: three tabs on a phone, two panels on a computer ---------- */
+
+.home {
+  height: 100dvh;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding-top: env(safe-area-inset-top);
+  overflow: hidden;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  /* Same height on every tab, with or without the round letter. */
+  min-height: 58px;
+  padding: 14px 18px 8px;
+}
+
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.logo-sm {
+  width: 30px;
+  height: 30px;
+  border-radius: 22.6%;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.topbar h1 {
+  margin: 0;
+  font-size: 21px;
+}
+
+.topbar-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.me-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 0;
+  background: #2a3444;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.tool-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--card);
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+
+/* On a phone these live in Settings instead. */
+#settings-btn,
+.tool-btn,
+.home[data-tab='settings'] .me-btn {
+  display: none;
+}
+
+.panes {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.pane {
+  display: none;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: 12px;
+  padding: 6px 16px 16px;
+  overflow-y: auto;
+}
+
+.home[data-tab='calls'] .calls-pane,
+.home[data-tab='link'] .link-pane,
+.home[data-tab='settings'] .settings-pane {
+  display: flex;
+}
+
+.pane-title,
+.group-label {
+  margin: 6px 2px 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #cfd3da;
+}
+
+/* The top bar already says "Call link"; an empty list needs no heading. */
+.link-pane .pane-title,
+.calls-pane.is-empty .pane-title {
+  display: none;
+}
+
+/* Leaves room for the + button over the last channel. */
+.calls-pane .channel-list {
+  padding-bottom: 76px;
+}
+
+.empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 10px 24px;
+  text-align: center;
+}
+
+.empty-logo {
+  width: 84px;
+  height: 84px;
+  border-radius: 22.6%;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 12px 30px rgba(0, 0, 0, 0.55);
+}
+
+.empty h2 {
+  margin: 14px 0 0;
+  font-size: 21px;
+}
+
+.empty .sub {
+  max-width: 320px;
+  margin-bottom: 8px;
+  font-size: 14.5px;
+}
+
+.empty .btn {
+  width: 100%;
+  max-width: 340px;
+}
+
+.btn.with-icon,
+.text-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.calls-foot {
+  margin-top: auto;
+  /* Clear of the + button floating over this corner. */
+  padding-right: 72px;
+}
+
+.fab {
+  position: fixed;
+  right: 18px;
+  bottom: calc(86px + env(safe-area-inset-bottom));
+  z-index: 6;
+  width: 58px;
+  height: 58px;
+  border: 0;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.55);
+}
+
+.fab:active {
+  transform: scale(0.95);
+}
+
+.home:not([data-tab='calls']) .fab {
+  display: none;
+}
+
+/* Video · Voice */
+.seg {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+}
+
+.seg button {
+  height: 42px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: #cfd3da;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.seg .on {
+  background: #2a3444;
+  color: #fff;
+}
+
+.opt-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.opt-row small,
+.row-item small {
+  margin-left: auto;
+  color: #8b93a1;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.chev {
+  color: #6b7383;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.grow {
+  flex: 1;
+}
+
+.text-link {
+  border: 0;
+  background: none;
+  padding: 8px 0 2px;
+  color: #cfd3da;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* Settings */
+.drawer-head {
+  display: none;
+}
+
+.me-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--card);
+  text-align: left;
+}
+
+.me-row .ch-avatar {
+  width: 48px;
+  height: 48px;
+  font-size: 19px;
+}
+
+.me-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.me-text strong {
+  font-size: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.me-text small {
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--card);
+}
+
+.row-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-height: 52px;
+  padding: 12px 14px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* A line between rows that are shown. */
+.group > .row-item:not([hidden]) ~ .row-item {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+div.row-item {
+  cursor: default;
+}
+
+.row-item .ok {
+  color: var(--good);
+  font-weight: 600;
+}
+
+.row-item .warn-text {
+  color: #ffcf5c;
+  font-weight: 600;
+}
+
+.settings-pane .mark {
+  margin-top: auto;
+}
+
+.sheet-card .promises {
+  text-align: left;
+  margin: 0;
+}
+
+/* On/off switch */
+input.switch {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  flex: none;
+  width: 46px;
+  height: 28px;
+  margin: 0;
+  border-radius: 14px;
+  background: #3a4252;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+input.switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #cfd3da;
+  transition: transform 0.15s, background 0.15s;
+}
+
+input.switch:checked {
+  background: var(--accent);
+}
+
+input.switch:checked::after {
+  transform: translateX(18px);
+  background: var(--on-accent);
+}
+
+input.switch:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+/* A sheet's switch rows: words first, switch on the right. */
+.toggle {
+  align-items: center;
+}
+
+.toggle input.switch {
+  order: 2;
+  width: 46px;
+  height: 28px;
+  margin: 0 0 0 auto;
+}
+
+.tabbar {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  padding: 8px 0 calc(10px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line);
+  background: #0d121b;
+}
+
+.tabbar button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: #9aa3b1;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.tabbar .on {
+  color: #fff;
+}
+
+.home-foot,
+.drawer-shade {
+  display: none;
+}
+
+/* Sound is picked in the call; only a computer has more than one output to mention. */
+.settings-pane .web-only {
+  display: none;
+}
+
+/* A computer: Calls and Link side by side, Settings slides in from the right. */
+@media (min-width: 900px) {
+  .settings-pane p.web-only {
+    display: block;
+  }
+
+  .settings-pane div.web-only {
+    display: flex;
+  }
+
+  .home {
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+
+  .topbar {
+    padding: 22px 32px 0;
+  }
+
+  .topbar h1 {
+    font-size: 22px;
+  }
+
+  #settings-btn {
+    display: grid;
+  }
+
+  .tool-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 14px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--card);
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .home[data-tab='settings'] .me-btn {
+    display: block;
+  }
+
+  .panes {
+    flex: none;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: stretch;
+    gap: 24px;
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 32px 0;
+  }
+
+  .home .calls-pane,
+  .home .link-pane {
+    display: flex;
+    min-height: 500px;
+    gap: 14px;
+    padding: 24px;
+    overflow: visible;
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    background: #121823;
+    /* Rows and boxes inside the card sit a shade darker than it. */
+    --card: #0d121a;
+  }
+
+  .home .pane-title {
+    display: block;
+    margin: 0 0 2px;
+    color: var(--ink);
+    font-size: 20px;
+  }
+
+  .calls-pane .channel-list {
+    padding-bottom: 0;
+  }
+
+  .empty {
+    padding-bottom: 0;
+  }
+
+  .empty-logo {
+    width: 64px;
+    height: 64px;
+  }
+
+  #go-link,
+  .grow,
+  .tabbar {
+    display: none;
+  }
+
+  .calls-foot {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    padding-right: 0;
+  }
+
+  .fab,
+  .home:not([data-tab='calls']) .fab {
+    position: static;
+    display: grid;
+    width: 54px;
+    height: 54px;
+    margin-left: auto;
+    border-radius: 16px;
+  }
+
+  .home-foot {
+    display: block;
+    margin: auto 0 0;
+    padding: 28px 16px calc(20px + env(safe-area-inset-bottom));
+    color: var(--ink-2);
+    font-size: 12.5px;
+    text-align: center;
+  }
+
+  .home .settings-pane {
+    display: flex;
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 25;
+    width: min(400px, 100vw);
+    padding: 22px 22px 18px;
+    border-left: 1px solid var(--line);
+    background: #10151e;
+    transform: translateX(100%);
+    visibility: hidden;
+    transition: transform 0.22s ease, visibility 0.22s;
+  }
+
+  .home.drawer-open .settings-pane {
+    transform: none;
+    visibility: visible;
+  }
+
+  .drawer-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+
+  .drawer-head h2 {
+    margin: 0;
+    font-size: 21px;
+  }
+
+  .drawer-shade {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 24;
+    background: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+
+  .home.drawer-open .drawer-shade {
+    opacity: 1;
+    pointer-events: auto;
   }
 }

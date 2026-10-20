@@ -219,7 +219,10 @@ function saveName(name: string): void {
 
 function show(screen: Screen): void {
   for (const s of ['home', 'join', 'protected', 'call', 'message', 'incoming'] as Screen[]) $(s).hidden = s !== screen;
-  if (screen === 'home') void drawRingSetup(true);
+  if (screen === 'home') {
+    drawMe();
+    void drawRingSetup(true);
+  }
 }
 
 function toast(text: string): void {
@@ -264,13 +267,80 @@ function setSize(n: number | null): void {
     b.setAttribute('aria-checked', String(on));
   }
   $<HTMLInputElement>('size-custom').classList.toggle('on', $<HTMLInputElement>('size-custom').value !== '');
-  $('size-note').textContent = n === null
-    ? `Anyone with the link can join. Smooth for up to ${SMOOTH_PEOPLE} people.`
-    : n === 2
-      ? 'Just the two of you. A third person is turned away.'
-      : n > SMOOTH_PEOPLE
-        ? `Only ${n} can join. Above ${SMOOTH_PEOPLE}, video may lag on phones.`
-        : `Only ${n} people can join. The rest are turned away.`;
+  // Only the one thing worth a line: big calls can lag.
+  const note = n !== null && n > SMOOTH_PEOPLE ? `Above ${SMOOTH_PEOPLE} people, video may lag on phones.` : '';
+  $('size-note').textContent = note;
+  $('size-note').hidden = !note;
+}
+
+/* Tabs on a phone (Calls · Link · Settings); on a computer Calls and Link sit side by side. */
+
+type Tab = 'calls' | 'link' | 'settings';
+const HOME_SHEETS = ['options-sheet', 'paste-sheet', 'name-sheet', 'privacy-sheet'];
+const TAB_TITLE: Record<Tab, string> = { calls: 'Ekanto', link: 'Call link', settings: 'Settings' };
+const wide = window.matchMedia('(min-width: 900px)');
+
+function setTab(tab: Tab): void {
+  $('home').dataset['tab'] = tab;
+  $('home-title').textContent = wide.matches ? 'Ekanto' : TAB_TITLE[tab];
+  for (const b of $('tabbar').querySelectorAll<HTMLButtonElement>('button')) {
+    b.classList.toggle('on', b.dataset['tab'] === tab);
+    if (b.dataset['tab'] === tab) b.setAttribute('aria-current', 'page');
+    else b.removeAttribute('aria-current');
+  }
+  if (tab === 'settings') void drawRingSetup();
+}
+
+/** Settings: its own tab on a phone, a side panel on a computer. */
+function openSettings(): void {
+  if (!wide.matches) return setTab('settings');
+  $('home').classList.add('drawer-open');
+  void drawRingSetup();
+}
+
+function closeSettings(): void {
+  $('home').classList.remove('drawer-open');
+}
+
+/** The round letter at the top and the name row in Settings. */
+function drawMe(): void {
+  const name = savedName();
+  $('me-btn').textContent = name ? initial(name) : '?';
+  $('me-avatar').textContent = name ? initial(name) : '?';
+  $('me-name').textContent = name || 'Add your name';
+}
+
+/** Asked once, before the first call: others should see who is calling, not "Someone". */
+let afterName: (() => void) | null = null;
+function openNameSheet(then: (() => void) | null = null): void {
+  afterName = then;
+  $<HTMLInputElement>('name').value = savedName();
+  $('name-save').textContent = then ? 'Continue' : 'Save';
+  $('name-sheet').hidden = false;
+  $('name').focus();
+}
+
+function withName(action: () => void): void {
+  if (savedName()) return action();
+  openNameSheet(action);
+}
+
+function saveNameSheet(): void {
+  const then = afterName;
+  afterName = null;
+  saveName($<HTMLInputElement>('name').value.trim().slice(0, 30));
+  $('name-sheet').hidden = true;
+  drawMe();
+  then?.();
+}
+
+/* More options: protected call, hide my IP — the summary says which are on. */
+function drawOptions(): void {
+  const on = [
+    IN_APP && $<HTMLInputElement>('protect').checked ? 'Protected' : '',
+    HAS_TURN && hideIp() ? 'IP hidden' : '',
+  ].filter(Boolean);
+  $('options-sum').textContent = on.join(' · ') || 'Off';
 }
 
 function route(): void {
@@ -294,8 +364,7 @@ function route(): void {
 /** A new channel brings its own people limit and protection; otherwise the home screen's are used. */
 function startNew(limit: number | null = size, appOnly = IN_APP && $<HTMLInputElement>('protect').checked,
   reason = cleanReason($<HTMLInputElement>('reason').value)): void {
-  const name = $<HTMLInputElement>('name').value.trim();
-  saveName(name);
+  const name = savedName();
   invite = newInvite(limit, appOnly, voice, Date.now(), reason);
   // A reason belongs to one call: the next call starts with an empty box.
   $<HTMLInputElement>('reason').value = '';
@@ -723,12 +792,12 @@ function isLive(ch: Channel): boolean {
 }
 
 function drawChannels(): void {
-  const section = $('channels');
-  // With channels saved they come first, under your name; without, "New channel" waits lower down.
-  const anchor = channels.length ? $('name').closest('.field')! : $('paste');
-  if (section.previousElementSibling !== anchor) anchor.after(section);
-  $('channels-head').hidden = !channels.length;
-  $('new-channel').hidden = channels.length > 0;
+  const any = channels.length > 0;
+  $('tab-calls').classList.toggle('is-empty', !any);
+  $('calls-empty').hidden = any;
+  $('channel-list').hidden = !any;
+  $('new-channel-fab').hidden = !any;
+  $('web-ring-note').hidden = IN_APP || !any;
   $('channel-list').replaceChildren(...channels.map((ch) => channelRow(ch, isLive(ch), { voice: ICON.earpiece, video: ICON.cam }, {
     open: openChannelSheet,
     call: askWhy,
@@ -742,6 +811,7 @@ let whyFor: { ch: Channel; voice: boolean } | null = null;
 /** Tapped call on a channel: ask why first — unless a call is already on there, then just join it. */
 function askWhy(ch: Channel, voiceCall: boolean): void {
   if (session || ch.gone) return;
+  if (!savedName()) return openNameSheet(() => askWhy(ch, voiceCall));
   if (isLive(ch)) return void callChannel(ch, voiceCall);
   whyFor = { ch, voice: voiceCall };
   $('callwhy-title').textContent = `Call ${ch.name}`;
@@ -767,8 +837,7 @@ function showWhy(id: string, reason: string | null | undefined): void {
 
 async function callChannel(ch: Channel, voiceCall: boolean, reason: string | null = null): Promise<void> {
   if (session || ch.gone) return;
-  const name = $<HTMLInputElement>('name').value.trim() || savedName();
-  saveName(name);
+  const name = savedName();
   const live = liveCalls.get(ch.id);
   const joining = live && isLive(ch) ? parseInvite(live.call) : null;
   const next = joining && !expired(joining) ? joining : newInvite(null, ch.appOnly, voiceCall);
@@ -1125,16 +1194,16 @@ const RING_ROWS: { which: RingSetting; title: string; why: string }[] = [
 ];
 
 async function drawRingSetup(auto = false): Promise<void> {
-  if (!IN_APP || !channels.length) {
-    $('ring-setup-btn').hidden = true;
-    return;
-  }
+  if (!IN_APP) return;
   const status = await nativeRing.status().catch(() => null);
   if (!status) return;
   const missing = RING_ROWS.some((r) => !status[r.which]);
-  $('ring-setup-btn').hidden = !missing;
+  $('ring-setup-btn').hidden = !missing || !channels.length;
+  $('ringing-row').hidden = false;
+  $('ringing-state').textContent = missing ? 'Set up ›' : '✓ Ready';
+  $('ringing-state').className = missing ? 'warn-text' : 'ok';
   // Shown by itself once, the first time a channel is saved; after that from "Set up ringing".
-  if (auto && missing) {
+  if (auto && missing && channels.length) {
     try {
       if (!localStorage.getItem('hush.ringAsked')) {
         localStorage.setItem('hush.ringAsked', '1');
@@ -1173,11 +1242,20 @@ function hideIp(): boolean {
 
 function addHideIpToggles(): void {
   if (!HAS_TURN) return;
-  for (const before of ['create', 'join-btn', 'newch-start']) {
+  for (const before of ['join-btn', 'newch-start']) {
     const label = document.createElement('label');
-    label.className = 'toggle';
+    label.className = 'toggle hide-ip';
     const box = document.createElement('input');
     box.type = 'checkbox';
+    box.className = 'switch';
+    const text = document.createElement('span');
+    text.innerHTML = '<strong>Hide my IP address</strong><br>Goes through the relay so nobody sees where you are. A little slower.';
+    label.append(box, text);
+    $(before).before(label);
+  }
+  $('hide-ip-row').hidden = false;
+  $('options-hide-ip').hidden = false;
+  for (const box of document.querySelectorAll<HTMLInputElement>('.hide-ip input')) {
     box.checked = hideIp();
     box.addEventListener('change', () => {
       try {
@@ -1185,19 +1263,14 @@ function addHideIpToggles(): void {
       } catch {
         // Not remembered, still applied to this call.
       }
-      document.querySelectorAll<HTMLInputElement>('.toggle.hide-ip input').forEach((b) => (b.checked = box.checked));
+      document.querySelectorAll<HTMLInputElement>('.hide-ip input').forEach((b) => (b.checked = box.checked));
+      drawOptions();
     });
-    label.classList.add('hide-ip');
-    const text = document.createElement('span');
-    text.innerHTML = '<strong>Hide my IP address</strong><br>The call goes through the encrypted relay, so others never see where you are. A little slower.';
-    label.append(box, text);
-    $(before).before(label);
   }
 }
 
 /* ---------- Wiring ---------- */
 
-$<HTMLInputElement>('name').value = savedName();
 for (const b of $('kinds').querySelectorAll<HTMLButtonElement>('button')) {
   b.addEventListener('click', () => setKind(b.dataset['kind'] === 'voice'));
 }
@@ -1232,8 +1305,60 @@ addHideIpToggles();
 // Protected calls are created in the app; the website points people to the app instead.
 $('protect-row').hidden = !IN_APP;
 $('newch-protect-row').hidden = !IN_APP;
+$('options-btn').hidden = !IN_APP && !HAS_TURN;
+$('protect').addEventListener('change', drawOptions);
+drawOptions();
+$('options-btn').addEventListener('click', () => ($('options-sheet').hidden = false));
+$('options-done').addEventListener('click', () => ($('options-sheet').hidden = true));
+for (const b of $('tabbar').querySelectorAll<HTMLButtonElement>('button')) {
+  b.addEventListener('click', () => setTab(b.dataset['tab'] as Tab));
+}
+$('go-link').addEventListener('click', () => setTab('link'));
+$('settings-btn').addEventListener('click', openSettings);
+$('settings-close').addEventListener('click', closeSettings);
+$('drawer-shade').addEventListener('click', closeSettings);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeSettings();
+});
+// Turning a computer window narrow (or a tablet around) moves Settings back into its tab.
+wide.addEventListener('change', () => {
+  const tab = $('home').dataset['tab'] as Tab;
+  if (wide.matches && tab === 'settings') {
+    setTab('calls');
+    openSettings();
+  } else if (!wide.matches && $('home').classList.contains('drawer-open')) {
+    closeSettings();
+    setTab('settings');
+  } else {
+    setTab(tab);
+  }
+});
+$('me-btn').addEventListener('click', () => openNameSheet());
+$('name-row').addEventListener('click', () => openNameSheet());
+$('name-save').addEventListener('click', saveNameSheet);
+$('name').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') saveNameSheet();
+});
+$('name-cancel').addEventListener('click', () => {
+  afterName = null;
+  $('name-sheet').hidden = true;
+});
+$('privacy-btn').addEventListener('click', () => ($('privacy-sheet').hidden = false));
+$('privacy-close').addEventListener('click', () => ($('privacy-sheet').hidden = true));
+$('paste-btn').addEventListener('click', () => {
+  $('paste-sheet').hidden = false;
+  $('paste-input').focus();
+});
+$('paste-cancel').addEventListener('click', () => ($('paste-sheet').hidden = true));
+$('ringing-row').addEventListener('click', () => {
+  $('ring-sheet').hidden = false;
+  void drawRingSetup();
+});
+for (const el of document.querySelectorAll<HTMLElement>('.web-only')) el.hidden = IN_APP;
+setTab('calls');
+drawMe();
 if (!IN_APP && APP_DOWNLOAD_URL) {
-  for (const id of ['get-app', 'download-app']) {
+  for (const id of ['get-app', 'get-app-row', 'download-app']) {
     $<HTMLAnchorElement>(id).href = APP_DOWNLOAD_URL;
     $(id).hidden = false;
   }
@@ -1243,16 +1368,18 @@ $('open-app').addEventListener('click', () => {
 });
 $('copy-protected').addEventListener('click', () => void copyLink());
 
-$('create').addEventListener('click', () => {
+$('create').addEventListener('click', () => withName(() => {
   newChannelName = null;
   startNew();
-});
+}));
 $('again').addEventListener('click', () => {
-  $<HTMLInputElement>('name').value = savedName();
+  history.replaceState(null, '', location.pathname);
+  setTab('link');
   show('home');
 });
 $('home-btn').addEventListener('click', () => {
   history.replaceState(null, '', location.pathname);
+  setTab('calls');
   show('home');
 });
 $('join-btn').addEventListener('click', () => {
@@ -1263,7 +1390,8 @@ $('join-btn').addEventListener('click', () => {
 $('paste').addEventListener('submit', (e) => {
   e.preventDefault();
   const parsed = parseInvite($<HTMLInputElement>('paste-input').value);
-  if (!parsed) return toast("That doesn't look like a Ekanto call link.");
+  if (!parsed) return toast("That doesn't look like an Ekanto call link.");
+  $('paste-sheet').hidden = true;
   history.replaceState(null, '', `#${inviteToHash(parsed)}`);
   $<HTMLInputElement>('paste-input').value = '';
   route();
@@ -1308,9 +1436,11 @@ $('pip-btn').addEventListener('click', () => {
 });
 $('invite').addEventListener('click', () => void shareLink());
 $('safety-btn').addEventListener('click', openSafety);
-for (const id of ['sheet', 'more-sheet', 'send-sheet', 'audio-sheet', 'leave-sheet', 'save-sheet', 'ask-sheet', 'newch-sheet', 'ch-sheet', 'ring-sheet', 'callwhy-sheet']) {
+for (const id of ['sheet', 'more-sheet', 'send-sheet', 'audio-sheet', 'leave-sheet', 'save-sheet', 'ask-sheet', 'newch-sheet', 'ch-sheet', 'ring-sheet', 'callwhy-sheet', ...HOME_SHEETS]) {
   $(id).addEventListener('click', (e) => {
-    if (e.target === $(id)) $(id).hidden = true;
+    if (e.target !== $(id)) return;
+    $(id).hidden = true;
+    if (id === 'name-sheet') afterName = null;
   });
 }
 
@@ -1368,15 +1498,15 @@ $('newch-custom').addEventListener('change', () => {
   const input = $<HTMLInputElement>('newch-custom');
   if (input.value !== '' && newChannelSize !== null) input.value = String(newChannelSize);
 });
-for (const id of ['new-channel', 'new-channel-mini']) {
-  $(id).addEventListener('click', () => {
+for (const id of ['new-channel', 'new-channel-fab']) {
+  $(id).addEventListener('click', () => withName(() => {
     $<HTMLInputElement>('newch-name').value = '';
     $<HTMLInputElement>('newch-custom').value = '';
     $<HTMLInputElement>('newch-protect').checked = false;
     setChannelSize(null);
     $('newch-sheet').hidden = false;
     $('newch-name').focus();
-  });
+  }));
 }
 $('newch-cancel').addEventListener('click', () => ($('newch-sheet').hidden = true));
 $('newch-start').addEventListener('click', () => {
@@ -1481,7 +1611,7 @@ if (IN_APP) {
     // Back closes whatever is open on top; in the call itself it keeps the call going in the
     // background (it never hangs up by accident).
     if (!$('viewer').hidden) return panel?.hideViewer();
-    for (const id of ['send-sheet', 'more-sheet', 'audio-sheet', 'sheet', 'save-sheet', 'ask-sheet', 'newch-sheet', 'ch-sheet', 'ring-sheet', 'callwhy-sheet']) {
+    for (const id of ['send-sheet', 'more-sheet', 'audio-sheet', 'sheet', 'save-sheet', 'ask-sheet', 'newch-sheet', 'ch-sheet', 'ring-sheet', 'callwhy-sheet', ...HOME_SHEETS]) {
       if (!$(id).hidden) return void ($(id).hidden = true);
     }
     // A ringing call keeps ringing (in the notification) — Back never declines by accident.
@@ -1495,7 +1625,11 @@ if (IN_APP) {
       });
       return;
     }
-    if (!$('home').hidden) return void NativeApp.exitApp();
+    if (!$('home').hidden) {
+      // Back from Link or Settings goes to Calls first, like a phone app.
+      if ($('home').dataset['tab'] !== 'calls') return setTab('calls');
+      return void NativeApp.exitApp();
+    }
     show('home');
   });
 }
