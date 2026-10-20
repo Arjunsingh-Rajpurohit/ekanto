@@ -339,6 +339,81 @@ h2 {
   color: #fff;
 }
 
+/* Reconnecting: amber, so the eye sees "wait" rather than "gone" */
+.chip.warn {
+  background: rgba(235, 160, 40, 0.92);
+  color: #1a1200;
+}
+
+/* Low data / voice only: a second chip under the status, tap to go back to normal */
+.chip.low {
+  position: absolute;
+  top: calc(100% + 8px);
+  font-size: 13px;
+  padding: 7px 14px;
+  background: rgba(60, 110, 220, 0.92);
+  color: #fff;
+}
+
+/* Signal bars in a name tag: 1 / 2 / 3 lit, hidden until measured */
+.tile .name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tile .name .nm {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tile .bars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 1.5px;
+  height: 11px;
+  flex: none;
+}
+
+.tile .bars i {
+  width: 3px;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.tile .bars i:nth-child(1) { height: 5px; }
+.tile .bars i:nth-child(2) { height: 8px; }
+.tile .bars i:nth-child(3) { height: 11px; }
+.tile .bars[data-bars="3"] i { background: #4ade80; }
+.tile .bars[data-bars="2"] i:nth-child(-n + 2) { background: #fbbf24; }
+.tile .bars[data-bars="1"] i:nth-child(1) { background: #f87171; }
+
+/* Muted: a small crossed mic at the bottom right of their tile (the top right sits under your own floating picture) */
+.tile .muted-badge {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  display: none;
+  width: 26px;
+  height: 26px;
+  padding: 5px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+}
+
+.tile.muted .muted-badge {
+  display: block;
+}
+
+/* Reconnecting: dimmed, not removed — they are still in the call */
+.tile.reconnecting video,
+.tile.reconnecting .avatar {
+  opacity: 0.35;
+  filter: grayscale(0.6);
+  transition: opacity 0.4s;
+}
+
 .overlay {
   position: absolute;
   inset: 0;

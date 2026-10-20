@@ -17,7 +17,16 @@ export function noiseOn(): boolean {
     return true;
   }
 }
-export const micCleanup = (on: boolean): MediaTrackConstraints => ({ echoCancellation: on, noiseSuppression: on, autoGainControl: on });
+/** "Use less data" setting: off unless the user switched it on. Calls then start with a small picture. */
+export const LOWDATA_KEY = 'hush.lowdata';
+export function lowDataOn(): boolean {
+  try {
+    return localStorage.getItem(LOWDATA_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+export const micCleanup =(on: boolean): MediaTrackConstraints => ({ echoCancellation: on, noiseSuppression: on, autoGainControl: on });
 const AUDIO = (): MediaTrackConstraints => micCleanup(noiseOn());
 
 /**

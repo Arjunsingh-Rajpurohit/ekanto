@@ -10,7 +10,7 @@ import { Chat } from './chat';
 import { ChatPanel } from './chat-ui';
 import { APP_DOWNLOAD_URL, APP_SCHEME, HAS_TURN, publicUrl } from './config';
 import { LINK_HOURS, MAX_PEOPLE, MIN_PEOPLE, SMOOTH_PEOPLE, cleanReason, expired, inviteToHash, newInvite, parseInvite, type Invite } from './invite';
-import { MediaProblem, NOISE_KEY, cameraTrack, canShareScreenInBrowser, micCleanup, noiseOn, openCamera, screenTrack, type Facing } from './media';
+import { LOWDATA_KEY, MediaProblem, NOISE_KEY, cameraTrack, canShareScreenInBrowser, lowDataOn, micCleanup, noiseOn, openCamera, screenTrack, type Facing } from './media';
 import { IN_APP, nativeAudio, nativeCall, nativeFloat, nativeRing, nativeScreenTrack, type AudioRoute, type AudioRoutes, type RingSetting } from './native';
 import { Ringing } from './ringing';
 import type { PluginListenerHandle } from '@capacitor/core';
@@ -410,8 +410,9 @@ async function enterCall(name: string, via?: ChannelVia, camera?: boolean): Prom
     local: () => stream!,
     onChange: render,
     platform: IN_APP ? 'app' : 'web',
-    media: { cam: !!stream.getVideoTracks()[0], screen: false },
+    media: { cam: !!stream.getVideoTracks()[0], screen: false, mic: stream.getAudioTracks()[0]?.enabled !== false },
     deviceKey: deviceKey(),
+    lowData: lowDataOn(),
   });
   // The browser's Back button asks first instead of leaving (see 'popstate' below).
   if (!IN_APP) history.pushState({ hushCall: true }, '', location.href);
@@ -477,6 +478,7 @@ function render(state: CallState): void {
     navigator.vibrate?.([60, 80, 60]);
   }
   stage.setPeople(state.people);
+  stage.setMyBars(state.myBars);
   meter.keep(new Set(['me', ...state.people.map((p) => p.id)]));
   for (const p of state.people) meter.watch(p.id, p.stream);
   drawTopActions(state);
@@ -499,8 +501,15 @@ function drawTopActions(state: CallState): void {
 function drawStatus(state: CallState): void {
   const chip = $('status');
   const connected = state.people.filter((p) => p.connected).length;
-  chip.classList.toggle('secure', connected > 0);
-  if (connected > 0 && state.liveSince) {
+  const reconnecting = state.people.some((p) => p.reconnecting);
+  chip.classList.toggle('secure', connected > 0 && !reconnecting);
+  chip.classList.toggle('warn', reconnecting);
+  const low = $('lowdata-chip');
+  low.hidden = state.lowData === 'normal' || state.people.length === 0;
+  low.textContent = state.lowData === 'voice' ? 'Voice only — tap to send video' : 'Low data — tap for normal';
+  if (reconnecting) {
+    chip.textContent = 'Reconnecting…';
+  } else if (connected > 0 && state.liveSince) {
     const s = Math.floor((Date.now() - state.liveSince) / 1000);
     const time = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
     const count = connected + 1;
@@ -1257,6 +1266,20 @@ function addNoiseToggle(): void {
   });
 }
 
+/** "Use less data": calls start with a small picture (the low-data chip in the call restores). */
+function addLowDataToggle(): void {
+  const box = $('lowdata') as HTMLInputElement;
+  box.checked = lowDataOn();
+  box.addEventListener('change', () => {
+    try {
+      localStorage.setItem(LOWDATA_KEY, box.checked ? '1' : '0');
+    } catch {
+      // Not remembered, still applied to this call.
+    }
+    session?.setLowData(box.checked ? 'low' : 'normal', true);
+  });
+}
+
 function addHideIpToggles(): void {
   if (!HAS_TURN) return;
   for (const before of ['join-btn', 'newch-start']) {
@@ -1319,6 +1342,7 @@ setKind(false);
 setSize(null);
 addHideIpToggles();
 addNoiseToggle();
+addLowDataToggle();
 
 // Protected calls are created in the app; the website points people to the app instead.
 $('protect-row').hidden = !IN_APP;
@@ -1423,8 +1447,10 @@ $('sheet-close').addEventListener('click', () => ($('sheet').hidden = true));
 $('mic').addEventListener('click', () => {
   const t = stream?.getAudioTracks()[0];
   if (t) t.enabled = !t.enabled;
+  if (t) session?.setMic(t.enabled);
   drawControls();
 });
+$('lowdata-chip').addEventListener('click', () => session?.setLowData('normal', true));
 $('cam').addEventListener('click', () => void toggleCamera());
 $('end').addEventListener('click', () => endCall());
 $('more').addEventListener('click', () => ($('more-sheet').hidden = false));

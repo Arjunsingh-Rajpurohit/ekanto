@@ -10,7 +10,14 @@ export type Phase = 'starting' | 'waiting' | 'live' | 'full' | 'offline';
 export interface MediaState {
   cam: boolean;
   screen: boolean;
+  /** Microphone on (not muted). */
+  mic: boolean;
 }
+
+/** Signal strength to this person: 3 good, 2 fair, 1 weak. Null until measured. */
+export type Bars = 1 | 2 | 3 | null;
+/** How much this phone sends: everything, a small picture, or voice only. */
+export type LowData = 'normal' | 'low' | 'voice';
 
 export interface Person {
   id: string;
@@ -20,6 +27,12 @@ export interface Person {
   cam: boolean | null;
   /** Sharing their screen: show it whole, not cropped. */
   screen: boolean;
+  /** Muted? Null until they say. */
+  mic: boolean | null;
+  /** Network bars to this person, measured locally; nothing is sent. */
+  bars: Bars;
+  /** The connection dropped and a new path is being looked for: dim them, don't remove them. */
+  reconnecting: boolean;
   /** Where they are: the app blocks screenshots, the website can't. */
   platform: 'app' | 'web' | null;
   /** The private side-channel is open: chat and files can go to this person. */
@@ -43,6 +56,10 @@ export interface CallState {
   hungUp: string | null;
   /** Messages that reached this call's room but weren't sealed with its key: break-in attempts. */
   blocked: number;
+  /** Your own bars: the weakest of your connections. */
+  myBars: Bars;
+  /** What this phone sends right now (see LowData). */
+  lowData: LowData;
 }
 
 type Kind = 'hello' | 'ack' | 'offer' | 'answer' | 'bye' | 'full';
@@ -83,7 +100,15 @@ interface Peer {
   channel: RTCDataChannel;
   cam: boolean | null;
   screen: boolean;
+  mic: boolean | null;
   platform: 'app' | 'web' | null;
+  bars: Bars;
+  reconnecting: boolean;
+  /** ICE restarts since the last good connection: after 3 the person is let go. */
+  restarts: number;
+  /** Last stats sample, to work out packet loss since then. */
+  lastLost: number;
+  lastReceived: number;
   offerTimer?: ReturnType<typeof setTimeout>;
   failTimer?: ReturnType<typeof setTimeout>;
 }
@@ -113,6 +138,21 @@ const HELLO_ALONE_MS = 3000;
 const HELLO_IN_CALL_MS = 20000;
 /** An offer nobody answers is retried this many times (5 s apart), then that person is dropped. */
 const MAX_OFFERS = 8;
+/** A dropped connection gets this many new tries (ICE restarts) before the person is let go. */
+const MAX_RESTARTS = 3;
+/** 'disconnected' is often a blip (Wi-Fi to mobile data): wait this long before a new try. */
+const BLIP_MS = 3000;
+/** A new try that hasn't connected by then is counted as failed and tried again. */
+const RESTART_WAIT_MS = 10000;
+/** How often each connection's quality is measured (locally, nothing is sent). */
+const STATS_MS = 2000;
+/** One bar for this long → send a smaller picture; this much longer → voice only. */
+const LOW_AFTER_MS = 10000;
+const VOICE_AFTER_MS = 20000;
+/** After the user asks for normal quality, auto low-data waits this long before kicking in again. */
+const MANUAL_HOLD_MS = 60000;
+/** Low-data ceiling: a small, smooth picture that survives a weak connection. */
+const LOW_DATA_BITRATE = 300_000;
 
 /**
  * One person's side of a call. Every two people get their own encrypted connection
@@ -122,7 +162,10 @@ const MAX_OFFERS = 8;
  */
 export class CallSession {
   readonly id = toBase64Url(crypto.getRandomValues(new Uint8Array(12)));
-  state: CallState = { phase: 'starting', relaysUp: 0, people: [], liveSince: null, news: null, joined: null, hungUp: null, blocked: 0 };
+  state: CallState = {
+    phase: 'starting', relaysUp: 0, people: [], liveSince: null, news: null, joined: null, hungUp: null, blocked: 0,
+    myBars: null, lowData: 'normal',
+  };
 
   private room?: Room;
   private relay = new Relay();
@@ -143,6 +186,13 @@ export class CallSession {
   private readonly deviceKey: string;
   private tag = '';
   private media: MediaState;
+  private statsTimer?: ReturnType<typeof setInterval>;
+  private lowData: LowData = 'normal';
+  /** Since when every connection has read one bar (0 = it doesn't). */
+  private weakSince = 0;
+  /** The user tapped "normal": auto low-data holds off until then. */
+  private manualUntil = 0;
+  private readonly onOnline = () => this.networkBack();
   /** Chat and files: everything on the side-channel that isn't a camera/screen signal. */
   onChannelData: (from: Person, data: string | ArrayBuffer) => void = () => undefined;
   /** Someone's chat line just opened (a moment after their video, more over the relay). */
@@ -161,7 +211,15 @@ export class CallSession {
     media: MediaState;
     /** A random secret kept on this phone; only ever used to derive per-call tags. */
     deviceKey: string;
+    /** "Use less data" setting: start with a small picture. */
+    lowData?: boolean;
   }) {
+    if (options.lowData) {
+      this.lowData = 'low';
+      this.state.lowData = 'low';
+    }
+    // Troubleshooting only (hush.debug = 1): lets a tester poke this call from the console.
+    if (DEBUG) (window as unknown as { __hush?: CallSession }).__hush = this;
     this.invite = options.invite;
     this.name = options.name;
     this.relayOnly = options.relayOnly;
@@ -173,9 +231,41 @@ export class CallSession {
   }
 
   /** Tell everyone the camera went on/off or screen sharing started/stopped. */
-  setMedia(media: MediaState): void {
-    this.media = media;
+  setMedia(media: Partial<MediaState>): void {
+    this.media = { ...this.media, ...media };
     for (const peer of this.peers.values()) this.sayHi(peer);
+  }
+
+  /** Tell everyone the microphone was muted or unmuted (a small badge on your tile for them). */
+  setMic(on: boolean): void {
+    this.media = { ...this.media, mic: on };
+    const note = JSON.stringify({ k: 'mic', on });
+    for (const peer of this.peers.values()) if (peer.channel.readyState === 'open') peer.channel.send(note);
+  }
+
+  /**
+   * How much this phone sends. The user's tap on the chip sets 'normal' and holds auto low-data
+   * off for a minute; the weak-network watcher sets 'low' and 'voice' (see measure()).
+   */
+  setLowData(mode: LowData, byUser = false): void {
+    if (byUser) {
+      this.manualUntil = Date.now() + MANUAL_HOLD_MS;
+      this.weakSince = 0;
+    }
+    if (mode === this.lowData) return;
+    this.lowData = mode;
+    log('low-data', mode);
+    this.tune();
+    this.update({ lowData: mode });
+  }
+
+  /** The phone's internet is back: look for new paths right away instead of waiting out the timers. */
+  networkBack(): void {
+    for (const peer of this.peers.values()) {
+      if (peer.pc.connectionState === 'connected' || peer.pc.connectionState === 'new') continue;
+      clearTimeout(peer.failTimer);
+      void this.recover(peer);
+    }
   }
 
   /** Send on one person's side-channel. False if it isn't open (they left, or not connected yet). */
@@ -223,6 +313,8 @@ export class CallSession {
       }
     });
     this.update({ phase: 'waiting' });
+    window.addEventListener('online', this.onOnline);
+    this.statsTimer = setInterval(() => void this.measure(), STATS_MS);
     let lastHello = 0;
     this.helloTimer = setInterval(() => {
       const every = this.peers.size === 0 ? HELLO_ALONE_MS : HELLO_IN_CALL_MS;
@@ -256,7 +348,9 @@ export class CallSession {
     }
     void this.post({ t: 'bye' });
     clearInterval(this.helloTimer);
+    clearInterval(this.statsTimer);
     clearTimeout(this.fullTimer);
+    window.removeEventListener('online', this.onOnline);
     for (const peer of this.peers.values()) this.dropPeer(peer);
     // Let the goodbye reach the relays before hanging up on them.
     setTimeout(() => this.relay.close(), 400);
@@ -272,8 +366,12 @@ export class CallSession {
       .sort((a, b) => a.joined - b.joined)
       .map((p) => ({
         id: p.id, name: p.name, stream: p.stream, connected: p.connected, safety: p.safety, route: p.route,
-        cam: p.cam, screen: p.screen, platform: p.platform, channelOpen: p.channel.readyState === 'open',
+        cam: p.cam, screen: p.screen, mic: p.mic, platform: p.platform, channelOpen: p.channel.readyState === 'open',
+        bars: p.bars, reconnecting: p.reconnecting,
       }));
+    // Your own signal is only as good as the weakest connection you hold.
+    const measured = people.map((p) => p.bars).filter((b): b is 1 | 2 | 3 => b !== null);
+    const myBars: Bars = measured.length ? (Math.min(...measured) as 1 | 2 | 3) : null;
     const anyLive = people.some((p) => p.connected);
     const phase = this.state.phase === 'full' || this.state.phase === 'offline' || this.state.phase === 'starting'
       ? this.state.phase
@@ -282,6 +380,7 @@ export class CallSession {
       ...this.state,
       phase,
       people,
+      myBars,
       liveSince: anyLive ? (this.state.liveSince ?? Date.now()) : people.length ? this.state.liveSince : null,
     };
     this.onChange(this.state);
@@ -403,7 +502,7 @@ export class CallSession {
 
   private sayHi(peer: Peer): void {
     if (peer.channel.readyState !== 'open') return;
-    peer.channel.send(JSON.stringify({ k: 'hi', platform: this.platform, cam: this.media.cam, screen: this.media.screen }));
+    peer.channel.send(JSON.stringify({ k: 'hi', platform: this.platform, cam: this.media.cam, screen: this.media.screen, mic: this.media.mic }));
   }
 
   private onChannel(peer: Peer, data: string | ArrayBuffer): void {
@@ -417,10 +516,21 @@ export class CallSession {
     }
     if (typeof data === 'string' && data.startsWith('{"k":"hi"')) {
       try {
-        const hi = JSON.parse(data) as { platform?: string; cam?: boolean; screen?: boolean };
+        const hi = JSON.parse(data) as { platform?: string; cam?: boolean; screen?: boolean; mic?: boolean };
         peer.platform = hi.platform === 'app' ? 'app' : 'web';
         peer.cam = !!hi.cam;
         peer.screen = !!hi.screen;
+        // An older app says nothing about its mic: leave it unknown rather than show "Muted".
+        peer.mic = typeof hi.mic === 'boolean' ? hi.mic : null;
+        this.publish();
+      } catch {
+        // Ignore a broken signal.
+      }
+      return;
+    }
+    if (typeof data === 'string' && data.startsWith('{"k":"mic"')) {
+      try {
+        peer.mic = !!(JSON.parse(data) as { on?: boolean }).on;
         this.publish();
       } catch {
         // Ignore a broken signal.
@@ -457,7 +567,8 @@ export class CallSession {
     const peer: Peer = {
       id: m.from, tag: m.tag, name: m.name?.slice(0, 30) || 'Guest', joined: m.joined, pc,
       stream: null, connected: false, safety: null, route: null, lastHeard: Date.now(), announced: false,
-      channel, cam: null, screen: false, platform: null,
+      channel, cam: null, screen: false, mic: null, platform: null,
+      bars: null, reconnecting: false, restarts: 0, lastLost: 0, lastReceived: 0,
     };
     this.peers.set(peer.id, peer);
     channel.onopen = () => {
@@ -543,6 +654,8 @@ export class CallSession {
         const mine = fingerprintOf(pc.currentLocalDescription?.sdp);
         const theirs = fingerprintOf(pc.currentRemoteDescription?.sdp);
         peer.connected = true;
+        peer.reconnecting = false;
+        peer.restarts = 0;
         peer.safety = mine && theirs ? await safetyEmojis(mine, theirs) : null;
         peer.route = await routeOf(pc);
         if (!peer.announced) {
@@ -556,24 +669,74 @@ export class CallSession {
       case 'disconnected':
         // Often a blip (Wi-Fi to mobile data). Give it a moment, then look for a new path.
         peer.connected = false;
-        this.publish();
-        peer.failTimer = setTimeout(() => void this.recover(peer), 6000);
+        this.markReconnecting(peer);
+        peer.failTimer = setTimeout(() => void this.recover(peer), BLIP_MS);
         return;
       case 'failed':
         peer.connected = false;
+        this.markReconnecting(peer);
         return this.recover(peer);
     }
   }
 
+  /** Someone who was already in the call is dimmed, not removed, while a new path is found. */
+  private markReconnecting(peer: Peer): void {
+    peer.reconnecting = peer.announced;
+    peer.bars = null;
+    this.publish();
+  }
+
+  /**
+   * A new try: restart ICE and re-offer through the relays (the phone with the smaller id always
+   * offers, so the two never talk over each other; the other side waits for that offer). A try
+   * that doesn't connect within RESTART_WAIT_MS is tried again, up to MAX_RESTARTS.
+   */
   private async recover(peer: Peer): Promise<void> {
-    if (this.peers.get(peer.id) !== peer || peer.pc.connectionState === 'connected') return;
+    if (this.peers.get(peer.id) !== peer || this.ended) return;
+    // Already back (the state change can slip by while a timer waits): just clear the dimming.
+    if (peer.pc.connectionState === 'connected') return this.onConnection(peer);
+    if (++peer.restarts > MAX_RESTARTS) return this.removePeer(peer, `Lost ${peer.name}`);
+    log('restart', short(peer.id), peer.restarts);
+    this.markReconnecting(peer);
+    clearTimeout(peer.offerTimer);
+    peer.failTimer = setTimeout(() => void this.recover(peer), RESTART_WAIT_MS);
     if (this.id < peer.id) {
       peer.pc.restartIce();
-      await this.offer(peer, true);
+      await this.offer(peer, true).catch(() => undefined);
     }
-    peer.failTimer = setTimeout(() => {
-      if (this.peers.get(peer.id) === peer && peer.pc.connectionState !== 'connected') this.removePeer(peer, `Lost ${peer.name}`);
-    }, 20000);
+  }
+
+  /**
+   * Every 2 s: how good is each connection? Round trip, packets lost since last time and the
+   * bandwidth the network says we may send map to 3/2/1 bars. Measured on this phone only.
+   * One bar everywhere for a while also turns low-data on by itself.
+   */
+  private async measure(): Promise<void> {
+    if (this.ended) return;
+    let changed = false;
+    for (const peer of [...this.peers.values()]) {
+      if (!peer.connected) continue;
+      const bars = await barsOf(peer).catch(() => null);
+      if (bars !== peer.bars) {
+        peer.bars = bars;
+        changed = true;
+      }
+    }
+    if (changed) this.publish();
+    this.autoLowData();
+  }
+
+  private autoLowData(): void {
+    const now = Date.now();
+    const weak = this.state.myBars === 1;
+    if (!weak || now < this.manualUntil) {
+      this.weakSince = 0;
+      return;
+    }
+    if (!this.weakSince) this.weakSince = now;
+    const forHow = now - this.weakSince;
+    if (this.lowData === 'normal' && forHow >= LOW_AFTER_MS) this.setLowData('low');
+    else if (this.lowData === 'low' && forHow >= LOW_AFTER_MS + VOICE_AFTER_MS) this.setLowData('voice');
   }
 
   private removePeer(peer: Peer, news: string | null): void {
@@ -608,9 +771,12 @@ export class CallSession {
       if (!sender?.track) continue;
       const params = sender.getParameters() as RTCRtpSendParameters & { degradationPreference?: string };
       if (!params.encodings?.length) continue;
-      params.encodings[0].maxBitrate = ceiling;
-      // No forced shrinking: full size whenever the network and phone can carry it.
-      params.encodings[0].scaleResolutionDownBy = 1;
+      // Low-data overrides the ceiling: a small picture, or no picture at all (sound still goes).
+      const low = this.lowData !== 'normal';
+      params.encodings[0].active = this.lowData !== 'voice';
+      params.encodings[0].maxBitrate = low ? Math.min(ceiling, LOW_DATA_BITRATE) : ceiling;
+      // No forced shrinking otherwise: full size whenever the network and phone can carry it.
+      params.encodings[0].scaleResolutionDownBy = low ? 2 : 1;
       // When something has to give, trade a little sharpness and a little smoothness evenly.
       params.degradationPreference = 'balanced';
       sender.setParameters(params).catch(() => undefined);
@@ -649,6 +815,37 @@ function gathered(pc: RTCPeerConnection): Promise<void> {
     const poll = setInterval(check, 100);
     setTimeout(finish, 2500);
   });
+}
+
+/**
+ * 3/2/1 bars from the live connection: round trip, share of packets lost since the last look,
+ * and how much the network lets us send. Nothing here leaves the phone.
+ */
+async function barsOf(peer: Peer): Promise<Bars> {
+  const stats = await peer.pc.getStats();
+  let pairId: string | undefined;
+  let lost = 0;
+  let received = 0;
+  stats.forEach((s) => {
+    if (s.type === 'transport' && s.selectedCandidatePairId) pairId = s.selectedCandidatePairId;
+    if (s.type === 'inbound-rtp') {
+      lost += s.packetsLost ?? 0;
+      received += s.packetsReceived ?? 0;
+    }
+  });
+  const pair = pairId ? stats.get(pairId) : undefined;
+  if (!pair) return null;
+  const rtt: number | undefined = pair.currentRoundTripTime;
+  const bandwidth: number | undefined = pair.availableOutgoingBitrate;
+  const newLost = Math.max(0, lost - peer.lastLost);
+  const newReceived = Math.max(0, received - peer.lastReceived);
+  peer.lastLost = lost;
+  peer.lastReceived = received;
+  const loss = newLost + newReceived > 0 ? newLost / (newLost + newReceived) : 0;
+  let bars: 1 | 2 | 3 = 3;
+  if ((rtt ?? 0) > 0.15 || loss > 0.03 || (bandwidth !== undefined && bandwidth < 800_000)) bars = 2;
+  if ((rtt ?? 0) > 0.4 || loss > 0.1 || (bandwidth !== undefined && bandwidth < 250_000)) bars = 1;
+  return bars;
 }
 
 /** Whether a call runs straight between two phones or through the encrypted backup relay. */
