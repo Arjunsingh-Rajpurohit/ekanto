@@ -3,12 +3,12 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="320"
-    android:viewportHeight="320">
-    <group android:translateX="-82" android:translateY="-116">
+    android:viewportWidth="360"
+    android:viewportHeight="360">
+    <group android:translateX="-76" android:translateY="-94.5">
         <path
             android:fillColor="#FFFFFFFF"
             android:fillType="evenOdd"
-            android:pathData="M162,220 A94,94 0 0,1 350,220 V388 H206 L134,424 L162,364 Z M282,286 A24,24 0 1,0 330,286 A24,24 0 1,0 282,286 Z" />
+            android:pathData="M164,192 A92,92 0 0,1 348,192 V388 Q348,404 332,404 H224 L178,444 Q172,449 174,441 L182,404 H180 Q164,404 164,388 Z M312,296 m-21,0 a21,21 0 1,0 42,0 a21,21 0 1,0 -42,0" />
     </group>
 </vector>
