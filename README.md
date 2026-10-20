@@ -57,7 +57,7 @@ The website rings only while it is open.
 | People limit | Mixed into the key: editing `.4` into `.40` in a link leads to an empty, different call. When the call is full, everyone agrees who stays (earliest joiners). |
 | Website | Strict security policy: it may load only its own files and talk only to the meeting points. No trackers, no fonts, no analytics. |
 | Nothing saved | No account, no history, no recordings. The link is wiped from the address bar when you hang up. Only your name (and any channels you save) stay, on your own phone — never backed up or copied to another phone. |
-| **Protected call** (app only) | Others can join only from the Android app, which blocks screenshots and screen recording (FLAG_SECURE) and has no browser extensions. |
+| **Protected call** (app only) | Others can join only from the Android app, which blocks screenshots and screen recording (FLAG_SECURE) and has no browser extensions. On Android 15+, a phone that starts a screen recorder is named to everyone in the call: "Ravi's phone tried to record — blocked." |
 | Chat and files | Go on a private data channel inside the same encrypted connection — never through any relay. Held in memory only. |
 
 **What no app can stop:** someone filming the screen with another phone. On the website (not the app), browser extensions the person installed can see the page.

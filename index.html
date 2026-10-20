@@ -126,6 +126,7 @@
           <h1>Private call</h1>
           <p id="join-sub" class="sub">You're invited to a private video call.</p>
           <p id="join-why" class="why" hidden></p>
+          <p id="join-shield" class="shield" hidden></p>
         </header>
         <label class="field">
           <span>Your name</span>
@@ -225,6 +226,8 @@
         </footer>
         <!-- Camera or mic blocked: stays until dismissed, says where to fix it -->
         <div id="blocked" class="blocked" role="alert" hidden><p id="blocked-text"></p><button id="blocked-close" class="btn small" type="button">Dismiss</button></div>
+        <!-- Protected call: a phone tried to record (Android 15+ tells us); stays until dismissed -->
+        <div id="rec-note" class="blocked rec" role="alert" hidden><p id="rec-text"></p><button id="rec-close" class="btn small" type="button">OK</button></div>
 
         <!-- Where the sound comes out -->
         <div id="audio-sheet" class="sheet" hidden>
@@ -326,6 +329,7 @@
           <div class="sheet-card">
             <h2>🔒 Safety check</h2>
             <p class="sub">Ask each person to read out their emojis. Same 5 on both phones = nobody is listening in between.</p>
+            <p id="safety-shield" class="shield" hidden></p>
             <ul id="safety" class="safety"></ul>
             <button id="sheet-close" class="btn">Close</button>
           </div>
@@ -402,7 +406,7 @@
           </div>
           <label id="protect-row" class="toggle" hidden>
             <input id="protect" type="checkbox" class="switch" />
-            <span><strong>Protected call</strong><br>Only the Ekanto app can join. No screenshots or screen recording.</span>
+            <span><strong>Protected call</strong><br>Only the Ekanto app can join. Their phone can't screenshot or record the call.</span>
           </label>
           <label id="options-hide-ip" class="toggle hide-ip" hidden>
             <input type="checkbox" class="switch" />

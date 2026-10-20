@@ -11,7 +11,8 @@ import { ChatPanel } from './chat-ui';
 import { APP_DOWNLOAD_URL, APP_SCHEME, HAS_TURN, publicUrl } from './config';
 import { LINK_HOURS, MAX_PEOPLE, MIN_PEOPLE, SMOOTH_PEOPLE, cleanReason, expired, inviteToHash, newInvite, parseInvite, type Invite } from './invite';
 import { LOWDATA_KEY, MediaProblem, NOISE_KEY, cameraTrack, canShareScreenInBrowser, lowDataOn, micCleanup, noiseOn, openCamera, screenTrack, type Facing } from './media';
-import { IN_APP, nativeAudio, nativeCall, nativeFloat, nativeRing, nativeScreenTrack, type AudioRoute, type AudioRoutes, type RingSetting } from './native';
+import { IN_APP, nativeAudio, nativeCall, nativeFloat, nativeProtect, nativeRing, nativeScreenTrack, type AudioRoute, type AudioRoutes, type RingSetting } from './native';
+import { PROTECTED_INVITE, PROTECTED_LIMIT, PROTECTED_PROMISE, RECORDING_SELF, parseRecording, recordingNotice, recordingWire } from './protect';
 import { Ringing } from './ringing';
 import type { PluginListenerHandle } from '@capacitor/core';
 import { SpeakingMeter } from './speaking';
@@ -239,6 +240,20 @@ const WHERE_TO_ALLOW = IN_APP
   ? 'To allow it: Android Settings › Apps › Ekanto › Permissions.'
   : 'To allow it: tap the lock icon in the address bar and allow Camera and Microphone.';
 
+/** "Ravi's phone tried to record — blocked." Sticky too: everyone in the call should see it. */
+function recordingNote(text: string): void {
+  $('rec-text').textContent = text;
+  $('rec-note').hidden = false;
+}
+
+/** Android 15+ says a screen recorder is on: tell the others (and me) — the picture is black anyway. */
+function onRecording(on: boolean): void {
+  if (!invite?.appOnly || !session) return;
+  if (on) recordingNote(RECORDING_SELF);
+  const wire = recordingWire(on);
+  for (const p of lastState?.people ?? []) session.sendTo(p.id, wire);
+}
+
 /** Stays on screen until dismissed — a 3-second toast is gone before it is read. */
 function blockedNote(text: string): void {
   $('blocked-text').textContent = text;
@@ -369,6 +384,7 @@ function route(): void {
   // A protected call is never joined from a browser, where extensions could watch it.
   if (parsed.appOnly && !IN_APP) return show('protected');
   $('join-sub').textContent = `You're invited to a ${parsed.appOnly ? 'protected' : 'private'} ${callWord(parsed)} — ${peopleText(parsed.limit)}.`;
+  $('join-shield').hidden = !parsed.appOnly;
   $('join-btn').textContent = parsed.voice ? 'Join voice call' : 'Join call';
   showWhy('join-why', parsed.reason);
   $<HTMLInputElement>('join-name').value = savedName();
@@ -530,7 +546,8 @@ function drawStatus(state: CallState): void {
     const s = Math.floor((Date.now() - state.liveSince) / 1000);
     const time = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
     const count = connected + 1;
-    chip.textContent = `🔒 Private · ${count === 2 ? time : `${count} people · ${time}`}`;
+    // A protected call wears its shield; a tap opens the safety sheet, which says what it means.
+    chip.textContent = `${invite?.appOnly ? '🛡️ Protected' : '🔒 Private'} · ${count === 2 ? time : `${count} people · ${time}`}`;
   } else {
     chip.textContent = state.phase === 'offline'
       ? 'Offline'
@@ -657,8 +674,11 @@ async function stopScreen(): Promise<void> {
 
 /** A clear message around the link: what it is, why (if said), and how long it works. */
 function inviteText(): string {
+  const why = invite?.reason ? `“${invite.reason}”` : '';
+  // A protected link says what makes it one: that line is what gets the app passed around.
+  if (invite?.appOnly) return [PROTECTED_INVITE[0], why, PROTECTED_INVITE[1]].filter(Boolean).join('\n');
   const kind = invite?.voice ? 'Join my private voice call on Ekanto' : 'Join my private video call on Ekanto';
-  return [`🔒 ${kind}`, invite?.reason ? `“${invite.reason}”` : '', `Works for ${LINK_HOURS} hours · encrypted · no login`]
+  return [`🔒 ${kind}`, why, `Works for ${LINK_HOURS} hours · encrypted · no login`]
     .filter(Boolean).join('\n');
 }
 
@@ -703,6 +723,8 @@ function finish(): number {
   sharing = null;
   session?.leave();
   session = null;
+  // A note about this call does not belong on the next one.
+  $('rec-note').hidden = true;
   chat?.dispose();
   chat = null;
   panel?.reset();
@@ -761,6 +783,7 @@ function openSafety(): void {
     li.append(name, emojis, path);
     return li;
   }));
+  $('safety-shield').hidden = !invite?.appOnly;
   $('sheet').hidden = false;
 }
 
@@ -1161,6 +1184,12 @@ async function keepChannel(secret: string, name: string, appOnly: boolean, size:
 }
 
 function onControl(from: Person, m: Record<string, unknown>): void {
+  const rec = parseRecording(m);
+  if (rec !== null) {
+    // Only a protected call promises this; in any other call the signal means nothing.
+    if (rec && invite?.appOnly) recordingNote(recordingNotice(from.name));
+    return;
+  }
   if (m.k === 'chan') {
     if (typeof m.cs !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(m.cs)) return;
     asked = { from, secret: m.cs, appOnly: m.app === true, size: Number(m.size) || 2 };
@@ -1523,6 +1552,10 @@ $('audio-btn').addEventListener('click', () => {
 });
 $('audio-close').addEventListener('click', () => ($('audio-sheet').hidden = true));
 $('blocked-close').addEventListener('click', () => ($('blocked').hidden = true));
+$('rec-close').addEventListener('click', () => ($('rec-note').hidden = true));
+$('safety-shield').textContent = `${PROTECTED_PROMISE} ${PROTECTED_LIMIT}`;
+$('join-shield').textContent = PROTECTED_PROMISE;
+void nativeProtect.onRecording(onRecording);
 $('layout-btn').addEventListener('click', () => {
   stage.setMode(stage.getMode() === 'grid' ? 'speaker' : 'grid');
   if (lastState) drawTopActions(lastState);

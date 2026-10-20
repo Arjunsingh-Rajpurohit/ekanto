@@ -539,7 +539,8 @@ export class CallSession {
     }
     const person = this.state.people.find((p) => p.id === peer.id);
     if (!person) return;
-    if (typeof data === 'string' && data.startsWith('{"k":"chan')) {
+    // Channel offers and "my phone tried to record" are the page's, not the chat's.
+    if (typeof data === 'string' && (data.startsWith('{"k":"chan') || data.startsWith('{"k":"rec"'))) {
       try {
         this.onControl(person, JSON.parse(data) as Record<string, unknown>);
       } catch {

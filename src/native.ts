@@ -32,6 +32,8 @@ interface HushNative {
   /** What the app was opened for: an incoming call's screen, or "Answer" in the notification. */
   takeLaunch(): Promise<Launch>;
   addListener(event: 'ringData', fn: (e: { topic: string; data: string }) => void): Promise<PluginListenerHandle>;
+  /** Android 15+: a screen recorder started (on) or stopped (off) while Ekanto was on screen. */
+  addListener(event: 'recording', fn: (e: { on: boolean }) => void): Promise<PluginListenerHandle>;
   addListener(event: 'launch', fn: () => void): Promise<PluginListenerHandle>;
 }
 
@@ -163,4 +165,9 @@ export const nativeRing = {
   takeLaunch: () => plugin.takeLaunch().catch(() => ({}) as Launch),
   onData: (fn: (topic: string, data: string) => void) => plugin.addListener('ringData', (e) => fn(e.topic, e.data)),
   onLaunch: (fn: () => void) => plugin.addListener('launch', fn),
+};
+
+/** Protected calls: Android 15+ tells the page when a screen recorder is on (older phones say nothing). */
+export const nativeProtect = {
+  onRecording: (fn: (on: boolean) => void) => (IN_APP ? plugin.addListener('recording', (e) => fn(e.on === true)).catch(() => undefined) : Promise.resolve()),
 };

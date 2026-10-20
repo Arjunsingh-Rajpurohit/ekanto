@@ -2370,6 +2370,24 @@ body {
   line-height: 1.45;
 }
 
+/* "Tried to record — blocked": the shield's colour, so it reads as protection, not a fault. */
+.blocked.rec {
+  background: #1f3a2e;
+  border-color: rgba(74, 222, 128, 0.35);
+}
+
+/* The protected promise: join screen and safety sheet, one calm green line. */
+.shield {
+  margin: 10px 0 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: #bbf7d0;
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(74, 222, 128, 0.3);
+}
+
 /* Empty Calls tab: one calm line, one button, a quiet link, and the app card on the website. */
 .empty .ready {
   font-size: 1.18rem;

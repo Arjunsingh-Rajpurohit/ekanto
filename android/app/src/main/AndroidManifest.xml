@@ -87,6 +87,8 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <!-- Android 15+: know when a screen recorder is on, so a protected call can say "tried to record — blocked". -->
+    <uses-permission android:name="android.permission.DETECT_SCREEN_RECORDING" />
     <!-- Bluetooth headsets on Android 11 and older (newer ones need no permission for this). -->
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
     <!-- Screen off at your ear during a voice call on the earpiece. -->

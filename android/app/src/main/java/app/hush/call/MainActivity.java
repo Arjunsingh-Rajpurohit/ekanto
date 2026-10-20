@@ -1,7 +1,9 @@
 package app.hush.call;
 
+import android.Manifest;
 import android.app.PictureInPictureParams;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.os.Build;
 import android.os.Bundle;
@@ -9,6 +11,7 @@ import android.util.Rational;
 import android.view.WindowManager;
 import androidx.annotation.RequiresApi;
 import com.getcapacitor.BridgeActivity;
+import java.util.function.Consumer;
 
 public class MainActivity extends BridgeActivity {
 
@@ -17,6 +20,8 @@ public class MainActivity extends BridgeActivity {
     private static MainActivity current;
     /** Ekanto is on screen: a ring plays here instead of as a notification. */
     static volatile boolean visible;
+    /** Android 15+: tells us when a screen recorder is on (its picture is black anyway — FLAG_SECURE). */
+    private Consumer<Integer> recordingWatch;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -27,7 +32,26 @@ public class MainActivity extends BridgeActivity {
         // Blocks screenshots and screen recording of this app, hides it from the
         // recent-apps preview, and keeps it off screen sharing and casting.
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
+        watchScreenRecording();
         handleCallIntent(getIntent());
+    }
+
+    /**
+     * Android 15+ can say when a recorder captures this app, so a protected call can tell everyone
+     * "Ravi's phone tried to record — blocked". Older Android just records black (FLAG_SECURE above).
+     */
+    private void watchScreenRecording() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) return;
+        // A normal permission, granted at install from the manifest; checked anyway, as the platform asks.
+        if (checkSelfPermission(Manifest.permission.DETECT_SCREEN_RECORDING) != PackageManager.PERMISSION_GRANTED) return;
+        Consumer<Integer> watch = state -> HushNativePlugin.emitRecording(state == WindowManager.SCREEN_RECORDING_STATE_VISIBLE);
+        try {
+            int now = getWindowManager().addScreenRecordingCallback(getMainExecutor(), watch);
+            recordingWatch = watch;
+            if (now == WindowManager.SCREEN_RECORDING_STATE_VISIBLE) HushNativePlugin.emitRecording(true);
+        } catch (Exception ignored) {
+            // No callback on this phone: FLAG_SECURE still blacks the recording.
+        }
     }
 
     @Override
@@ -91,6 +115,10 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onDestroy() {
         if (current == this) current = null;
+        if (recordingWatch != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            getWindowManager().removeScreenRecordingCallback(recordingWatch);
+            recordingWatch = null;
+        }
         super.onDestroy();
     }
 

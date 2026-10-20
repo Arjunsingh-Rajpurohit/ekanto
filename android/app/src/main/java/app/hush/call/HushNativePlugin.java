@@ -115,6 +115,15 @@ public class HushNativePlugin extends Plugin {
         plugin.notifyListeners("floating", event);
     }
 
+    /** Android 15+: a screen recorder started (on) or stopped capturing Ekanto. */
+    static void emitRecording(boolean on) {
+        HushNativePlugin plugin = instance;
+        if (plugin == null) return;
+        JSObject event = new JSObject();
+        event.put("on", on);
+        plugin.notifyListeners("recording", event);
+    }
+
     /** "Hang up" tapped in the notification. */
     static void emitHangUp() {
         HushNativePlugin plugin = instance;
