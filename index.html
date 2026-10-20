@@ -43,7 +43,7 @@
           <!-- Calls: saved channels, tap to ring them -->
           <section id="tab-calls" class="pane calls-pane" aria-label="Saved channels">
             <h2 class="pane-title">Saved channels</h2>
-            <button id="ring-setup-btn" class="ring-warn" type="button" hidden>⚠️ Set up ringing, so calls reach you when Ekanto is closed</button>
+            <button id="ring-health" class="ring-health" type="button" hidden></button>
             <ul id="channel-list" class="channel-list"></ul>
             <div id="calls-empty" class="empty">
               <img src="./favicon.svg" alt="" class="empty-logo" />
@@ -480,7 +480,8 @@
           <h2>Ring like a phone call</h2>
           <p class="sub">So Ekanto can ring you even when it is closed, allow these once:</p>
           <div id="ring-list" class="audio-list"></div>
-          <p class="hint">Xiaomi, Oppo, Vivo, Realme, OnePlus: also turn on <strong>Autostart</strong> for Ekanto (Settings → Apps → Ekanto).</p>
+          <p id="ring-hint" class="hint" hidden>Android can't tell us if Autostart is on. Tap the row, turn it on, and the row turns green.</p>
+          <button id="ring-test" class="btn" type="button">🔔 Test ring — lock your phone, it rings in 1 minute</button>
           <button id="ring-close" class="btn" type="button">Done</button>
         </div>
       </div>

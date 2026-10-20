@@ -2,6 +2,7 @@ package app.hush.call;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.ComponentName;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
@@ -11,6 +12,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.PowerManager;
 import android.provider.Settings;
+import java.util.Locale;
 import androidx.activity.result.ActivityResult;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
@@ -206,7 +208,78 @@ public class HushNativePlugin extends Plugin {
         out.put("notifications", NotificationManagerCompat.from(context).areNotificationsEnabled());
         out.put("fullScreen", Build.VERSION.SDK_INT < 34 || context.getSystemService(NotificationManager.class).canUseFullScreenIntent());
         out.put("battery", context.getSystemService(PowerManager.class).isIgnoringBatteryOptimizations(context.getPackageName()));
+        out.put("exactAlarms", RingService.canExactAlarm(context));
         return out;
+    }
+
+    /** "Can Ekanto ring right now?" — every reason it may not, each with the setting that fixes it. */
+    @PluginMethod
+    public void ringHealth(PluginCall call) {
+        JSObject state = ringState();
+        JSArray problems = new JSArray();
+        if (!state.getBoolean("notifications", true)) problems.put(problem("notifications", "Notifications are off", "Allow"));
+        if (!state.getBoolean("fullScreen", true)) problems.put(problem("fullScreen", "Can't ring on the lock screen", "Allow"));
+        if (!state.getBoolean("battery", true)) problems.put(problem("battery", "Android may put Ekanto to sleep", "Allow"));
+        if (!state.getBoolean("exactAlarms", true)) problems.put(problem("exactAlarms", "A sleeping phone may not wake for a call", "Allow"));
+        if (autostartMaker() != null) {
+            // Android cannot tell us if Autostart is on: it is shown until the user says it is.
+            boolean said = getContext().getSharedPreferences(RingService.PREFS, Context.MODE_PRIVATE).getBoolean("autostartOk", false);
+            if (!said) problems.put(problem("autostart", "Autostart is off on " + autostartMaker() + " phones", autostartIntent() != null ? "Open" : "Settings"));
+        }
+        JSObject out = new JSObject();
+        out.put("ready", problems.length() == 0);
+        out.put("problems", problems);
+        out.put("maker", autostartMaker());
+        out.put("autostartKnown", autostartIntent() != null);
+        call.resolve(out);
+    }
+
+    private JSObject problem(String code, String title, String fix) {
+        JSObject p = new JSObject();
+        p.put("code", code);
+        p.put("title", title);
+        p.put("fix", fix);
+        return p;
+    }
+
+    /** Phone makers whose "Autostart" switch stops a closed app from ringing; null for everyone else. */
+    private String autostartMaker() {
+        String m = Build.MANUFACTURER == null ? "" : Build.MANUFACTURER.toLowerCase(Locale.ROOT);
+        if (m.contains("xiaomi") || m.contains("redmi") || m.contains("poco")) return "Xiaomi";
+        if (m.contains("oppo")) return "Oppo";
+        if (m.contains("vivo")) return "Vivo";
+        if (m.contains("realme")) return "Realme";
+        if (m.contains("oneplus")) return "OnePlus";
+        if (m.contains("huawei") || m.contains("honor")) return "Huawei";
+        return null;
+    }
+
+    /** The maker's own Autostart page, if this phone has one of the known ones. */
+    private Intent autostartIntent() {
+        String[][] known = {
+            { "com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity" },
+            { "com.coloros.safecenter", "com.coloros.safecenter.permission.startup.StartupAppListActivity" },
+            { "com.coloros.safecenter", "com.coloros.safecenter.startupapp.StartupAppListActivity" },
+            { "com.oppo.safe", "com.oppo.safe.permission.startup.StartupAppListActivity" },
+            { "com.vivo.permissionmanager", "com.vivo.permissionmanager.activity.BgStartUpManagerActivity" },
+            { "com.iqoo.secure", "com.iqoo.secure.ui.phoneoptimize.BgStartUpManager" },
+            { "com.oneplus.security", "com.oneplus.security.chainlaunch.view.ChainLaunchAppListActivity" },
+            { "com.huawei.systemmanager", "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity" },
+            { "com.huawei.systemmanager", "com.huawei.systemmanager.optimize.process.ProtectActivity" },
+        };
+        for (String[] k : known) {
+            Intent i = new Intent().setComponent(new ComponentName(k[0], k[1]));
+            if (i.resolveActivity(getContext().getPackageManager()) != null) return i;
+        }
+        return null;
+    }
+
+    /** Rings this phone in about a minute, from the background listener, with no relay: lock the phone and watch. */
+    @PluginMethod
+    public void testRing(PluginCall call) {
+        long delay = call.getInt("delayMs", 60000);
+        RingService.scheduleTestRing(getContext(), delay);
+        call.resolve();
     }
 
     /** Asks for one of the three things ringing needs, or opens the right page of Android's settings. */
@@ -227,6 +300,13 @@ public class HushNativePlugin extends Plugin {
             } else if ("battery".equals(which)) {
                 // Ekanto is not on Google Play, so it may ask this directly: one tap, "Allow".
                 getActivity().startActivity(new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, pkg));
+            } else if ("exactAlarms".equals(which) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                getActivity().startActivity(new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, pkg));
+            } else if ("autostart".equals(which)) {
+                // Once they have been to the switch, believe them: Android gives no way to read it.
+                getContext().getSharedPreferences(RingService.PREFS, Context.MODE_PRIVATE).edit().putBoolean("autostartOk", true).apply();
+                Intent auto = autostartIntent();
+                getActivity().startActivity(auto != null ? auto : new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkg));
             }
         } catch (Exception e) {
             getActivity().startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkg));

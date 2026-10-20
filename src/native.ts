@@ -23,6 +23,10 @@ interface HushNative {
   setChannels(options: { name: string; channels: NativeChannel[] }): Promise<void>;
   ringStatus(): Promise<RingStatus>;
   ringSetting(options: { which: RingSetting }): Promise<RingStatus>;
+  /** "Can Ekanto ring right now?" — every reason it may not, each with its fix. */
+  ringHealth(): Promise<RingHealth>;
+  /** Rings this phone in about a minute from the background listener, no relay: lock it and watch. */
+  testRing(options: { delayMs: number }): Promise<void>;
   /** The ring was answered or declined inside the app: stop the ringing notification. */
   stopRinging(options: { call: string; keepOverLock: boolean }): Promise<void>;
   /** What the app was opened for: an incoming call's screen, or "Answer" in the notification. */
@@ -36,8 +40,24 @@ export interface RingStatus {
   notifications: boolean;
   fullScreen: boolean;
   battery: boolean;
+  /** Android 12+: "Alarms & reminders", so a sleeping phone still wakes for a call. */
+  exactAlarms: boolean;
 }
-export type RingSetting = 'notifications' | 'fullScreen' | 'battery';
+export type RingSetting = 'notifications' | 'fullScreen' | 'battery' | 'exactAlarms' | 'autostart';
+export interface RingProblem {
+  code: RingSetting;
+  title: string;
+  /** The button's word: "Allow", "Open" or "Settings". */
+  fix: string;
+}
+export interface RingHealth {
+  ready: boolean;
+  problems: RingProblem[];
+  /** Xiaomi, Oppo, …: a maker with an Autostart switch Android cannot read; null for the rest. */
+  maker: string | null;
+  /** True when its Autostart page was found on this phone. */
+  autostartKnown: boolean;
+}
 
 export interface Launch {
   action?: 'incoming' | 'answer';
@@ -135,7 +155,9 @@ export const nativeFloat = {
 export const nativeRing = {
   setChannels: (name: string, channels: NativeChannel[]) => (IN_APP ? plugin.setChannels({ name, channels }).catch(() => undefined) : Promise.resolve()),
   status: () => plugin.ringStatus(),
+  health: () => plugin.ringHealth(),
   allow: (which: RingSetting) => plugin.ringSetting({ which }),
+  test: (delayMs = 60000) => plugin.testRing({ delayMs }),
   /** keepOverLock: answered, so the call may stay over the lock screen. */
   stop: (call: string, keepOverLock = false) => (IN_APP ? plugin.stopRinging({ call, keepOverLock }).catch(() => undefined) : Promise.resolve()),
   takeLaunch: () => plugin.takeLaunch().catch(() => ({}) as Launch),
