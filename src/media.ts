@@ -8,7 +8,17 @@ const VIDEO = (facing: Facing): MediaTrackConstraints => ({
   height: { ideal: 720 },
   frameRate: { ideal: 30 },
 });
-const AUDIO: MediaTrackConstraints = { echoCancellation: true, noiseSuppression: true, autoGainControl: true };
+/** "Remove background noise" setting: on unless the user switched it off. */
+export const NOISE_KEY = 'hush.noise';
+export function noiseOn(): boolean {
+  try {
+    return localStorage.getItem(NOISE_KEY) !== '0';
+  } catch {
+    return true;
+  }
+}
+export const micCleanup = (on: boolean): MediaTrackConstraints => ({ echoCancellation: on, noiseSuppression: on, autoGainControl: on });
+const AUDIO = (): MediaTrackConstraints => micCleanup(noiseOn());
 
 /**
  * Microphone, plus the camera for a video call. A voice call never touches the camera, so its
@@ -20,7 +30,7 @@ export async function openCamera(facing: Facing = 'user', video = true): Promise
   }
   if (!video) {
     try {
-      return await navigator.mediaDevices.getUserMedia({ audio: AUDIO });
+      return await navigator.mediaDevices.getUserMedia({ audio: AUDIO() });
     } catch (e) {
       const name = (e as DOMException)?.name;
       throw new MediaProblem(name === 'NotAllowedError' || name === 'SecurityError'
@@ -29,14 +39,14 @@ export async function openCamera(facing: Facing = 'user', video = true): Promise
     }
   }
   try {
-    return await navigator.mediaDevices.getUserMedia({ video: VIDEO(facing), audio: AUDIO });
+    return await navigator.mediaDevices.getUserMedia({ video: VIDEO(facing), audio: AUDIO() });
   } catch (e) {
     const name = (e as DOMException)?.name;
     if (name === 'NotAllowedError' || name === 'SecurityError') {
       throw new MediaProblem('Camera and microphone are blocked. Allow them for this site in your browser settings, then try again.');
     }
     try {
-      return await navigator.mediaDevices.getUserMedia({ audio: AUDIO });
+      return await navigator.mediaDevices.getUserMedia({ audio: AUDIO() });
     } catch {
       throw new MediaProblem('No camera or microphone was found, or another app is using them.');
     }
