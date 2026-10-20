@@ -18,7 +18,19 @@ const TURN: RTCIceServer[] = env.VITE_TURN_URLS && env.VITE_TURN_USERNAME && env
   ? [{ urls: String(env.VITE_TURN_URLS).split(',').map((u: string) => u.trim()), username: env.VITE_TURN_USERNAME, credential: env.VITE_TURN_CREDENTIAL }]
   : [];
 
-export const ICE_SERVERS: RTCIceServer[] = [...STUN, ...TURN];
+/**
+ * A second, public relay (Open Relay Project, free) so one outage or a used-up quota does not drop
+ * calls. It only forwards media the phones already encrypted — it carries no key and hears nothing.
+ */
+const OPEN_RELAY: RTCIceServer[] = [{
+  urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turns:openrelay.metered.ca:443?transport=tcp'],
+  username: 'openrelayproject',
+  credential: 'openrelayproject',
+}];
+
+// Our own relay first; the public one is only tried after it.
+export const ICE_SERVERS: RTCIceServer[] = [...STUN, ...TURN, ...OPEN_RELAY];
+/** "Hide my IP" needs a relay we trust — only our own counts, never the public fallback. */
 export const HAS_TURN = TURN.length > 0;
 
 /** Where the Android app can be downloaded (a GitHub release), set when building. */
