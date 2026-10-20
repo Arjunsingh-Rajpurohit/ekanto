@@ -86,14 +86,14 @@ button {
 
 h1 {
   margin: 10px 0 6px;
-  font-size: 30px;
+  font-size: 1.765rem;
   font-weight: 700;
   letter-spacing: -0.02em;
 }
 
 h2 {
   margin: 0 0 6px;
-  font-size: 20px;
+  font-size: 1.176rem;
   letter-spacing: -0.01em;
 }
 
@@ -111,7 +111,7 @@ h2 {
 
 .hint {
   margin: 0;
-  font-size: 13.5px;
+  font-size: 0.882rem;
   color: var(--ink-2);
   line-height: 1.45;
 }
@@ -125,7 +125,7 @@ h2 {
 }
 
 .field > span {
-  font-size: 14px;
+  font-size: 0.882rem;
   font-weight: 600;
 }
 
@@ -137,7 +137,7 @@ h2 {
   background: var(--card);
   border-radius: 14px;
   padding: 14px 16px;
-  font-size: 16px;
+  font-size: 0.941rem;
   outline: none;
   transition: border-color 0.15s;
 }
@@ -159,7 +159,7 @@ h2 {
   border-radius: 12px;
   border: 1px solid var(--line);
   background: var(--card);
-  font-size: 16px;
+  font-size: 0.941rem;
   font-weight: 600;
   text-align: center;
   padding: 0;
@@ -183,7 +183,7 @@ h2 {
   border-radius: 14px;
   background: var(--card);
   border: 1px solid var(--line);
-  font-size: 14px;
+  font-size: 0.882rem;
   color: var(--ink-2);
   line-height: 1.45;
 }
@@ -205,7 +205,7 @@ h2 {
   background: var(--card-2);
   border-radius: 14px;
   padding: 13px 18px;
-  font-size: 16px;
+  font-size: 0.941rem;
   font-weight: 600;
   transition: transform 0.08s, background 0.15s;
 }
@@ -219,7 +219,7 @@ h2 {
 
 .btn.big {
   padding: 17px;
-  font-size: 17px;
+  font-size: 1rem;
 }
 
 .btn:active,
@@ -239,12 +239,12 @@ h2 {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  font-size: 14px;
+  font-size: 0.882rem;
   color: var(--ink-2);
 }
 
 .big-icon {
-  font-size: 54px;
+  font-size: 3.176rem;
 }
 
 /* ---------- Call ---------- */
@@ -288,7 +288,7 @@ h2 {
   border-radius: 99px;
   background: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(8px);
-  font-size: 13px;
+  font-size: 0.882rem;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
@@ -306,7 +306,7 @@ h2 {
   gap: 4px;
   background: var(--card);
   color: var(--ink-2);
-  font-size: 14px;
+  font-size: 0.882rem;
 }
 
 .tile.waiting .tile-wait {
@@ -328,7 +328,7 @@ h2 {
   border: 0;
   border-radius: 99px;
   padding: 9px 16px;
-  font-size: 14.5px;
+  font-size: 0.882rem;
   font-weight: 600;
   background: rgba(21, 23, 28, 0.72);
   backdrop-filter: blur(12px);
@@ -484,7 +484,7 @@ h2 {
 }
 
 .safety .emojis {
-  font-size: 32px;
+  font-size: 1.882rem;
   letter-spacing: 4px;
 }
 
@@ -507,7 +507,7 @@ h2 {
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   text-align: center;
-  font-size: 15px;
+  font-size: 0.882rem;
   overflow-wrap: anywhere;
 }
 
@@ -578,7 +578,7 @@ a.btn {
   border: 0;
   border-radius: 14px;
   background: var(--card-2);
-  font-size: 16px;
+  font-size: 0.941rem;
   font-weight: 600;
   text-align: left;
 }
@@ -653,7 +653,7 @@ a.btn {
 .chat-empty {
   margin: auto;
   color: var(--ink-2);
-  font-size: 14px;
+  font-size: 0.882rem;
   text-align: center;
 }
 
@@ -661,7 +661,7 @@ a.btn {
   max-width: 82%;
   padding: 9px 12px 6px;
   border-radius: 16px;
-  font-size: 15px;
+  font-size: 0.882rem;
   line-height: 1.4;
   overflow-wrap: anywhere;
 }
@@ -686,7 +686,7 @@ a.btn {
 
 .bubble .who {
   display: block;
-  font-size: 12px;
+  font-size: 0.882rem;
   font-weight: 700;
   color: #9fc0ff;
   margin-bottom: 2px;
@@ -694,7 +694,7 @@ a.btn {
 
 .bubble time {
   display: block;
-  font-size: 11px;
+  font-size: 0.882rem;
   opacity: 0.6;
   text-align: right;
   margin-top: 2px;
@@ -709,7 +709,7 @@ a.btn {
 }
 
 .file-icon {
-  font-size: 26px;
+  font-size: 1.529rem;
 }
 
 .file-info {
@@ -770,7 +770,7 @@ a.btn {
   background: var(--bg);
   border-radius: 20px;
   padding: 11px 14px;
-  font-size: 16px;
+  font-size: 0.941rem;
   outline: none;
 }
 
@@ -780,7 +780,7 @@ a.btn {
   border-radius: 50%;
   border: 0;
   background: var(--card-2);
-  font-size: 20px;
+  font-size: 1.176rem;
   flex: none;
 }
 
@@ -796,14 +796,14 @@ a.btn {
   border: 1px solid var(--line);
   background: var(--card-2);
   text-align: left;
-  font-size: 14px;
+  font-size: 0.882rem;
   line-height: 1.45;
   color: var(--ink-2);
 }
 
 .choice-row strong {
   color: var(--ink);
-  font-size: 16px;
+  font-size: 0.941rem;
 }
 
 .choice-row:disabled {
@@ -811,7 +811,7 @@ a.btn {
 }
 
 .ci {
-  font-size: 24px;
+  font-size: 1.412rem;
 }
 
 .warn {
@@ -820,7 +820,7 @@ a.btn {
   border-radius: 12px;
   background: rgba(229, 72, 77, 0.12);
   color: #ffb4b6;
-  font-size: 14px;
+  font-size: 0.882rem;
   line-height: 1.4;
   text-align: left;
 }
@@ -891,7 +891,7 @@ a.btn {
   margin: 0;
   padding: 14px;
   white-space: pre-wrap;
-  font-size: 14px;
+  font-size: 0.882rem;
   color: var(--ink);
 }
 
@@ -900,7 +900,7 @@ a.btn {
   margin: auto 0 0;
   padding-top: 18px;
   text-align: center;
-  font-size: 12px;
+  font-size: 0.882rem;
   letter-spacing: 0.02em;
   color: var(--ink-2);
   opacity: 0.75;
@@ -921,7 +921,7 @@ a.btn {
   border-radius: 12px;
   background: var(--accent-soft);
   color: var(--ink);
-  font-size: 16px;
+  font-size: 0.941rem;
   font-weight: 600;
   line-height: 1.4;
   overflow-wrap: anywhere;
@@ -939,7 +939,7 @@ a.btn {
   background: var(--card-2);
   border-radius: 999px;
   padding: 8px 14px;
-  font-size: 14px;
+  font-size: 0.882rem;
   font-weight: 600;
 }
 
@@ -965,7 +965,7 @@ a.btn {
   background: none;
   padding: 6px;
   color: #ff7a7e;
-  font-size: 15px;
+  font-size: 0.882rem;
   font-weight: 600;
 }
 
@@ -1107,7 +1107,7 @@ a.btn {
 }
 
 .float .tile .name {
-  font-size: 11px;
+  font-size: 0.882rem;
   left: 6px;
   bottom: 6px;
   padding: 2px 8px;
@@ -1321,7 +1321,7 @@ body.floating .stage[data-layout='focus'] .main {
   border-radius: 50%;
   display: grid;
   place-items: center;
-  font-size: 18px;
+  font-size: 1.059rem;
   font-weight: 700;
   color: #fff;
   background: linear-gradient(160deg, #2a3444, #141a24);
@@ -1336,14 +1336,14 @@ body.floating .stage[data-layout='focus'] .main {
 }
 
 .ch-text strong {
-  font-size: 16px;
+  font-size: 0.941rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .ch-text small {
-  font-size: 13px;
+  font-size: 0.882rem;
   color: var(--ink-2);
   white-space: nowrap;
   overflow: hidden;
@@ -1395,7 +1395,7 @@ body.floating .stage[data-layout='focus'] .main {
   padding: 10px 12px;
   background: rgba(255, 207, 92, 0.12);
   color: #ffcf5c;
-  font-size: 13.5px;
+  font-size: 0.882rem;
   font-weight: 600;
   text-align: left;
 }
@@ -1439,7 +1439,7 @@ body.floating .stage[data-layout='focus'] .main {
   border-radius: 50%;
   display: grid;
   place-items: center;
-  font-size: 48px;
+  font-size: 2.824rem;
   font-weight: 700;
   color: #fff;
   background: linear-gradient(160deg, #2a3444, #141a24);
@@ -1466,7 +1466,7 @@ body.floating .stage[data-layout='focus'] .main {
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  font-size: 14px;
+  font-size: 0.882rem;
   color: var(--ink-2);
 }
 
@@ -1527,7 +1527,7 @@ body.floating .stage[data-layout='focus'] .main {
 
 .topbar h1 {
   margin: 0;
-  font-size: 21px;
+  font-size: 1.235rem;
 }
 
 .topbar-tools {
@@ -1542,7 +1542,7 @@ body.floating .stage[data-layout='focus'] .main {
   border-radius: 50%;
   border: 0;
   background: #2a3444;
-  font-size: 15px;
+  font-size: 0.882rem;
   font-weight: 700;
 }
 
@@ -1590,7 +1590,7 @@ body.floating .stage[data-layout='focus'] .main {
 .pane-title,
 .group-label {
   margin: 6px 2px 0;
-  font-size: 13px;
+  font-size: 0.882rem;
   font-weight: 700;
   color: #cfd3da;
 }
@@ -1626,13 +1626,13 @@ body.floating .stage[data-layout='focus'] .main {
 
 .empty h2 {
   margin: 14px 0 0;
-  font-size: 21px;
+  font-size: 1.235rem;
 }
 
 .empty .sub {
   max-width: 320px;
   margin-bottom: 8px;
-  font-size: 14.5px;
+  font-size: 0.882rem;
 }
 
 .empty .btn {
@@ -1694,7 +1694,7 @@ body.floating .stage[data-layout='focus'] .main {
   border-radius: 10px;
   background: none;
   color: #cfd3da;
-  font-size: 15px;
+  font-size: 0.882rem;
   font-weight: 600;
 }
 
@@ -1712,7 +1712,7 @@ body.floating .stage[data-layout='focus'] .main {
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--card);
-  font-size: 15px;
+  font-size: 0.882rem;
   font-weight: 600;
   text-align: left;
 }
@@ -1721,13 +1721,13 @@ body.floating .stage[data-layout='focus'] .main {
 .row-item small {
   margin-left: auto;
   color: #8b93a1;
-  font-size: 13px;
+  font-size: 0.882rem;
   font-weight: 500;
 }
 
 .chev {
   color: #6b7383;
-  font-size: 20px;
+  font-size: 1.176rem;
   line-height: 1;
 }
 
@@ -1740,7 +1740,7 @@ body.floating .stage[data-layout='focus'] .main {
   background: none;
   padding: 8px 0 2px;
   color: #cfd3da;
-  font-size: 15px;
+  font-size: 0.882rem;
   font-weight: 600;
 }
 
@@ -1764,7 +1764,7 @@ body.floating .stage[data-layout='focus'] .main {
 .me-row .ch-avatar {
   width: 48px;
   height: 48px;
-  font-size: 19px;
+  font-size: 1.118rem;
 }
 
 .me-text {
@@ -1776,7 +1776,7 @@ body.floating .stage[data-layout='focus'] .main {
 }
 
 .me-text strong {
-  font-size: 16px;
+  font-size: 0.941rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1784,7 +1784,7 @@ body.floating .stage[data-layout='focus'] .main {
 
 .me-text small {
   color: var(--ink-2);
-  font-size: 13px;
+  font-size: 0.882rem;
 }
 
 .group {
@@ -1807,7 +1807,7 @@ body.floating .stage[data-layout='focus'] .main {
   border: 0;
   background: none;
   color: var(--ink);
-  font-size: 15px;
+  font-size: 0.882rem;
   font-weight: 600;
   text-align: left;
   text-decoration: none;
@@ -1912,7 +1912,7 @@ input.switch:focus-visible {
   border: 0;
   background: none;
   color: #9aa3b1;
-  font-size: 12px;
+  font-size: 0.882rem;
   font-weight: 600;
 }
 
@@ -1951,7 +1951,7 @@ input.switch:focus-visible {
   }
 
   .topbar h1 {
-    font-size: 22px;
+    font-size: 1.294rem;
   }
 
   #settings-btn {
@@ -1967,7 +1967,7 @@ input.switch:focus-visible {
     border-radius: 12px;
     background: var(--card);
     color: var(--ink);
-    font-size: 14px;
+    font-size: 0.882rem;
     font-weight: 600;
     text-decoration: none;
   }
@@ -2006,7 +2006,7 @@ input.switch:focus-visible {
     display: block;
     margin: 0 0 2px;
     color: var(--ink);
-    font-size: 20px;
+    font-size: 1.176rem;
   }
 
   .calls-pane .channel-list {
@@ -2051,7 +2051,7 @@ input.switch:focus-visible {
     margin: auto 0 0;
     padding: 28px 16px calc(20px + env(safe-area-inset-bottom));
     color: var(--ink-2);
-    font-size: 12.5px;
+    font-size: 0.882rem;
     text-align: center;
   }
 
@@ -2085,7 +2085,7 @@ input.switch:focus-visible {
 
   .drawer-head h2 {
     margin: 0;
-    font-size: 21px;
+    font-size: 1.235rem;
   }
 
   .drawer-shade {
@@ -2102,5 +2102,280 @@ input.switch:focus-visible {
   .home.drawer-open .drawer-shade {
     opacity: 1;
     pointer-events: auto;
+  }
+}
+
+/* ---------- First-time phone user (owner, 20 Oct 2026): words under buttons, bigger text ---------- */
+
+/* 17px base and rem text, so the phone's large-text setting grows every word. */
+html {
+  font-size: 1rem;
+}
+
+body {
+  font-size: 1rem;
+}
+
+.sub {
+  font-size: 1rem;
+}
+
+.hint,
+.empty .sub,
+.field > span,
+.mark,
+.toast,
+.in-sub,
+.tile .name,
+.float .tile .name,
+.ch small,
+.menu-item small,
+.row-item small,
+.me-text small,
+.opt-row small,
+.chip,
+.why,
+.home-foot,
+.tabbar span,
+.ch-why {
+  font-size: 0.94rem;
+}
+
+.in-action {
+  font-size: 1.06rem;
+  font-weight: 700;
+  color: #fff;
+  gap: 12px;
+}
+
+/* Chat badge is the one thing that stays small: a count, not a word. */
+.badge {
+  font-size: 12px;
+}
+
+.in-kind {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 1rem;
+}
+
+/* Incoming: two big buttons, far apart, with Answer and Decline in bold white. */
+.incoming-actions {
+  max-width: 400px;
+  justify-content: space-between;
+  padding: 0 24px 8px;
+}
+
+.round.in-btn {
+  width: 88px;
+  height: 88px;
+}
+
+.round.in-btn svg {
+  width: 36px;
+  height: 36px;
+}
+
+/* In-call controls: a word under each; End is the big red one. */
+.controls {
+  gap: 6px;
+  padding-left: 6px;
+  padding-right: 6px;
+  align-items: flex-end;
+}
+
+.ctl {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 52px;
+}
+
+.ctl-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+  white-space: nowrap;
+}
+
+.round.danger#end {
+  width: 72px;
+  height: 72px;
+}
+
+.round.danger#end svg {
+  width: 30px;
+  height: 30px;
+}
+
+@media (min-width: 400px) {
+  .controls {
+    gap: 12px;
+  }
+}
+
+/* The waiting card: the next step reads at a glance, WhatsApp first. */
+.waiting-sub {
+  font-size: 1.06rem;
+  color: var(--ink);
+}
+
+.share-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.share-col .row {
+  display: flex;
+  gap: 10px;
+}
+
+.share-col .row .btn {
+  flex: 1;
+}
+
+.btn.whatsapp {
+  background: #25d366;
+  color: #062b16;
+  font-weight: 700;
+  width: 100%;
+}
+
+/* Camera or mic blocked: stays until dismissed. */
+.blocked {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: calc(64px + env(safe-area-inset-top));
+  z-index: 8;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #2a3444;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.blocked p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* Empty Calls tab: one calm line, one button, a quiet link, and the app card on the website. */
+.empty .ready {
+  font-size: 1.18rem;
+  font-weight: 600;
+  line-height: 1.4;
+  max-width: 320px;
+}
+
+.get-app-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  max-width: 340px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  text-decoration: none;
+  text-align: left;
+}
+
+.get-app-card span {
+  color: var(--ink-2);
+  font-size: 0.94rem;
+}
+
+/* Limit who can join: four numbers, "Other…", then the default in full. */
+.sizes {
+  grid-template-columns: repeat(5, 1fr);
+}
+
+.sizes .any {
+  grid-column: 1 / -1;
+}
+
+/* Join screen: the IP switch under a small "More options" row. */
+.more-row {
+  width: 100%;
+  max-width: 420px;
+  margin: 4px auto 0;
+  text-align: left;
+}
+
+.more-row summary {
+  cursor: pointer;
+  color: var(--ink-2);
+  font-size: 0.94rem;
+  text-align: center;
+  padding: 10px;
+  list-style: none;
+}
+
+.more-row summary::-webkit-details-marker {
+  display: none;
+}
+
+.more-row summary::after {
+  content: ' ›';
+}
+
+.more-row[open] summary::after {
+  content: ' ⌄';
+}
+
+/* Grid on a phone: your floating picture sits low and small, never on the first person's face. */
+@media (max-width: 899px) {
+  .stage[data-layout='grid'] .float {
+    width: 22vw;
+    max-width: 96px;
+  }
+
+  .stage[data-layout='grid'] .float[data-corner='tr'],
+  .stage[data-layout='grid'] .float[data-corner='tl'] {
+    top: auto;
+    bottom: calc(126px + env(safe-area-inset-bottom));
+  }
+
+  .stage[data-layout='grid'] .float[data-corner='br'],
+  .stage[data-layout='grid'] .float[data-corner='bl'] {
+    bottom: calc(126px + env(safe-area-inset-bottom));
+  }
+
+  .stage[data-layout='grid'] .grid {
+    padding-bottom: calc(126px + env(safe-area-inset-bottom) + 22vw * 4 / 3 + 8px);
+  }
+}
+
+/* Small top buttons keep a 44px finger target. */
+.mini {
+  width: 44px;
+  height: 44px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse {
+    animation: none;
+  }
+}
+
+/* A 360px phone: six buttons still fit, End still the biggest. */
+@media (max-width: 399px) {
+  .ctl {
+    min-width: 48px;
+  }
+
+  .ctl .round:not(#end) {
+    width: 52px;
+    height: 52px;
   }
 }

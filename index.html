@@ -41,20 +41,21 @@
 
         <div class="panes">
           <!-- Calls: saved channels, tap to ring them -->
-          <section id="tab-calls" class="pane calls-pane" aria-label="Saved channels">
-            <h2 class="pane-title">Saved channels</h2>
+          <section id="tab-calls" class="pane calls-pane" aria-label="People you call">
+            <h2 class="pane-title">People you call</h2>
             <button id="ring-setup-btn" class="ring-warn" type="button" hidden>⚠️ Set up ringing, so calls reach you when Ekanto is closed</button>
             <ul id="channel-list" class="channel-list"></ul>
             <div id="calls-empty" class="empty">
               <img src="./favicon.svg" alt="" class="empty-logo" />
-              <h2>No saved channels yet</h2>
-              <p class="sub">Save the people you call often. Next time, just tap to call — it rings their phone. No links.</p>
-              <button id="new-channel" class="btn primary" type="button">＋ New channel</button>
-              <button id="go-link" class="btn with-icon" type="button"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><span>Start a one-time call link</span></button>
+              <h2 class="ready">You're ready. When someone calls you, this phone will ring.</h2>
+              <p class="sub">Nobody saved yet. When your family calls you, they appear here. Then just tap their name to call back.</p>
+              <button id="new-channel" class="btn primary" type="button">＋ Add a person</button>
+              <a id="get-app-card" class="get-app-card" target="_blank" rel="noopener noreferrer" hidden><strong>Get the Ekanto app</strong><span>It rings even when this page is closed. Android · free ›</span></a>
+              <button id="go-link" class="text-link with-icon" type="button"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><span>Start a one-time call link</span></button>
             </div>
             <div class="calls-foot">
-              <p id="web-ring-note" class="hint" hidden>On the website, channels ring only while this page is open. The app rings anytime.</p>
-              <button id="new-channel-fab" class="fab" type="button" aria-label="New channel" hidden><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+              <p id="web-ring-note" class="hint" hidden>On the website, calls ring only while this page is open. The app rings anytime.</p>
+              <button id="new-channel-fab" class="fab" type="button" aria-label="Add a person" hidden><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
             </div>
           </section>
 
@@ -65,23 +66,11 @@
               <button type="button" data-kind="video" role="radio" class="on" aria-checked="true">🎥 Video</button>
               <button type="button" data-kind="voice" role="radio" aria-checked="false">📞 Voice</button>
             </div>
-            <div class="field">
-              <span>How many people? <em class="muted">(incl. you)</em></span>
-              <div id="sizes" class="sizes" role="radiogroup" aria-label="How many people">
-                <button type="button" data-n="2" role="radio">2</button>
-                <button type="button" data-n="3" role="radio">3</button>
-                <button type="button" data-n="4" role="radio">4</button>
-                <button type="button" data-n="6" role="radio">6</button>
-                <button type="button" data-n="" role="radio" class="on">Any</button>
-                <input id="size-custom" type="number" inputmode="numeric" min="2" max="20" placeholder="#" aria-label="Type a number" />
-              </div>
-              <p id="size-note" class="hint" hidden></p>
-            </div>
             <label class="field">
               <span>Reason <em class="muted">(optional)</em></span>
               <input id="reason" type="text" maxlength="60" autocomplete="off" placeholder="e.g. Dinner plans" />
             </label>
-            <button id="options-btn" class="opt-row" type="button" hidden>
+            <button id="options-btn" class="opt-row" type="button">
               <span>More options</span><small id="options-sum"></small><span class="chev" aria-hidden="true">›</span>
             </button>
             <div class="grow"></div>
@@ -102,7 +91,7 @@
             </button>
             <p class="group-label">Privacy</p>
             <div class="group">
-              <label id="hide-ip-row" class="row-item hide-ip" hidden><span>Hide my IP address</span><input type="checkbox" class="switch" /></label>
+              <label id="hide-ip-row" class="row-item hide-ip" hidden><span>Hide where I am (IP address)</span><input type="checkbox" class="switch" /></label>
               <button id="privacy-btn" class="row-item" type="button"><span>How Ekanto keeps calls private</span><span class="chev" aria-hidden="true">›</span></button>
             </div>
             <p class="group-label">Sound</p>
@@ -143,6 +132,7 @@
         </label>
         <button id="join-btn" class="btn primary big">Join call</button>
         <p class="hint center-text">Your camera and microphone turn on when you join.</p>
+        <details id="join-more" class="more-row" hidden><summary>More options</summary></details>
         <p class="mark">Ekanto™ · © 2026 Mr.Rajpurohit</p>
       </section>
 
@@ -163,7 +153,7 @@
       <!-- Someone in a saved channel is calling -->
       <section id="incoming" class="screen incoming" hidden>
         <div class="incoming-top">
-          <p id="in-kind" class="hint">Ekanto video call</p>
+          <p id="in-kind" class="in-kind">Video call — your camera will turn on</p>
           <div id="in-avatar" class="in-avatar" aria-hidden="true">P</div>
           <h1 id="in-name">Priya</h1>
           <p id="in-sub" class="sub">is calling…</p>
@@ -207,26 +197,31 @@
           <div class="card">
             <div class="pulse" aria-hidden="true"></div>
             <h2 id="waiting-title">Waiting for others</h2>
-            <p id="waiting-sub" class="sub">Send them the link.</p>
+            <p id="waiting-sub" class="sub waiting-sub">Nobody has joined yet. Send them the link.</p>
+            <p id="waiting-detail" class="hint" hidden></p>
             <p id="waiting-why" class="why" hidden></p>
-            <div id="waiting-share" class="row">
-              <button id="share" class="btn primary">Share link</button>
-              <button id="copy" class="btn">Copy</button>
+            <div id="waiting-share" class="share-col">
+              <a id="whatsapp" class="btn whatsapp" target="_blank" rel="noopener noreferrer">Send on WhatsApp</a>
+              <div class="row">
+                <button id="share" class="btn">Share another way</button>
+                <button id="copy" class="btn">Copy</button>
+              </div>
             </div>
-            <p class="mark">Ekanto™ · © 2026 Mr.Rajpurohit</p>
           </div>
         </div>
 
         <footer class="controls">
-          <button id="mic" class="round" type="button" aria-label="Mute microphone"></button>
-          <button id="cam" class="round" type="button" aria-label="Turn camera off"></button>
-          <button id="audio-btn" class="round" type="button" aria-label="Sound output" hidden></button>
-          <button id="chat-btn" class="round" type="button" aria-label="Chat">
+          <div class="ctl"><button id="mic" class="round" type="button" aria-label="Mute"></button><span id="mic-label" class="ctl-label">Mute</span></div>
+          <div class="ctl"><button id="cam" class="round" type="button" aria-label="Camera"></button><span id="cam-label" class="ctl-label">Camera</span></div>
+          <div class="ctl"><button id="audio-btn" class="round" type="button" aria-label="Speaker"></button><span id="audio-btn-label" class="ctl-label">Speaker</span></div>
+          <div class="ctl"><button id="chat-btn" class="round" type="button" aria-label="Chat">
             <span id="chat-badge" class="badge" hidden></span>
-          </button>
-          <button id="more" class="round" type="button" aria-label="More"></button>
-          <button id="end" class="round danger" type="button" aria-label="End call"></button>
+          </button><span id="chat-btn-label" class="ctl-label">Chat</span></div>
+          <div class="ctl"><button id="more" class="round" type="button" aria-label="More"></button><span id="more-label" class="ctl-label">More</span></div>
+          <div class="ctl end-ctl"><button id="end" class="round danger" type="button" aria-label="End"></button><span id="end-label" class="ctl-label">End</span></div>
         </footer>
+        <!-- Camera or mic blocked: stays until dismissed, says where to fix it -->
+        <div id="blocked" class="blocked" role="alert" hidden><p id="blocked-text"></p><button id="blocked-close" class="btn small" type="button">Dismiss</button></div>
 
         <!-- Where the sound comes out -->
         <div id="audio-sheet" class="sheet" hidden>
@@ -244,10 +239,9 @@
             <button id="screen" class="menu-item" type="button"><span class="mi"></span><span id="screen-label">Share my screen</span></button>
             <p id="screen-note" class="hint" hidden>Phone browsers can't share their screen. Use a computer, or the Ekanto app.</p>
             <button id="invite" class="menu-item" type="button"><span class="mi"></span>Invite someone</button>
-            <button id="save-channel" class="menu-item" type="button"><span class="mi"></span>Save as channel</button>
+            <button id="save-channel" class="menu-item" type="button"><span class="mi"></span>Save this person</button>
             <button id="safety-btn" class="menu-item" type="button"><span class="mi">🔒</span>Safety check</button>
             <button id="more-close" class="btn" type="button">Close</button>
-            <p class="mark">Ekanto™ · © 2026 Mr.Rajpurohit</p>
           </div>
         </div>
 
@@ -300,10 +294,10 @@
         <!-- Save this call as a channel -->
         <div id="save-sheet" class="sheet" hidden>
           <div class="sheet-card">
-            <h2>Save as channel</h2>
-            <p class="sub">Next time, just tap it to ring everyone here — no new links.</p>
+            <h2>Save this person</h2>
+            <p class="sub">Next time, just tap their name to call — no new links.</p>
             <label class="field left">
-              <span>Channel name</span>
+              <span>Name</span>
               <input id="save-name" type="text" maxlength="30" autocomplete="off" placeholder="e.g. Wife, Family" />
             </label>
             <button id="save-yes" class="btn primary" type="button">Save</button>
@@ -314,10 +308,10 @@
         <!-- Someone in the call asks to save it as a channel -->
         <div id="ask-sheet" class="sheet" hidden>
           <div class="sheet-card">
-            <h2>Save this call as a channel?</h2>
+            <h2 id="ask-title">Save this person?</h2>
             <p id="ask-sub" class="sub"></p>
             <label class="field left">
-              <span>Channel name</span>
+              <span>Name</span>
               <input id="ask-name" type="text" maxlength="30" autocomplete="off" />
             </label>
             <button id="ask-yes" class="btn primary" type="button">Save</button>
@@ -360,27 +354,27 @@
       <!-- New channel: starts a call; whoever joins is asked to save it -->
       <div id="newch-sheet" class="sheet fixed" hidden>
         <div class="sheet-card">
-          <h2>New channel</h2>
-          <p class="sub">Start a call and send the link. When they join, the channel is saved on both phones — next time, just tap to call.</p>
+          <h2>Add a person</h2>
+          <p class="sub">Start a call and send them the link. When they join, you are saved on both phones — next time, just tap their name to call.</p>
           <label class="field left">
-            <span>Channel name</span>
+            <span>Their name</span>
             <input id="newch-name" type="text" maxlength="30" autocomplete="off" placeholder="e.g. Wife, Family" />
           </label>
           <div class="field left">
-            <span>How many people? <em class="muted">(including you)</em></span>
-            <div id="newch-sizes" class="sizes" role="radiogroup" aria-label="How many people">
+            <span>Limit who can join <em class="muted">(including you)</em></span>
+            <div id="newch-sizes" class="sizes" role="radiogroup" aria-label="Limit who can join">
               <button type="button" data-n="2" role="radio">2</button>
               <button type="button" data-n="3" role="radio">3</button>
               <button type="button" data-n="4" role="radio">4</button>
               <button type="button" data-n="6" role="radio">6</button>
-              <button type="button" data-n="" role="radio">Any</button>
-              <input id="newch-custom" type="number" inputmode="numeric" min="2" max="20" placeholder="#" aria-label="Type a number" />
+              <input id="newch-custom" type="number" inputmode="numeric" min="2" max="20" placeholder="Other…" aria-label="Type a number" />
+              <button type="button" data-n="" role="radio" class="any">Any number of people</button>
             </div>
             <p id="newch-note" class="hint"></p>
           </div>
           <label id="newch-protect-row" class="toggle" hidden>
             <input id="newch-protect" type="checkbox" class="switch" />
-            <span><strong>Protected channel</strong><br>Its calls work only in the Ekanto app: no screenshots, no screen recording, no browser extensions.</span>
+            <span><strong>Protected calls</strong><br>Its calls work only in the Ekanto app: no screenshots, no screen recording, no browser extensions.</span>
           </label>
           <button id="newch-start" class="btn primary" type="button">Start call &amp; get link</button>
           <button id="newch-cancel" class="btn" type="button">Cancel</button>
@@ -391,13 +385,25 @@
       <div id="options-sheet" class="sheet fixed" hidden>
         <div class="sheet-card">
           <h2>More options</h2>
+          <div class="field left">
+            <span>Limit who can join <em class="muted">(including you)</em></span>
+            <div id="sizes" class="sizes" role="radiogroup" aria-label="Limit who can join">
+              <button type="button" data-n="2" role="radio">2</button>
+              <button type="button" data-n="3" role="radio">3</button>
+              <button type="button" data-n="4" role="radio">4</button>
+              <button type="button" data-n="6" role="radio">6</button>
+              <input id="size-custom" type="number" inputmode="numeric" min="2" max="20" placeholder="Other…" aria-label="Type a number" />
+              <button type="button" data-n="" role="radio" class="on any">Any number of people</button>
+            </div>
+            <p id="size-note" class="hint" hidden></p>
+          </div>
           <label id="protect-row" class="toggle" hidden>
             <input id="protect" type="checkbox" class="switch" />
             <span><strong>Protected call</strong><br>Only the Ekanto app can join. No screenshots or screen recording.</span>
           </label>
           <label id="options-hide-ip" class="toggle hide-ip" hidden>
             <input type="checkbox" class="switch" />
-            <span><strong>Hide my IP address</strong><br>Goes through the relay so nobody sees where you are. A little slower.</span>
+            <span><strong>Hide where I am (IP address)</strong><br>Sends the call through a middle computer, so the other side can't see your city. A bit slower.</span>
           </label>
           <button id="options-done" class="btn primary" type="button">Done</button>
         </div>
@@ -463,14 +469,14 @@
 
       <div id="ch-sheet" class="sheet fixed" hidden>
         <div class="sheet-card">
-          <h2 id="ch-title">Channel</h2>
+          <h2 id="ch-title">Person</h2>
           <p id="ch-info" class="sub"></p>
           <label class="field left">
             <span>Name on this phone</span>
             <input id="ch-name" type="text" maxlength="30" autocomplete="off" />
           </label>
           <button id="ch-done" class="btn primary" type="button">Done</button>
-          <button id="ch-delete" class="text-danger" type="button">Delete channel</button>
+          <button id="ch-delete" class="text-danger" type="button">Remove this person</button>
         </div>
       </div>
 

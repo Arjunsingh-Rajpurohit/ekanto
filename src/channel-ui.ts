@@ -11,12 +11,13 @@ export function initial(name: string): string {
   return ([...name.trim()][0] ?? '?').toUpperCase();
 }
 
-/** 3:15 pm today, or 12 Oct for an older day. */
-export function timeText(at: number): string {
+/** "9:02 pm" today · "Yesterday 9:02 pm" · "18 Oct" for an older day. */
+export function timeText(at: number, now = Date.now()): string {
   const d = new Date(at);
-  return d.toDateString() === new Date().toDateString()
-    ? d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
-    : d.toLocaleDateString([], { day: 'numeric', month: 'short' });
+  const time = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  if (d.toDateString() === new Date(now).toDateString()) return time;
+  if (d.toDateString() === new Date(now - 24 * 3600 * 1000).toDateString()) return `Yesterday ${time}`;
+  return d.toLocaleDateString([], { day: 'numeric', month: 'short' });
 }
 
 export interface RowActions {
@@ -29,22 +30,24 @@ export interface RowIcons {
   video: string;
 }
 
-/** One saved channel: who, its state, and the two call buttons (like a contact in a phone app). */
+/** One saved person: who, their state, and the two call buttons (like a contact in a phone app). */
 export function channelRow(ch: Channel, live: boolean, icons: RowIcons, actions: RowActions): HTMLLIElement {
   const li = document.createElement('li');
   let line: string;
+  let second = '';
   let state = '';
   if (ch.gone) {
-    line = `${ch.gone} deleted this channel`;
+    line = `${ch.gone} removed you`;
     state = 'gone';
   } else if (live) {
     line = '● In a call now — tap to join';
     state = 'live';
   } else if (ch.missed) {
-    line = `Missed call · ${timeText(ch.missed)}${ch.missedWhy ? ` · ${ch.missedWhy}` : ''}`;
+    line = `Missed · ${timeText(ch.missed)}`;
+    second = ch.missedWhy ?? '';
     state = 'missed';
   } else {
-    line = ch.members.length ? `You and ${listNames(ch.members)}` : 'Saved channel';
+    line = ch.members.length ? `You and ${listNames(ch.members)}` : 'Saved';
   }
   li.className = `ch${state ? ` ${state}` : ''}`;
 
@@ -62,8 +65,16 @@ export function channelRow(ch: Channel, live: boolean, icons: RowIcons, actions:
   const small = document.createElement('small');
   small.textContent = line;
   text.append(name, small);
+  if (second) {
+    const why = document.createElement('small');
+    why.className = 'ch-why';
+    why.textContent = second;
+    text.append(why);
+  }
   main.append(avatar, text);
-  main.addEventListener('click', () => actions.open(ch));
+  // A missed call is called back with one tap on the row (video); otherwise the row opens options.
+  main.addEventListener('click', () => (state === 'missed' ? actions.call(ch, false) : actions.open(ch)));
+  if (state === 'missed') main.setAttribute('aria-label', `Call ${ch.name} back`);
 
   const button = (icon: string, label: string, voice: boolean) => {
     const b = document.createElement('button');
