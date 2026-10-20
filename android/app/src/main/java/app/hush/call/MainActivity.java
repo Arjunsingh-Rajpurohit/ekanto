@@ -109,6 +109,15 @@ public class MainActivity extends BridgeActivity {
         return true;
     }
 
+    /** The call ended while floating: close the small window too, like a phone call does. */
+    static void closeFloating() {
+        MainActivity activity = current;
+        if (activity == null) return;
+        activity.runOnUiThread(() -> {
+            if (activity.isInPictureInPictureMode()) activity.moveTaskToBack(true);
+        });
+    }
+
     private void applyPipParams() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             try {

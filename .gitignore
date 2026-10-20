@@ -27,3 +27,4 @@ dist-ssr
 hush.apk
 ekanto.apk
 .env.turn
+.env.cloudflare

@@ -140,6 +140,7 @@ public class HushNativePlugin extends Plugin {
     public void endCall(PluginCall call) {
         audio.stop();
         MainActivity.setFloatingAllowed(false);
+        MainActivity.closeFloating();
         MainActivity.setShowOverLock(false);
         getContext().stopService(new Intent(getContext(), CallService.class));
         call.resolve();

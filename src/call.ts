@@ -39,6 +39,8 @@ export interface CallState {
   news: string | null;
   /** A one-off "Ravi joined", the first time someone connects. */
   joined: string | null;
+  /** A one-off: the name of someone who just hung up on purpose (not a lost connection). */
+  hungUp: string | null;
   /** Messages that reached this call's room but weren't sealed with its key: break-in attempts. */
   blocked: number;
 }
@@ -120,7 +122,7 @@ const MAX_OFFERS = 8;
  */
 export class CallSession {
   readonly id = toBase64Url(crypto.getRandomValues(new Uint8Array(12)));
-  state: CallState = { phase: 'starting', relaysUp: 0, people: [], liveSince: null, news: null, joined: null, blocked: 0 };
+  state: CallState = { phase: 'starting', relaysUp: 0, people: [], liveSince: null, news: null, joined: null, hungUp: null, blocked: 0 };
 
   private room?: Room;
   private relay = new Relay();
@@ -283,6 +285,7 @@ export class CallSession {
     this.onChange(this.state);
     this.state.news = null;
     this.state.joined = null;
+    this.state.hungUp = null;
   }
 
   /** Sealing is async; the queue keeps messages in the order they were made. */
@@ -333,7 +336,10 @@ export class CallSession {
       case 'bye': {
         this.gone.add(m.from);
         const peer = this.peers.get(m.from);
-        if (peer) this.removePeer(peer, `${peer.name} left`);
+        if (peer) {
+          this.state.hungUp = peer.name;
+          this.removePeer(peer, `${peer.name} left`);
+        }
         return;
       }
       case 'full':
@@ -401,7 +407,10 @@ export class CallSession {
   private onChannel(peer: Peer, data: string | ArrayBuffer): void {
     if (data === '{"k":"bye"}') {
       this.gone.add(peer.id);
-      if (this.peers.get(peer.id) === peer) this.removePeer(peer, `${peer.name} left`);
+      if (this.peers.get(peer.id) === peer) {
+        this.state.hungUp = peer.name;
+        this.removePeer(peer, `${peer.name} left`);
+      }
       return;
     }
     if (typeof data === 'string' && data.startsWith('{"k":"hi"')) {

@@ -173,6 +173,10 @@ function drawAudioSheet(): void {
 }
 
 const stage = new Stage($('stage'), () => $('call').classList.toggle('clean'));
+// Buttons tapped away: a tap anywhere but a picture brings them back.
+$('call').addEventListener('click', (e) => {
+  if (!(e.target as Element).closest('.tile')) $('call').classList.remove('clean');
+});
 const meter = new SpeakingMeter((speaking, loudest) => stage.setSpeaking(speaking, loudest));
 
 /* ---------- Small helpers ---------- */
@@ -354,7 +358,11 @@ async function enterCall(name: string, via?: ChannelVia, camera?: boolean): Prom
   clock = setInterval(() => lastState && drawStatus(lastState), 1000);
 }
 
+/** How many others were on screen at the last render. */
+let shownPeople = 0;
+
 function render(state: CallState): void {
+  const talking = lastState?.liveSince ?? null;
   lastState = state;
   if (state.phase === 'full') {
     finish();
@@ -364,6 +372,12 @@ function render(state: CallState): void {
     return;
   }
   const alone = state.people.length === 0;
+  // A two-person channel is a phone call: when they hang up, it's over for you too.
+  if (alone && state.hungUp && channelCall?.connected && channelCall.ch.size <= 2) return endCall(state.hungUp, talking);
+  // Someone came or went: show the buttons again (they may have been tapped away), so hanging up
+  // is always one tap.
+  if (state.people.length !== shownPeople) $('call').classList.remove('clean');
+  shownPeople = state.people.length;
   $('waiting').hidden = !alone;
   $('waiting-title').textContent = state.phase === 'offline'
     ? 'No internet — trying again…'
@@ -615,15 +629,18 @@ function finish(): number {
   if (document.pictureInPictureElement) void document.exitPictureInPicture().catch(() => undefined);
   for (const id of ['sheet', 'more-sheet', 'send-sheet', 'leave-sheet', 'audio-sheet', 'save-sheet', 'ask-sheet']) $(id).hidden = true;
   lastState = null;
+  shownPeople = 0;
   history.replaceState(null, '', location.pathname);
   return since ? Date.now() - since : 0;
 }
 
-function endCall(): void {
-  const ms = finish();
+/** Hang up. `who` = the other person hung up first ("Priya hung up."), `since` = when talking began. */
+function endCall(who?: string, since?: number | null): void {
+  const ms = finish() || (since ? Date.now() - since : 0);
   const min = Math.floor(ms / 60000);
   const sec = Math.floor((ms % 60000) / 1000);
-  message('👋', 'Call ended', ms ? `You talked for ${min ? `${min} min ` : ''}${sec} sec. Nothing was saved — the chat and files are gone too.` : 'Nothing was saved.');
+  message('👋', 'Call ended', (who ? `${who.slice(0, 30)} hung up. ` : '')
+    + (ms ? `You talked for ${min ? `${min} min ` : ''}${sec} sec. Nothing was saved — the chat and files are gone too.` : 'Nothing was saved.'));
 }
 
 function openSafety(): void {
@@ -1263,7 +1280,7 @@ $('mic').addEventListener('click', () => {
   drawControls();
 });
 $('cam').addEventListener('click', () => void toggleCamera());
-$('end').addEventListener('click', endCall);
+$('end').addEventListener('click', () => endCall());
 $('more').addEventListener('click', () => ($('more-sheet').hidden = false));
 $('more-close').addEventListener('click', () => ($('more-sheet').hidden = true));
 $('flip').addEventListener('click', () => {
