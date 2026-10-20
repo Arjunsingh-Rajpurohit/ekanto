@@ -555,7 +555,12 @@ function drawStatus(state: CallState): void {
     const time = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
     const count = connected + 1;
     // A protected call wears its shield; a tap opens the safety sheet, which says what it means.
-    chip.textContent = `${invite?.appOnly ? '🛡️ Protected' : '🔒 Private'}\u00a0·\u00a0${count === 2 ? time : `${count}\u00a0people · ${time}`}`;
+    // Fixed words only (no user text). On a phone a 3+ call drops the word, the lock still says it:
+    // "🔒 3 people · 0:12" fits beside the layout buttons where "🔒 Private · 3 people · 0:12" did not.
+    const word = invite?.appOnly ? 'Protected' : 'Private';
+    chip.classList.toggle('many', count > 2);
+    chip.innerHTML = `${invite?.appOnly ? '🛡️' : '🔒'}<span class="wide">&nbsp;${word}&nbsp;·</span>&nbsp;${
+      count === 2 ? time : `${count}&nbsp;people&nbsp;·&nbsp;${time}`}`;
   } else {
     chip.textContent = state.phase === 'offline'
       ? 'Offline'

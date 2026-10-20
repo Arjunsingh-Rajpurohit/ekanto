@@ -1299,6 +1299,13 @@ a.btn {
   line-height: 1.25;
 }
 
+/* A phone has no room for "Private" next to "3 people"; the lock says it. */
+@media (max-width: 600px) {
+  .top-row .chip.many .wide {
+    display: none;
+  }
+}
+
 .top-actions {
   position: absolute;
   right: 0;
