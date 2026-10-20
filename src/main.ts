@@ -221,6 +221,8 @@ function saveName(name: string): void {
 
 function show(screen: Screen): void {
   for (const s of ['home', 'join', 'protected', 'call', 'message', 'incoming'] as Screen[]) $(s).hidden = s !== screen;
+  // A toast belongs to the screen it was shown on: "Priya joined" must not sit under "Priya hung up".
+  hideToast();
   if (screen === 'home') {
     drawMe();
     void drawRingSetup(true);
@@ -233,6 +235,12 @@ function toast(text: string): void {
   t.hidden = false;
   clearTimeout(Number(t.dataset['timer']));
   t.dataset['timer'] = String(setTimeout(() => (t.hidden = true), 3200));
+}
+
+function hideToast(): void {
+  const t = $('toast');
+  clearTimeout(Number(t.dataset['timer']));
+  t.hidden = true;
 }
 
 /** Where a blocked camera or mic is switched back on — the one thing a stuck user needs. */
@@ -547,7 +555,7 @@ function drawStatus(state: CallState): void {
     const time = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
     const count = connected + 1;
     // A protected call wears its shield; a tap opens the safety sheet, which says what it means.
-    chip.textContent = `${invite?.appOnly ? '🛡️ Protected' : '🔒 Private'} · ${count === 2 ? time : `${count} people · ${time}`}`;
+    chip.textContent = `${invite?.appOnly ? '🛡️ Protected' : '🔒 Private'}\u00a0·\u00a0${count === 2 ? time : `${count}\u00a0people · ${time}`}`;
   } else {
     chip.textContent = state.phase === 'offline'
       ? 'Offline'
@@ -1535,7 +1543,19 @@ $('mic').addEventListener('click', () => {
   if (t) session?.setMic(t.enabled);
   drawControls();
 });
-$('lowdata-chip').addEventListener('click', () => session?.setLowData('normal', true));
+$('lowdata-chip').addEventListener('click', () => {
+  session?.setLowData('normal', true);
+  // "Tap for normal" also turns the setting off, or the next call would start low again by surprise.
+  const box = $('lowdata') as HTMLInputElement;
+  if (box.checked) {
+    box.checked = false;
+    try {
+      localStorage.setItem(LOWDATA_KEY, '0');
+    } catch {
+      // Not remembered; this call is normal anyway.
+    }
+  }
+});
 $('cam').addEventListener('click', () => void toggleCamera());
 $('end').addEventListener('click', () => endCall());
 $('more').addEventListener('click', () => ($('more-sheet').hidden = false));

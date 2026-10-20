@@ -586,6 +586,12 @@ h2 {
   overflow-wrap: anywhere;
 }
 
+/* In a call the toast sits under the top bar, so it never hides a tile's name or the controls. */
+#call:not([hidden]) ~ .toast {
+  top: calc(66px + env(safe-area-inset-top));
+  bottom: auto;
+}
+
 a.btn {
   color: var(--ink);
   text-decoration: none;
@@ -1279,9 +1285,18 @@ a.btn {
   width: 100%;
   max-width: 1100px;
   display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
   align-items: center;
   justify-content: center;
   position: relative;
+  /* Room for the two round buttons on the right, so a long chip wraps instead of sliding under them. */
+  padding: 0 96px;
+}
+
+.top-row .chip {
+  text-align: center;
+  line-height: 1.25;
 }
 
 .top-actions {
@@ -1640,8 +1655,9 @@ body.floating .stage[data-layout='focus'] .main {
 }
 
 .me-btn {
-  width: 36px;
-  height: 36px;
+  /* A thumb needs 44px, even for a small round button. */
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   border: 0;
   background: #2a3444;
@@ -1716,7 +1732,8 @@ body.floating .stage[data-layout='focus'] .main {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  padding: 0 10px 24px;
+  /* 16, not 24: with a 44px link row a 640px phone would otherwise scroll by 3px. */
+  padding: 0 10px 16px;
   text-align: center;
 }
 
@@ -1749,6 +1766,12 @@ body.floating .stage[data-layout='focus'] .main {
   align-items: center;
   justify-content: center;
   gap: 8px;
+}
+
+/* A text link is still a button: tall enough for a thumb. */
+.text-link {
+  min-height: 44px;
+  padding: 8px 12px;
 }
 
 .calls-foot {
@@ -2498,6 +2521,39 @@ body {
   .ctl .round:not(#end) {
     width: 52px;
     height: 52px;
+  }
+}
+
+/* A phone on its side: no logo, no long text — the heading and the three actions fit without scrolling. */
+@media (max-height: 480px) and (max-width: 900px) {
+  .calls-pane .empty {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-content: center;
+    gap: 8px 10px;
+    padding-bottom: 8px;
+  }
+
+  .calls-pane .empty-logo,
+  .calls-pane .empty .sub,
+  .calls-pane .get-app-card span {
+    display: none;
+  }
+
+  .calls-pane .empty .ready {
+    flex: 0 0 100%;
+    margin: 0 0 4px;
+    font-size: 1rem;
+    max-width: none;
+  }
+
+  .calls-pane .empty .btn,
+  .calls-pane .empty .get-app-card,
+  .calls-pane .empty .text-link {
+    width: auto;
+    max-width: none;
+    min-height: 44px;
+    justify-content: center;
   }
 }
 

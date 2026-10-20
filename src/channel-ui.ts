@@ -43,7 +43,7 @@ export function channelRow(ch: Channel, live: boolean, icons: RowIcons, actions:
     line = '● In a call now — tap to join';
     state = 'live';
   } else if (ch.missed) {
-    line = `Missed · ${timeText(ch.missed)}`;
+    line = `Missed · ${timeText(ch.missed)} — tap to call back`;
     second = ch.missedWhy ?? '';
     state = 'missed';
   } else {
