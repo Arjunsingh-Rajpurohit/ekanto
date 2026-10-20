@@ -124,11 +124,12 @@ function drawAudioButton(): void {
     btn.hidden = !session;
     const route = ROUTE[appOutputs().current];
     btn.innerHTML = ICON[route.icon];
-    btn.setAttribute('aria-label', `Sound: ${route.label}`);
+    btn.setAttribute('aria-label', 'Speaker');
   } else {
-    btn.hidden = webOutputs.length < 2;
+    // Always shown: a first-time user looks for it. With nothing to pick, tapping it explains.
+    btn.hidden = false;
     btn.innerHTML = ICON.speakerOut;
-    btn.setAttribute('aria-label', 'Sound output');
+    btn.setAttribute('aria-label', 'Speaker');
   }
 }
 
@@ -233,6 +234,17 @@ function toast(text: string): void {
   t.dataset['timer'] = String(setTimeout(() => (t.hidden = true), 3200));
 }
 
+/** Where a blocked camera or mic is switched back on — the one thing a stuck user needs. */
+const WHERE_TO_ALLOW = IN_APP
+  ? 'To allow it: Android Settings › Apps › Ekanto › Permissions.'
+  : 'To allow it: tap the lock icon in the address bar and allow Camera and Microphone.';
+
+/** Stays on screen until dismissed — a 3-second toast is gone before it is read. */
+function blockedNote(text: string): void {
+  $('blocked-text').textContent = text;
+  $('blocked').hidden = false;
+}
+
 function message(icon: string, title: string, text: string): void {
   $('message-icon').textContent = icon;
   $('message-title').textContent = title;
@@ -271,6 +283,7 @@ function setSize(n: number | null): void {
   const note = n !== null && n > SMOOTH_PEOPLE ? `Above ${SMOOTH_PEOPLE} people, video may lag on phones.` : '';
   $('size-note').textContent = note;
   $('size-note').hidden = !note;
+  drawOptions();
 }
 
 /* Tabs on a phone (Calls · Link · Settings); on a computer Calls and Link sit side by side. */
@@ -337,6 +350,7 @@ function saveNameSheet(): void {
 /* More options: protected call, hide my IP — the summary says which are on. */
 function drawOptions(): void {
   const on = [
+    size ? `Up to ${size} people` : '',
     IN_APP && $<HTMLInputElement>('protect').checked ? 'Protected' : '',
     HAS_TURN && hideIp() ? 'IP hidden' : '',
   ].filter(Boolean);
@@ -390,16 +404,19 @@ async function enterCall(name: string, via?: ChannelVia, camera?: boolean): Prom
     stream = await openCamera(facing, camera ?? !invite.voice);
   } catch (e) {
     return message(invite.voice ? '🎙️' : '🎥', invite.voice ? 'Microphone not available' : 'Camera or mic not available',
-      e instanceof MediaProblem ? e.message : 'Please try again.');
+      `${e instanceof MediaProblem ? e.message : 'Please try again.'} ${WHERE_TO_ALLOW}`);
   }
   show('call');
   stage.reset();
   meter.watch('me', stream);
   updateMe(name);
-  $('waiting-sub').textContent = newChannelName !== null
-    ? `Send them the link. When they join, both phones save the channel${newChannelName ? ` “${newChannelName}”` : ''} — after that, just tap to call.`
-    : `Send them the link. This ${callWord(invite)} allows ${peopleText(invite.limit)}${invite.appOnly ? ' and only the Ekanto app can join' : ''}. The link works for ${LINK_HOURS} hours.`;
+  $('waiting-sub').textContent = 'Nobody has joined yet. Send them the link.';
+  $('waiting-detail').textContent = newChannelName !== null
+    ? `When they join, both phones save each other${newChannelName ? ` as “${newChannelName}”` : ''} — after that, just tap to call.`
+    : `This ${callWord(invite)} allows ${peopleText(invite.limit)}${invite.appOnly ? ' and only the Ekanto app can join' : ''}. The link works for ${LINK_HOURS} hours.`;
+  $('waiting-detail').hidden = false;
   $('waiting-share').hidden = !!via;
+  $<HTMLAnchorElement>('whatsapp').href = `https://wa.me/?text=${encodeURIComponent(`${inviteText()}\n${link()}`)}`;
   showWhy('waiting-why', via ? via.reason ?? null : invite.reason);
   warnedBlocked = false;
 
@@ -449,7 +466,7 @@ function render(state: CallState): void {
   shownPeople = state.people.length;
   $('waiting').hidden = !alone;
   $('waiting-title').textContent = state.phase === 'offline'
-    ? 'No internet — trying again…'
+    ? 'Weak network — trying again. Keep this screen open.'
     : channelCall?.caller && !channelCall.connected ? `Calling ${channelCall.ch.name}…` : 'Waiting for others';
   if (channelCall && !channelCall.connected && state.people.some((p) => p.connected)) {
     channelCall.connected = true;
@@ -508,7 +525,7 @@ function drawStatus(state: CallState): void {
   } else {
     chip.textContent = state.phase === 'offline'
       ? 'Offline'
-      : state.people.length ? 'Connecting…' : channelCall?.caller ? 'Ringing…' : 'Waiting…';
+      : state.people.length ? 'Connecting… usually under 10 seconds' : channelCall?.caller ? 'Ringing…' : 'Waiting…';
   }
 }
 
@@ -532,12 +549,14 @@ function drawControls(): void {
     b.classList.toggle('off', off);
     b.setAttribute('aria-label', label);
     b.disabled = disabled;
+    const text = document.getElementById(`${id}-label`);
+    if (text) text.textContent = label;
   };
-  set('mic', audio?.enabled === false ? ICON.micOff : ICON.mic, audio?.enabled === false, audio?.enabled === false ? 'Unmute' : 'Mute', !audio);
-  set('cam', camOn ? ICON.cam : ICON.camOff, !camOn, camOn ? 'Turn camera off' : 'Turn camera on');
+  set('mic', audio?.enabled === false ? ICON.micOff : ICON.mic, audio?.enabled === false, audio?.enabled === false ? 'Muted' : 'Mute', !audio);
+  set('cam', camOn ? ICON.cam : ICON.camOff, !camOn, camOn ? 'Camera' : 'Camera off');
   set('chat-btn', ICON.chat, false, 'Chat');
   set('more', ICON.more, false, 'More');
-  set('end', ICON.end, false, 'End call');
+  set('end', ICON.end, false, 'End');
   $('flip').querySelector('.mi')!.innerHTML = ICON.flip;
   $('screen').querySelector('.mi')!.innerHTML = ICON.screen;
   $('invite').querySelector('.mi')!.innerHTML = ICON.invite;
@@ -566,7 +585,7 @@ async function toggleCamera(): Promise<void> {
       stream.addTrack(track);
       if (!sharing) await session?.replaceVideoTrack(track);
     } catch {
-      toast("Couldn't turn the camera on. Check the camera permission.");
+      blockedNote(`The camera is blocked. ${WHERE_TO_ALLOW}`);
     }
   }
   session?.setMedia({ cam: !!stream.getVideoTracks()[0], screen: !!sharing });
@@ -627,13 +646,17 @@ async function stopScreen(): Promise<void> {
   drawControls();
 }
 
+/** A clear message around the link: what it is, why (if said), and how long it works. */
+function inviteText(): string {
+  const kind = invite?.voice ? 'Join my private voice call on Ekanto' : 'Join my private video call on Ekanto';
+  return [`🔒 ${kind}`, invite?.reason ? `“${invite.reason}”` : '', `Works for ${LINK_HOURS} hours · encrypted · no login`]
+    .filter(Boolean).join('\n');
+}
+
 async function shareLink(): Promise<void> {
   $('more-sheet').hidden = true;
   const url = link();
-  // A clear message around the link: what it is, why (if said), and how long it works.
-  const kind = invite?.voice ? 'Join my private voice call on Ekanto' : 'Join my private video call on Ekanto';
-  const text = [`🔒 ${kind}`, invite?.reason ? `“${invite.reason}”` : '', `Works for ${LINK_HOURS} hours · encrypted · no login`]
-    .filter(Boolean).join('\n');
+  const text = inviteText();
   try {
     if (IN_APP) await Share.share({ title: 'Private call', text, url });
     else if (navigator.share) await navigator.share({ title: 'Private call', text, url });
@@ -841,7 +864,7 @@ async function callChannel(ch: Channel, voiceCall: boolean, reason: string | nul
   const live = liveCalls.get(ch.id);
   const joining = live && isLive(ch) ? parseInvite(live.call) : null;
   const next = joining && !expired(joining) ? joining : newInvite(null, ch.appOnly, voiceCall);
-  if (next.appOnly && !IN_APP) return toast('This channel is protected — call from the Ekanto app.');
+  if (next.appOnly && !IN_APP) return toast('Calls with them are protected — call from the Ekanto app.');
   invite = next;
   clearMissed(ch);
   history.replaceState(null, '', `#${inviteToHash(invite)}`);
@@ -862,7 +885,7 @@ function startChannelCall(via: ChannelVia): void {
   drawControls();
   ringing.hold(cc.ch.id);
   if (via.caller) startRinging(cc);
-  else $('waiting-sub').textContent = 'Connecting…';
+  else $('waiting-sub').textContent = 'Connecting… usually under 10 seconds';
   // Joined a call that was on a moment ago, but everyone has gone: ring them instead.
   if (via.joinedLive) {
     setTimeout(() => {
@@ -1015,7 +1038,7 @@ function showIncoming(ch: Channel, ring: Ring): void {
   const from = ring.from.slice(0, 30) || ch.name;
   // In the app the notification rings (with the phone's own ringtone); the website rings itself.
   ringingNow = { ch, ring, timer: setTimeout(missedCall, RING_GAP_MS), stopTone: IN_APP ? undefined : startTone('ring') };
-  $('in-kind').textContent = ring.v ? 'Ekanto voice call' : 'Ekanto video call';
+  $('in-kind').textContent = ring.v ? 'Voice call' : 'Video call — your camera will turn on';
   $('in-avatar').textContent = initial(from);
   $('in-name').textContent = from;
   $('in-sub').textContent = ch.name.toLowerCase() === from.toLowerCase() ? 'is calling…' : `is calling · ${ch.name}`;
@@ -1103,7 +1126,7 @@ async function handleLaunch(): Promise<void> {
 function openSaveSheet(): void {
   $('more-sheet').hidden = true;
   const others = (lastState?.people ?? []).filter((p) => p.connected && p.channelOpen);
-  if (!others.length) return toast('You can save a channel once someone has joined.');
+  if (!others.length) return toast('You can save them once someone has joined.');
   $<HTMLInputElement>('save-name').value = listNames(others.map((p) => p.name));
   $('save-sheet').hidden = false;
 }
@@ -1132,7 +1155,8 @@ function onControl(from: Person, m: Record<string, unknown>): void {
   if (m.k === 'chan') {
     if (typeof m.cs !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(m.cs)) return;
     asked = { from, secret: m.cs, appOnly: m.app === true, size: Number(m.size) || 2 };
-    $('ask-sub').textContent = `${from.name} wants to save this call. Next time, just tap it to call — no new links.`;
+    $('ask-title').textContent = `Save ${from.name}?`;
+    $('ask-sub').textContent = `Save ${from.name} so you can call each other with one tap?`;
     $<HTMLInputElement>('ask-name').value = listNames((lastState?.people ?? []).map((p) => p.name));
     $('ask-sheet').hidden = false;
     return;
@@ -1158,13 +1182,13 @@ let sheetChannel: Channel | null = null;
 function openChannelSheet(ch: Channel): void {
   sheetChannel = ch;
   $('ch-title').textContent = ch.name;
-  const who = ch.members.length ? `You and ${listNames(ch.members)}` : 'Saved channel';
+  const who = ch.members.length ? `You and ${listNames(ch.members)}` : 'Saved';
   $('ch-info').textContent = ch.gone
-    ? `${ch.gone} deleted this channel, so calls are off. Delete it here too.`
+    ? `${ch.gone} removed you, so calls are off. Remove them here too.`
     : `${who}${ch.appOnly ? ' · protected' : ''}. Only your phones know its key.${IN_APP ? '' : ' On the website it rings only while Ekanto is open.'}`;
   $<HTMLInputElement>('ch-name').value = ch.name;
   $('ch-name').closest('.field')!.toggleAttribute('hidden', !!ch.gone);
-  $('ch-delete').textContent = 'Delete channel';
+  $('ch-delete').textContent = 'Remove this person';
   delete $('ch-delete').dataset['armed'];
   $('ch-sheet').hidden = false;
 }
@@ -1176,7 +1200,7 @@ function deleteChannel(): void {
   // Two taps, so a channel is never deleted by accident.
   if (!btn.dataset['armed']) {
     btn.dataset['armed'] = '1';
-    btn.textContent = `Tap again to delete “${ch.name}”`;
+    btn.textContent = `Tap again to remove “${ch.name}”`;
     return;
   }
   $('ch-sheet').hidden = true;
@@ -1184,7 +1208,7 @@ function deleteChannel(): void {
   // Tell the others (if their phone is on), then forget it here.
   const told = ch.gone ? Promise.resolve() : ringing.send(ch, { t: 'gone', from: myName() });
   void told.finally(() => storeChannels(channels.filter((c) => c.id !== ch.id)));
-  toast(`Deleted “${ch.name}”.`);
+  toast(`Removed “${ch.name}”.`);
 }
 
 /* App: what Android needs so a closed Ekanto still rings */
@@ -1266,9 +1290,14 @@ function addHideIpToggles(): void {
     box.type = 'checkbox';
     box.className = 'switch';
     const text = document.createElement('span');
-    text.innerHTML = '<strong>Hide my IP address</strong><br>Goes through the relay so nobody sees where you are. A little slower.';
+    text.innerHTML = '<strong>Hide where I am (IP address)</strong><br>Sends the call through a middle computer, so the other side can\'t see your city. A bit slower.';
     label.append(box, text);
-    $(before).before(label);
+    // On the Join screen the switch hides under "More options": first-timers only need Join.
+    const more = before === 'join-btn' ? $('join-more') : null;
+    if (more) {
+      more.append(label);
+      more.hidden = false;
+    } else $(before).before(label);
   }
   $('hide-ip-row').hidden = false;
   $('options-hide-ip').hidden = false;
@@ -1323,7 +1352,6 @@ addNoiseToggle();
 // Protected calls are created in the app; the website points people to the app instead.
 $('protect-row').hidden = !IN_APP;
 $('newch-protect-row').hidden = !IN_APP;
-$('options-btn').hidden = !IN_APP && !HAS_TURN;
 $('protect').addEventListener('change', drawOptions);
 drawOptions();
 $('options-btn').addEventListener('click', () => ($('options-sheet').hidden = false));
@@ -1376,7 +1404,7 @@ for (const el of document.querySelectorAll<HTMLElement>('.web-only')) el.hidden 
 setTab('calls');
 drawMe();
 if (!IN_APP && APP_DOWNLOAD_URL) {
-  for (const id of ['get-app', 'get-app-row', 'download-app']) {
+  for (const id of ['get-app', 'get-app-row', 'get-app-card', 'download-app']) {
     $<HTMLAnchorElement>(id).href = APP_DOWNLOAD_URL;
     $(id).hidden = false;
   }
@@ -1435,10 +1463,12 @@ $('flip').addEventListener('click', () => {
 });
 $('screen').addEventListener('click', () => void toggleScreen());
 $('audio-btn').addEventListener('click', () => {
+  if (!IN_APP && webOutputs.length < 2) return toast("Use your phone's volume buttons.");
   drawAudioSheet();
   $('audio-sheet').hidden = false;
 });
 $('audio-close').addEventListener('click', () => ($('audio-sheet').hidden = true));
+$('blocked-close').addEventListener('click', () => ($('blocked').hidden = true));
 $('layout-btn').addEventListener('click', () => {
   stage.setMode(stage.getMode() === 'grid' ? 'speaker' : 'grid');
   if (lastState) drawTopActions(lastState);
