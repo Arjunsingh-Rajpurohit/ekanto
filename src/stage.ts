@@ -222,7 +222,10 @@ export class Stage {
       tile.querySelector('.name')!.textContent = p.screen ? `${p.name} · sharing screen` : p.name;
       tile.querySelector('.avatar')!.textContent = (p.name.trim()[0] ?? '?').toUpperCase();
       tile.classList.toggle('waiting', !p.connected);
-      tile.classList.toggle('no-video', p.cam === false && !p.screen);
+      // Until their 'hi' says otherwise, a stream with no live picture is a camera that is off:
+      // the connection comes up a moment before the side-channel, and a black tile hides their name.
+      const livePicture = (p.stream?.getVideoTracks() ?? []).some((t) => t.readyState === 'live' && !t.muted);
+      tile.classList.toggle('no-video', !p.screen && (p.cam === false || (p.cam === null && !livePicture)));
       tile.classList.toggle('screen', p.screen);
     }
     tile.classList.toggle('speaking', this.speaking.has(id));
