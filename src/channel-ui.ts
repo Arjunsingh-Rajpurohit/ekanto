@@ -30,8 +30,15 @@ export interface RowIcons {
   video: string;
 }
 
+/** The chat's newest line and how many are unread. */
+export interface RowChat {
+  text: string;
+  at: number;
+  unread: number;
+}
+
 /** One saved person: who, their state, and the two call buttons (like a contact in a phone app). */
-export function channelRow(ch: Channel, live: boolean, icons: RowIcons, actions: RowActions): HTMLLIElement {
+export function channelRow(ch: Channel, live: boolean, icons: RowIcons, actions: RowActions, chat?: RowChat): HTMLLIElement {
   const li = document.createElement('li');
   let line: string;
   let state = '';
@@ -41,9 +48,12 @@ export function channelRow(ch: Channel, live: boolean, icons: RowIcons, actions:
   } else if (live) {
     line = '● In a call now — tap to join';
     state = 'live';
-  } else if (ch.missed) {
+  } else if (ch.missed && (!chat || ch.missed >= chat.at)) {
     line = `Missed · ${timeText(ch.missed)}${ch.missedWhy ? ` · ${ch.missedWhy}` : ''}`;
     state = 'missed';
+  } else if (chat) {
+    line = `${chat.text} · ${timeText(chat.at)}`;
+    if (chat.unread) state = 'unread';
   } else {
     line = ch.members.length ? `You and ${listNames(ch.members)}` : 'Saved';
   }
@@ -52,10 +62,16 @@ export function channelRow(ch: Channel, live: boolean, icons: RowIcons, actions:
   const main = document.createElement('button');
   main.type = 'button';
   main.className = 'ch-main';
-  main.setAttribute('aria-label', `${ch.name}: options`);
+  main.setAttribute('aria-label', `Chat with ${ch.name}${chat?.unread ? `, ${chat.unread} unread` : ''}`);
   const avatar = document.createElement('span');
   avatar.className = 'ch-avatar';
   avatar.textContent = initial(ch.name);
+  if (chat?.unread) {
+    const badge = document.createElement('span');
+    badge.className = 'ch-unread';
+    badge.textContent = chat.unread > 99 ? '99+' : String(chat.unread);
+    avatar.append(badge);
+  }
   const text = document.createElement('span');
   text.className = 'ch-text';
   const name = document.createElement('strong');
@@ -64,9 +80,8 @@ export function channelRow(ch: Channel, live: boolean, icons: RowIcons, actions:
   small.textContent = line;
   text.append(name, small);
   main.append(avatar, text);
-  // A missed call is called back with one tap on the row (video); otherwise the row opens options.
-  main.addEventListener('click', () => (state === 'missed' ? actions.call(ch, false) : actions.open(ch)));
-  if (state === 'missed') main.setAttribute('aria-label', `Call ${ch.name} back`);
+  // Like a chat app: the row opens the conversation; the two buttons call.
+  main.addEventListener('click', () => actions.open(ch));
 
   const button = (icon: string, label: string, voice: boolean) => {
     const b = document.createElement('button');

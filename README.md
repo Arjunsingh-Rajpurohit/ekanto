@@ -37,6 +37,22 @@ keeps it listening — no Google push, no server). Allow **notifications**, **fu
 **no battery limit** once (Ekanto asks). On Xiaomi/Oppo/Vivo/Realme/OnePlus also turn on **Autostart**.
 The website rings only while it is open.
 
+## Messages — chat with a saved person, like WhatsApp
+
+Tap a person on **Calls** to open your chat with them; 📞 and 🎥 in the chat call them.
+
+- **Phone to phone, no server.** A message is sealed with the channel's key and goes over the same
+  relays the rings use; they forward it and keep nothing. Only the channel's members can read it.
+- **✓ sent · ✓✓ delivered · blue ✓✓ read.** If the other phone is off, yours sends it again (soon
+  after, then every few minutes, and at once when their phone comes back) until it arrives — for up
+  to 7 days. Read receipts can be turned off in Settings.
+- **Kept only on the members' phones**, and it disappears after **7 days** by default. Change it in
+  the person's sheet (24 hours · 7 days · Never) — the setting is the same for everyone in the chat,
+  and the chat says who changed it. Removing a person deletes the chat from your phone.
+- **The app hears messages while closed** and shows a chat notification; the lock screen only says
+  "New message". A protected person's chat is app-only, like their calls.
+- On the website, messages arrive while Ekanto is open; ones sent meanwhile arrive when you open it.
+
 ## In a call
 
 | | |

@@ -346,6 +346,22 @@ public class HushNativePlugin extends Plugin {
     }
 
     /** Why the app was opened (a ringing call), and what happened while the page wasn't running. */
+    /** Mine not yet delivered: the background listener keeps sending them while Ekanto is closed. */
+    @PluginMethod
+    public void setOutbox(PluginCall call) {
+        JSArray items = call.getArray("items", new JSArray());
+        RingService.prefs(getContext()).edit().putString("outbox", items.toString()).apply();
+        RingService.outboxChanged();
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void clearMessages(PluginCall call) {
+        String channel = call.getString("channel");
+        if (channel != null) RingService.clearMessages(getContext(), channel);
+        call.resolve();
+    }
+
     @PluginMethod
     public void takeLaunch(PluginCall call) {
         JSObject out;
@@ -358,6 +374,8 @@ public class HushNativePlugin extends Plugin {
             JSONObject pending = new JSONObject(prefs.getString("pending", "{}"));
             out.put("missed", pending.optJSONArray("missed") != null ? pending.optJSONArray("missed") : new JSONArray());
             out.put("gone", pending.optJSONArray("gone") != null ? pending.optJSONArray("gone") : new JSONArray());
+            out.put("msgs", pending.optJSONArray("msgs") != null ? pending.optJSONArray("msgs") : new JSONArray());
+            out.put("acks", pending.optJSONArray("acks") != null ? pending.optJSONArray("acks") : new JSONArray());
         } catch (Exception ignored) {
             // Nothing pending.
         }

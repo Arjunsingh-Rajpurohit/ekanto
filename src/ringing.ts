@@ -19,10 +19,16 @@ export interface NativeChannel {
   ring: string;
   me: string;
   gone: boolean;
+  /** How many phones a message must reach before it counts as delivered. */
+  size: number;
+  /** Protected: its message notifications never show the text. */
+  appOnly: boolean;
 }
 
 /** A ring older than this is history, not a call. */
 const MAX_AGE_MS = 90 * 1000;
+/** A message is sent again until it arrives, for as long as messages can stay at all. */
+export const MSG_MAX_AGE_MS = 7 * 24 * 3600 * 1000;
 
 /**
  * Sends and hears rings for every saved channel.
@@ -72,7 +78,9 @@ export class Ringing {
 
   /** For the Android app's background listener. */
   async forNative(): Promise<NativeChannel[]> {
-    return [...this.prepared.values()].map((p) => ({ id: p.ch.id, name: p.ch.name, ring: toBase64Url(p.ring), me: p.me, gone: !!p.ch.gone }));
+    return [...this.prepared.values()].map((p) => ({
+      id: p.ch.id, name: p.ch.name, ring: toBase64Url(p.ring), me: p.me, gone: !!p.ch.gone, size: p.ch.size, appOnly: p.ch.appOnly,
+    }));
   }
 
   /** A sealed ring the native listener heard. */
@@ -95,14 +103,23 @@ export class Ringing {
     void this.refresh();
   }
 
-  async send(ch: Channel, ring: Omit<Ring, 'by' | 'ts'>): Promise<void> {
+  /** True once a relay took it. A message keeps its first `ts` every time it is sent again. */
+  async send(ch: Channel, ring: Omit<Ring, 'by' | 'ts'> & { ts?: number }): Promise<boolean> {
     const p = this.prepared.get(ch.id);
-    if (!p) return;
+    if (!p) return false;
     const relay = this.open();
     // Just opened: wait for a relay to answer (up to 8 s) so the first ring isn't lost.
     for (let i = 0; i < 40 && !relay.up; i++) await new Promise((r) => setTimeout(r, 200));
-    relay.send(await ringTopic(p.ring, today()), await sealRing(p.key, { ...ring, by: p.me, ts: Date.now() }));
+    const up = relay.up;
+    relay.send(await ringTopic(p.ring, today()), await sealRing(p.key, { ...ring, by: p.me, ts: ring.ts ?? Date.now() }));
     this.closeWhenIdle();
+    return up;
+  }
+
+  /** A ring as the Android listener sends it again while Ekanto is closed (it seals it itself). */
+  json(ch: Channel, ring: Omit<Ring, 'by'>): string | null {
+    const p = this.prepared.get(ch.id);
+    return p ? JSON.stringify({ ...ring, by: p.me }) : null;
   }
 
   stop(): void {
@@ -155,13 +172,18 @@ export class Ringing {
     const p = this.byTopic.get(topic);
     if (!p) return;
     const ring = await openRing(p.key, data);
-    // Our own ring, or an old one played back ("deleted" counts however late it arrives).
-    if (!ring || ring.by === p.me || (ring.t !== 'gone' && Math.abs(Date.now() - ring.ts) > MAX_AGE_MS)) return;
-    // Heard twice (from the native listener and this page): handle once.
-    const id = `${ring.t}|${ring.by}|${ring.ts}`;
-    if (this.seen.has(id)) return;
-    this.seen.add(id);
-    if (this.seen.size > 1000) this.seen.clear();
+    // Our own ring, or an old one played back ("deleted" counts however late it arrives; a message
+    // is sent again until it arrives, so it counts for days).
+    const maxAge = ring?.t === 'gone' ? Infinity : ring?.t === 'msg' ? MSG_MAX_AGE_MS : MAX_AGE_MS;
+    if (!ring || ring.by === p.me || Math.abs(Date.now() - ring.ts) > maxAge) return;
+    // Heard twice (from the native listener and this page): handle once. A message is the
+    // exception: the chat knows it by its id and must answer "got" again to every new copy.
+    if (ring.t !== 'msg') {
+      const id = `${ring.t}|${ring.by}|${ring.ts}`;
+      if (this.seen.has(id)) return;
+      this.seen.add(id);
+      if (this.seen.size > 1000) this.seen.clear();
+    }
     this.onRing(p.ch, ring);
   }
 }

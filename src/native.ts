@@ -1,4 +1,5 @@
 import { Capacitor, registerPlugin, type PluginListenerHandle } from '@capacitor/core';
+import type { Ring } from './channels';
 import type { NativeChannel } from './ringing';
 
 /** The Android side of Ekanto (android/app/src/main/java/app/hush/call). */
@@ -31,6 +32,10 @@ interface HushNative {
   stopRinging(options: { call: string; keepOverLock: boolean }): Promise<void>;
   /** What the app was opened for: an incoming call's screen, or "Answer" in the notification. */
   takeLaunch(): Promise<Launch>;
+  /** Messages not yet delivered: the background listener keeps sending them while Ekanto is closed. */
+  setOutbox(options: { items: { channel: string; id: string; json: string }[] }): Promise<void>;
+  /** The chat was opened: its message notification goes. */
+  clearMessages(options: { channel: string }): Promise<void>;
   addListener(event: 'ringData', fn: (e: { topic: string; data: string }) => void): Promise<PluginListenerHandle>;
   /** Android 15+: a screen recorder started (on) or stopped (off) while Ekanto was on screen. */
   addListener(event: 'recording', fn: (e: { on: boolean }) => void): Promise<PluginListenerHandle>;
@@ -62,7 +67,8 @@ export interface RingHealth {
 }
 
 export interface Launch {
-  action?: 'incoming' | 'answer';
+  /** chat: the message notification was tapped. */
+  action?: 'incoming' | 'answer' | 'chat';
   call?: string;
   channel?: string;
   from?: string;
@@ -72,6 +78,9 @@ export interface Launch {
   /** Heard while the page wasn't running. */
   missed?: { channel: string; at: number; why?: string }[];
   gone?: { channel: string; from: string }[];
+  /** Messages, and "got"/"seen" for mine, heard while the page wasn't running. */
+  msgs?: (Ring & { channel: string })[];
+  acks?: { channel: string; kind: string; by: string; ids: string[] }[];
 }
 
 export type AudioRoute = 'speaker' | 'earpiece' | 'bluetooth' | 'wired';
@@ -165,6 +174,8 @@ export const nativeRing = {
   takeLaunch: () => plugin.takeLaunch().catch(() => ({}) as Launch),
   onData: (fn: (topic: string, data: string) => void) => plugin.addListener('ringData', (e) => fn(e.topic, e.data)),
   onLaunch: (fn: () => void) => plugin.addListener('launch', fn),
+  setOutbox: (items: { channel: string; id: string; json: string }[]) => (IN_APP ? plugin.setOutbox({ items }).catch(() => undefined) : Promise.resolve()),
+  clearMessages: (channel: string) => (IN_APP ? plugin.clearMessages({ channel }).catch(() => undefined) : Promise.resolve()),
 };
 
 /** Protected calls: Android 15+ tells the page when a screen recorder is on (older phones say nothing). */

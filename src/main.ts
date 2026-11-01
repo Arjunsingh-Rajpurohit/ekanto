@@ -2,7 +2,8 @@ import './style.css';
 import { App as NativeApp } from '@capacitor/app';
 import { Share } from '@capacitor/share';
 import { CallSession, type CallState, type Person } from './call';
-import { channelRow, initial, listNames } from './channel-ui';
+import { channelRow, initial, listNames, type RowChat } from './channel-ui';
+import { Chats } from './chats';
 import {
   channelId, loadChannels, newChannelSecret, saveChannels, upsertChannel, type Channel, type Ring,
 } from './channels';
@@ -13,10 +14,12 @@ import { LINK_HOURS, MAX_PEOPLE, MIN_PEOPLE, SMOOTH_PEOPLE, cleanReason, expired
 import { LOWDATA_KEY, MediaProblem, NOISE_KEY, cameraTrack, canShareScreenInBrowser, lowDataOn, micCleanup, noiseOn, openCamera, screenTrack, type Facing } from './media';
 import { IN_APP, nativeAudio, nativeCall, nativeFloat, nativeProtect, nativeRing, nativeScreenTrack, type AudioRoute, type AudioRoutes, type RingSetting } from './native';
 import { PROTECTED_INVITE, PROTECTED_LIMIT, PROTECTED_PROMISE, RECORDING_SELF, parseRecording, recordingNotice, recordingWire } from './protect';
+import { DEFAULT_KEEP, unreadOf, type Msg } from './messages';
 import { Ringing } from './ringing';
 import type { PluginListenerHandle } from '@capacitor/core';
 import { SpeakingMeter } from './speaking';
 import { Stage } from './stage';
+import { drawThread } from './thread-ui';
 import { startTone } from './tones';
 import { clearSaved } from './viewer';
 
@@ -46,7 +49,7 @@ const ICON = {
   end: svg('<path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.34a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"/><line x1="22" x2="2" y1="2" y2="22"/>'),
 };
 
-type Screen = 'home' | 'join' | 'protected' | 'call' | 'message' | 'incoming';
+type Screen = 'home' | 'join' | 'protected' | 'call' | 'message' | 'incoming' | 'thread';
 
 let invite: Invite | null = null;
 let size: number | null = null;
@@ -220,7 +223,7 @@ function saveName(name: string): void {
 }
 
 function show(screen: Screen): void {
-  for (const s of ['home', 'join', 'protected', 'call', 'message', 'incoming'] as Screen[]) $(s).hidden = s !== screen;
+  for (const s of ['home', 'join', 'protected', 'call', 'message', 'incoming', 'thread'] as Screen[]) $(s).hidden = s !== screen;
   // A toast belongs to the screen it was shown on: "Priya joined" must not sit under "Priya hung up".
   hideToast();
   if (screen === 'home') {
@@ -838,9 +841,119 @@ let asked: { from: Person; secret: string; appOnly: boolean; size: number } | nu
 const ringing = new Ringing(deviceKey(), IN_APP, onRing);
 const myName = () => savedName() || 'Someone';
 
+/* Messages: a chat with each saved person, phone to phone */
+
+const RECEIPTS_KEY = 'hush.receipts';
+function receiptsOn(): boolean {
+  try {
+    return localStorage.getItem(RECEIPTS_KEY) !== '0';
+  } catch {
+    return true;
+  }
+}
+
+/** The chat on screen. */
+let threadOf: Channel | null = null;
+
+const chats = new Chats({
+  send: (ch, ring) => ringing.send(ch, ring),
+  channels: () => channels,
+  myName,
+  isOpen: (id) => threadOf?.id === id && !$('thread').hidden && document.visibilityState === 'visible',
+  receipts: receiptsOn,
+  nativeAcks: IN_APP,
+  changed: chatChanged,
+  outbox: (items) => void nativeRing.setOutbox(items),
+  json: (ch, ring) => ringing.json(ch, ring),
+});
+
+function chatChanged(id: string, news?: Msg): void {
+  if (threadOf?.id === id && !$('thread').hidden) drawThread($('thread-list'), threadOf, chats.thread(id));
+  // In a call, a message is a quiet line, not a new screen.
+  if (news && !news.mine && !news.note && session && threadOf?.id !== id) toast(`💬 ${news.from}: ${news.x.slice(0, 80)}`);
+  drawChannels();
+}
+
+/** The list row: the newest message (or a missed call when that is newer) and how many are unread. */
+function rowChat(ch: Channel): RowChat | undefined {
+  const t = chats.thread(ch.id);
+  const last = [...t.msgs].reverse().find((m) => m.note !== 'missed');
+  if (!last) return undefined;
+  const text = last.note === 'keep'
+    ? '⏱ Disappearing messages changed'
+    : `${last.mine ? 'You: ' : ch.size > 2 ? `${last.from}: ` : ''}${last.x}`;
+  return { text: text.replace(/\s+/g, ' '), at: last.ts, unread: unreadOf(t) };
+}
+
+function openThread(ch: Channel): void {
+  if (session) return;
+  threadOf = ch;
+  drawThreadHead(ch);
+  const input = $<HTMLTextAreaElement>('thread-input');
+  input.value = '';
+  // Leaving the chat with the browser's Back goes back to the list, not off the site.
+  if (!IN_APP) history.pushState({ hushThread: ch.id }, '', location.href);
+  show('thread');
+  // Sized once it is on screen: a hidden box measures nothing.
+  sizeInput();
+  const list = $('thread-list');
+  drawThread(list, ch, chats.thread(ch.id));
+  list.scrollTop = list.scrollHeight;
+  chats.markRead(ch);
+  chats.sync(ch);
+  void nativeRing.clearMessages(ch.id);
+  if (ch.missed) clearMissed(ch);
+  if (wide.matches && !input.closest('[hidden]')) input.focus();
+}
+
+function drawThreadHead(ch: Channel): void {
+  $('thread-avatar').textContent = initial(ch.name);
+  $('thread-name').textContent = ch.name;
+  $('thread-sub').textContent = ch.gone
+    ? `${ch.gone} removed you`
+    : `${ch.members.length ? `You and ${listNames(ch.members)}` : 'Saved'}${ch.appOnly ? ' · protected' : ''}`;
+  $('thread-voice').innerHTML = ICON.earpiece;
+  $('thread-video').innerHTML = ICON.cam;
+  for (const id of ['thread-voice', 'thread-video']) $<HTMLButtonElement>(id).disabled = !!ch.gone;
+  // A protected person's chat stays in the app, where screenshots are blocked — like their calls.
+  const closed = ch.gone
+    ? `${ch.gone} removed you, so messages are off.`
+    : ch.appOnly && !IN_APP ? '🛡️ Protected — chat with them in the Ekanto app.' : '';
+  $('thread-form').hidden = !!closed;
+  $('thread-closed').hidden = !closed;
+  $('thread-closed').textContent = closed;
+}
+
+function closeThread(): void {
+  threadOf = null;
+  show('home');
+}
+
+/** The box grows with the text, up to a few lines, like a chat app's. */
+function sizeInput(): void {
+  const input = $<HTMLTextAreaElement>('thread-input');
+  input.style.height = 'auto';
+  input.style.height = `${Math.min(input.scrollHeight, 128)}px`;
+  $<HTMLButtonElement>('thread-send').disabled = !input.value.trim();
+}
+
+function sendFromThread(): void {
+  const input = $<HTMLTextAreaElement>('thread-input');
+  if (!threadOf || !input.value.trim()) return;
+  chats.send(threadOf, input.value);
+  input.value = '';
+  sizeInput();
+  input.focus();
+}
+
 function storeChannels(list: Channel[]): void {
   channels = list;
   saveChannels(list);
+  if (threadOf) {
+    threadOf = list.find((c) => c.id === threadOf!.id) ?? null;
+    if (threadOf) drawThreadHead(threadOf);
+    else if (!$('thread').hidden) closeThread();
+  }
   void syncChannels();
   drawChannels();
 }
@@ -863,10 +976,14 @@ function drawChannels(): void {
   $('channel-list').hidden = !any;
   $('new-channel-fab').hidden = !any;
   $('web-ring-note').hidden = IN_APP || !any;
-  $('channel-list').replaceChildren(...channels.map((ch) => channelRow(ch, isLive(ch), { voice: ICON.earpiece, video: ICON.cam }, {
-    open: openChannelSheet,
+  // Like a chat app: whoever you spoke with last is at the top.
+  const rows = channels.map((ch) => ({ ch, chat: rowChat(ch) }));
+  const active = (r: (typeof rows)[number]) => Math.max(r.chat?.at ?? 0, r.ch.missed ?? 0, r.ch.created ?? 0);
+  rows.sort((a, b) => active(b) - active(a));
+  $('channel-list').replaceChildren(...rows.map(({ ch, chat }) => channelRow(ch, isLive(ch), { voice: ICON.earpiece, video: ICON.cam }, {
+    open: openThread,
     call: askWhy,
-  })));
+  }, chat)));
 }
 
 /* Saying why before calling a channel (optional) */
@@ -986,6 +1103,11 @@ function endChannelCall(): void {
 /** Everything heard on the channels' ring topics. */
 function onRing(ch: Channel, ring: Ring): void {
   switch (ring.t) {
+    case 'msg':
+    case 'got':
+    case 'seen':
+    case 'sync':
+      return chats.onRing(ch, ring);
     case 'ring':
       return incomingRing(ch, ring);
     case 'cancel':
@@ -1106,7 +1228,10 @@ function missedCall(): void {
   const why = cleanReason(ringingNow?.ring.r) ?? undefined;
   endRinging();
   // The app's notification turns into "Missed call" by itself.
-  if (ch) storeChannels(channels.map((c) => (c.id === ch.id ? { ...c, missed: Date.now(), missedWhy: why } : c)));
+  if (ch) {
+    storeChannels(channels.map((c) => (c.id === ch.id ? { ...c, missed: Date.now(), missedWhy: why } : c)));
+    chats.missed(ch, Date.now(), why);
+  }
 }
 
 function answerRing(): void {
@@ -1144,6 +1269,12 @@ async function handleLaunch(): Promise<void> {
   // While Ekanto was closed: missed calls, and channels the others deleted.
   const missed = new Map((launch.missed ?? []).map((m) => [m.channel, m]));
   const gone = new Map((launch.gone ?? []).map((g) => [g.channel, g.from]));
+  for (const c of channels) {
+    const m = missed.get(c.id);
+    if (m) chats.missed(c, m.at, cleanReason(m.why) ?? undefined);
+  }
+  if (launch.msgs?.length || launch.acks?.length) chats.merge(launch.msgs ?? [], launch.acks ?? []);
+  chats.syncOutbox();
   if (missed.size || gone.size) {
     storeChannels(channels.map((c) => ({
       ...c,
@@ -1154,6 +1285,10 @@ async function handleLaunch(): Promise<void> {
     })));
   }
   const ch = channels.find((c) => c.id === launch.channel);
+  if (launch.action === 'chat') {
+    if (ch && !session && ringingNow === null) openThread(ch);
+    return;
+  }
   if (!launch.action || !launch.call || !ch || session) return;
   const ring: Ring = { t: 'ring', call: launch.call, from: launch.from || ch.name, by: '', ts: Date.now(), v: launch.voice, r: cleanReason(launch.why) ?? undefined };
   if (ringingNow?.ring.call !== launch.call) {
@@ -1236,9 +1371,19 @@ function openChannelSheet(ch: Channel): void {
     : `${who}${ch.appOnly ? ' · protected' : ''}. Only your phones know its key.${IN_APP ? '' : ' On the website it rings only while Ekanto is open.'}`;
   $<HTMLInputElement>('ch-name').value = ch.name;
   $('ch-name').closest('.field')!.toggleAttribute('hidden', !!ch.gone);
+  $('ch-keep-field').hidden = !!ch.gone;
+  drawKeep(chats.thread(ch.id).keep);
   $('ch-delete').textContent = 'Remove this person';
   delete $('ch-delete').dataset['armed'];
   $('ch-sheet').hidden = false;
+}
+
+function drawKeep(keep: number): void {
+  for (const b of $('ch-keep').querySelectorAll<HTMLButtonElement>('button')) {
+    const on = Number(b.dataset['keep']) === keep;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-checked', String(on));
+  }
 }
 
 function deleteChannel(): void {
@@ -1254,8 +1399,15 @@ function deleteChannel(): void {
   $('ch-sheet').hidden = true;
   sheetChannel = null;
   // Tell the others (if their phone is on), then forget it here.
-  const told = ch.gone ? Promise.resolve() : ringing.send(ch, { t: 'gone', from: myName() });
-  void told.finally(() => storeChannels(channels.filter((c) => c.id !== ch.id)));
+  // Twice, a moment apart, like a declined call: a lost "removed" would leave them writing to nobody.
+  const gone = { t: 'gone' as const, from: myName() };
+  const told = ch.gone ? Promise.resolve(false)
+    : ringing.send(ch, gone).then(() => new Promise((r) => setTimeout(r, 1500))).then(() => ringing.send(ch, gone));
+  void told.finally(() => {
+    storeChannels(channels.filter((c) => c.id !== ch.id));
+    // Their messages go from this phone with them.
+    chats.forget(ch.id);
+  });
   toast(`Removed “${ch.name}”.`);
 }
 
@@ -1678,6 +1830,41 @@ $('ch-done').addEventListener('click', () => {
   if (ch && name && name !== ch.name) storeChannels(channels.map((c) => (c.id === ch.id ? { ...c, name } : c)));
 });
 $('ch-delete').addEventListener('click', deleteChannel);
+for (const b of $('ch-keep').querySelectorAll<HTMLButtonElement>('button')) {
+  b.addEventListener('click', () => {
+    if (!sheetChannel) return;
+    const keep = Number(b.dataset['keep']);
+    chats.setKeep(sheetChannel, Number.isFinite(keep) ? keep : DEFAULT_KEEP);
+    drawKeep(chats.thread(sheetChannel.id).keep);
+  });
+}
+$('thread-back').addEventListener('click', () => {
+  if (!IN_APP && history.state?.hushThread) history.back();
+  else closeThread();
+});
+$('thread-who').addEventListener('click', () => threadOf && openChannelSheet(threadOf));
+$('thread-voice').addEventListener('click', () => threadOf && askWhy(threadOf, true));
+$('thread-video').addEventListener('click', () => threadOf && askWhy(threadOf, false));
+$('thread-input').addEventListener('input', sizeInput);
+$('thread-input').addEventListener('keydown', (e) => {
+  // Enter sends; Shift+Enter starts a new line.
+  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+    e.preventDefault();
+    sendFromThread();
+  }
+});
+$('thread-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  sendFromThread();
+});
+$<HTMLInputElement>('receipts').checked = receiptsOn();
+$('receipts').addEventListener('change', () => {
+  try {
+    localStorage.setItem(RECEIPTS_KEY, $<HTMLInputElement>('receipts').checked ? '1' : '0');
+  } catch {
+    // Not remembered: this visit only.
+  }
+});
 $('ring-health').addEventListener('click', () => {
   $('ring-sheet').hidden = false;
   void drawRingSetup();
@@ -1723,13 +1910,19 @@ for (const b of $('callwhy-picks').querySelectorAll<HTMLButtonElement>('button')
 }
 $('in-decline').addEventListener('click', declineRing);
 drawChannels();
-void syncChannels();
+void syncChannels().then(() => {
+  // On the website this page is the listener: say "I'm here" so waiting messages come now.
+  if (!IN_APP) for (const ch of channels) chats.sync(ch);
+  chats.syncOutbox();
+});
+window.addEventListener('online', () => chats.resendAll());
 
 window.addEventListener('hashchange', () => {
   if (!session) route();
 });
 // Back in a browser during a call: stay on the call and ask.
 window.addEventListener('popstate', () => {
+  if (!session && !$('thread').hidden) return closeThread();
   if (!session) return;
   history.pushState({ hushCall: true }, '', location.href);
   $('leave-sheet').hidden = false;
@@ -1743,6 +1936,8 @@ $('leave-no').addEventListener('click', () => ($('leave-sheet').hidden = true));
 window.addEventListener('pagehide', () => session?.leave());
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && session && !wakeLock) void keepAwake();
+  // Back on the chat: what arrived meanwhile is read now.
+  if (document.visibilityState === 'visible' && threadOf && !$('thread').hidden) chats.markRead(threadOf);
 });
 
 /** A link opened from outside (hushcall://join#…) lands here, in the app. */
@@ -1763,7 +1958,12 @@ if (IN_APP) {
   void nativeRing.onLaunch(() => void handleLaunch());
   void handleLaunch();
   // Back from Android's settings: show what is allowed now.
-  void NativeApp.addListener('resume', () => void drawRingSetup());
+  void NativeApp.addListener('resume', () => {
+    void drawRingSetup();
+    // Messages heard while away, and anything of mine still on its way goes now.
+    void handleLaunch();
+    chats.resendAll();
+  });
   void NativeApp.getLaunchUrl().then((r) => openFromOutside(r?.url));
   void NativeApp.addListener('backButton', () => {
     // Back closes whatever is open on top; in the call itself it keeps the call going in the
@@ -1775,6 +1975,7 @@ if (IN_APP) {
     // A ringing call keeps ringing (in the notification) — Back never declines by accident.
     if (!$('incoming').hidden) return void NativeApp.minimizeApp();
     if (!$('chat').hidden) return panel?.closePanel();
+    if (!$('thread').hidden) return closeThread();
     // In a call, Back never hangs up: a video call floats in a small window, a voice call keeps
     // going in the background (the notification brings it back).
     if (session) {

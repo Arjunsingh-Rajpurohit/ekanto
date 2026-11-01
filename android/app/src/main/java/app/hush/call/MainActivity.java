@@ -84,6 +84,11 @@ public class MainActivity extends BridgeActivity {
             intent.setAction(Intent.ACTION_MAIN);
             return;
         }
+        if (RingService.ACTION_OPEN_CHAT.equals(action)) {
+            HushNativePlugin.setLaunch("chat", null, intent.getStringExtra(RingService.EXTRA_CHANNEL), null, false, null);
+            intent.setAction(Intent.ACTION_MAIN);
+            return;
+        }
         if (!answer && !RingService.ACTION_INCOMING.equals(action)) return;
         String call = intent.getStringExtra(RingService.EXTRA_CALL);
         showOverLock(true);

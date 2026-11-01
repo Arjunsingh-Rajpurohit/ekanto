@@ -103,6 +103,7 @@
             <p class="group-label">Privacy</p>
             <div class="group">
               <label id="hide-ip-row" class="row-item hide-ip" hidden><span>Hide where I am (IP address)</span><input type="checkbox" class="switch" /></label>
+              <label id="receipts-row" class="row-item"><span>Read receipts</span><input id="receipts" type="checkbox" class="switch" /></label>
               <button id="privacy-btn" class="row-item" type="button"><span>How Ekanto keeps calls private</span><span class="chev" aria-hidden="true">›</span></button>
             </div>
             <p class="group-label">Sound</p>
@@ -183,6 +184,25 @@
           </div>
         </div>
         <p class="mark">Ekanto™ · © 2026 Mr.Rajpurohit</p>
+      </section>
+
+      <!-- A saved person's chat: phone to phone, kept only on the members' phones -->
+      <section id="thread" class="screen thread" hidden>
+        <header class="thread-head">
+          <button id="thread-back" class="tool-icon plain" type="button" aria-label="Back"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+          <button id="thread-who" class="thread-who" type="button" aria-label="Person options">
+            <span id="thread-avatar" class="ch-avatar"></span>
+            <span class="thread-name"><strong id="thread-name"></strong><small id="thread-sub"></small></span>
+          </button>
+          <button id="thread-voice" class="ch-call" type="button" aria-label="Voice call"></button>
+          <button id="thread-video" class="ch-call" type="button" aria-label="Video call"></button>
+        </header>
+        <ol id="thread-list" class="thread-list" aria-live="polite"></ol>
+        <form id="thread-form" class="thread-composer">
+          <textarea id="thread-input" rows="1" maxlength="1000" autocomplete="off" enterkeyhint="send" placeholder="Message" aria-label="Message"></textarea>
+          <button id="thread-send" class="send-btn" type="submit" aria-label="Send" disabled><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13"/><path d="m13 6 6 6-6 6"/></svg></button>
+        </form>
+        <p id="thread-closed" class="thread-closed" hidden></p>
       </section>
 
       <!-- In the call -->
@@ -482,6 +502,14 @@
             <span>Name on this phone</span>
             <input id="ch-name" type="text" maxlength="30" autocomplete="off" />
           </label>
+          <div id="ch-keep-field" class="field left">
+            <span>Messages disappear after</span>
+            <div id="ch-keep" class="seg seg3" role="radiogroup" aria-label="Messages disappear after">
+              <button type="button" role="radio" data-keep="86400000">24 hours</button>
+              <button type="button" role="radio" data-keep="604800000">7 days</button>
+              <button type="button" role="radio" data-keep="0">Never</button>
+            </div>
+          </div>
           <button id="ch-done" class="btn primary" type="button">Done</button>
           <button id="ch-delete" class="text-danger" type="button">Remove this person</button>
         </div>

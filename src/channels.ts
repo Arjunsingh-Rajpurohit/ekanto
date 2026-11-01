@@ -42,9 +42,11 @@ export interface Ring {
   /**
    * ring: "pick up!" (repeated while ringing) · cancel: the caller gave up, or the call is over ·
    * live: I'm in a call you can join · left: I left it · decline / busy: the answer to a ring ·
-   * gone: the sender deleted the channel.
+   * gone: the sender deleted the channel · msg: a chat message (sent again until "got") ·
+   * got / seen: it reached / was read on a phone · sync: "I'm back — send what I missed".
+   * An older Ekanto ignores the chat ones.
    */
-  t: 'ring' | 'cancel' | 'live' | 'left' | 'decline' | 'busy' | 'gone';
+  t: 'ring' | 'cancel' | 'live' | 'left' | 'decline' | 'busy' | 'gone' | 'msg' | 'got' | 'seen' | 'sync';
   /** The call's own link (its secret). Only members can read it. */
   call?: string;
   /** The sender's name. */
@@ -56,6 +58,14 @@ export interface Ring {
   v?: boolean;
   /** Why the caller is calling ("Dinner plans?"), if they said. Sealed like the rest of the ring. */
   r?: string;
+  /** A message's own id: the same on every copy, so it is shown once however often it comes. */
+  id?: string;
+  /** A message's text. */
+  x?: string;
+  /** A message that changes how long messages stay (ms, 0 = until deleted) instead of saying something. */
+  k?: number;
+  /** got / seen: which messages. */
+  ids?: string[];
 }
 
 const enc = new TextEncoder();

@@ -30,6 +30,8 @@ abstract class RingLink extends WebSocketListener {
     private boolean closed;
     private long retry = 2000;
     private final Runnable reconnect = this::connect;
+    /** Told on the service's thread each time this relay is connected. */
+    Runnable onUp;
 
     RingLink(OkHttpClient http, String url, Handler handler, Sink sink) {
         this.http = http;
@@ -79,6 +81,7 @@ abstract class RingLink extends WebSocketListener {
         up = true;
         retry = 2000;
         syncTopics();
+        if (onUp != null) handler.post(onUp);
     }
 
     protected abstract void syncTopics();

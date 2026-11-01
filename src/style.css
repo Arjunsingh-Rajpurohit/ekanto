@@ -2498,3 +2498,214 @@ body {
     flex: 1;
   }
 }
+
+/* ---------- A saved person's chat ---------- */
+
+.thread {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding-top: env(safe-area-inset-top);
+  overflow: hidden;
+}
+
+.thread-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  background: #0d121b;
+}
+
+.tool-icon.plain {
+  border: 0;
+  background: none;
+}
+
+.thread-who {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  background: none;
+  padding: 2px 0;
+  text-align: left;
+}
+
+.thread-name {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.thread-name strong,
+.thread-name small {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.thread-name small {
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.thread-list {
+  flex: 1;
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 12px 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.thread-list .sys {
+  align-self: center;
+  max-width: 88%;
+  padding: 5px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ink-2);
+  font-size: 13px;
+  text-align: center;
+}
+
+.thread-list .sys.promise {
+  margin: 4px 0 8px;
+  color: #cfd3da;
+}
+
+.thread-list .sys.missed {
+  color: #ff8a8d;
+}
+
+.thread-list .bubble {
+  max-width: 78%;
+  padding: 7px 10px 5px;
+}
+
+/* Time and ticks sit at the end of the last line, as in every chat app. */
+.bubble .meta {
+  float: right;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin: 6px 0 -2px 10px;
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.bubble .meta time {
+  display: inline;
+  margin: 0;
+}
+
+.thread-list .bubble p {
+  display: inline;
+}
+
+.tick {
+  display: inline-flex;
+}
+
+.tick.read {
+  color: #53bdeb;
+  opacity: 1;
+}
+
+.bubble.mine .meta:has(.tick.read) {
+  opacity: 1;
+}
+
+.thread-composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 8px 10px calc(10px + env(safe-area-inset-bottom));
+  background: #0d121b;
+}
+
+.thread-composer textarea {
+  flex: 1;
+  min-width: 0;
+  min-height: 46px;
+  max-height: 128px;
+  resize: none;
+  border: 1px solid var(--line);
+  background: var(--card);
+  border-radius: 22px;
+  padding: 11px 16px;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.35;
+  outline: none;
+}
+
+.send-btn {
+  flex: none;
+  width: 46px;
+  height: 46px;
+  border: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.send-btn:disabled {
+  opacity: 0.35;
+}
+
+.thread-closed {
+  margin: 0;
+  padding: 14px 16px calc(16px + env(safe-area-inset-bottom));
+  text-align: center;
+  color: var(--ink-2);
+  background: #0d121b;
+}
+
+/* Unread count on the person's letter, like a chat app's list. */
+.ch-avatar {
+  position: relative;
+}
+
+.ch-unread {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: var(--good);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 0 0 2px var(--bg);
+}
+
+.ch.unread .ch-text small {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.seg.seg3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+@media (min-width: 900px) {
+  .thread {
+    max-width: 760px;
+    margin: 0 auto;
+    border-left: 1px solid var(--line);
+    border-right: 1px solid var(--line);
+  }
+}

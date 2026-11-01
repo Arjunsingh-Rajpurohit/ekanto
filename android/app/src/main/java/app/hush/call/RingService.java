@@ -67,11 +67,19 @@ public class RingService extends Service {
     static final String EXTRA_FROM = "from";
     static final String EXTRA_VOICE = "voice";
     static final String EXTRA_WHY = "why";
+    /** A message notification was tapped: open that person's chat. */
+    static final String ACTION_OPEN_CHAT = "app.hush.call.OPEN_CHAT";
 
     static final String PREFS = "hush.ring";
     private static final String READY_CHANNEL = "ready";
     private static final String RING_CHANNEL = "ring";
     private static final String MISSED_CHANNEL = "missed";
+    private static final String MESSAGE_CHANNEL = "messages";
+    /** A message is sent again until it arrives, for as long as messages can stay (as MSG_MAX_AGE_MS in ringing.ts). */
+    private static final long MSG_MAX_AGE_MS = 7L * 24 * 3600 * 1000;
+    /** "Send me what I missed", at most this often after a reconnect. */
+    private static final long SYNC_EVERY_MS = 2 * 60 * 1000;
+    private static final java.util.regex.Pattern MSG_ID = java.util.regex.Pattern.compile("[A-Za-z0-9_-]{8,24}");
     private static final int READY_ID = 8;
     /** Rings repeat every 4 s; nothing heard for this long = the caller gave up. */
     private static final long RING_GAP_MS = 12000;
@@ -92,6 +100,10 @@ public class RingService extends Service {
         byte[] ring;
         byte[] key;
         boolean gone;
+        /** Phones a message must reach (2 = one-to-one). */
+        int size;
+        /** Protected: a message notification never shows the text. */
+        boolean appOnly;
     }
 
     private static final class Ringing {
@@ -119,6 +131,11 @@ public class RingService extends Service {
     private ConnectivityManager.NetworkCallback networkCallback;
     private Network network;
     private Ringtone tone;
+    /** The lines in each person's message notification, until their chat is opened. */
+    private final Map<String, List<String[]>> lines = new HashMap<>();
+    private Set<String> msgIds;
+    private long lastSync;
+    private final Map<String, Long> lastResend = new HashMap<>();
 
     /* ---------- Called from the app (plugin, activity, receivers) ---------- */
 
@@ -236,6 +253,8 @@ public class RingService extends Service {
         http = new OkHttpClient.Builder().pingInterval(60, TimeUnit.SECONDS).connectTimeout(15, TimeUnit.SECONDS).build();
         for (String url : MQTT) links.add(new MqttLink(http, url, handler, this::heard));
         for (String url : NOSTR) links.add(new NostrLink(http, url, handler, this::heard));
+        // Connected (again): messages waiting on either side go now, not at the next wake-up.
+        for (RingLink link : links) link.onUp = this::linkUp;
         watchNetwork();
     }
 
@@ -322,6 +341,12 @@ public class RingService extends Service {
             NotificationChannel missed = new NotificationChannel(MISSED_CHANNEL, "Missed calls", NotificationManager.IMPORTANCE_DEFAULT);
             m.createNotificationChannel(missed);
         }
+        if (m.getNotificationChannel(MESSAGE_CHANNEL) == null) {
+            NotificationChannel messages = new NotificationChannel(MESSAGE_CHANNEL, "Messages", NotificationManager.IMPORTANCE_HIGH);
+            messages.setDescription("New messages from the people you saved");
+            messages.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
+            m.createNotificationChannel(messages);
+        }
     }
 
     /* ---------- Listening ---------- */
@@ -343,6 +368,8 @@ public class RingService extends Service {
                 ch.ring = ring;
                 ch.key = RingCrypto.key(ring);
                 ch.gone = o.optBoolean("gone");
+                ch.size = Math.max(2, o.optInt("size", 2));
+                ch.appOnly = o.optBoolean("appOnly");
                 list.add(ch);
             }
         } catch (Exception ignored) {
@@ -384,6 +411,8 @@ public class RingService extends Service {
             if (link.isUp()) link.ping();
             else link.reconnectNow();
         }
+        // Mine not yet delivered: try again (the other phone may be back).
+        resendOutbox(null, true);
         scheduleKeepAlive();
     }
 
@@ -432,6 +461,10 @@ public class RingService extends Service {
             String call = m.has("call") ? m.optString("call") : null;
             String from = clip(m.optString("from", ch.name));
             if (ch.me.equals(m.optString("by"))) return;
+            if ("msg".equals(t) || "got".equals(t) || "seen".equals(t) || "sync".equals(t)) {
+                chat(ch, t, m, pageAlive);
+                return;
+            }
             if (!"gone".equals(t) && Math.abs(System.currentTimeMillis() - m.optLong("ts")) > MAX_AGE_MS) return;
             if ("ring".equals(t) && call != null) ring(ch, call, from, m.optBoolean("v"), RingCrypto.cleanReason(m.optString("r", "")));
             else if ("cancel".equals(t) && call != null && ringing.containsKey(call)) missed(call, pageAlive);
@@ -439,6 +472,185 @@ public class RingService extends Service {
         } catch (Exception ignored) {
             // A broken ring is ignored.
         }
+    }
+
+    /* ---------- Messages ---------- */
+
+    private void chat(Ch ch, String t, JSONObject m, boolean pageAlive) throws Exception {
+        long age = Math.abs(System.currentTimeMillis() - m.optLong("ts"));
+        if ("msg".equals(t)) {
+            String id = m.optString("id");
+            if (ch.gone || age > MSG_MAX_AGE_MS || !MSG_ID.matcher(id).matches()) return;
+            // Every copy is answered: an earlier "got" may have been lost on the way.
+            JSONArray ids = new JSONArray().put(id);
+            publish(ch, envelope(ch, "got").put("ids", ids));
+            if (!firstTime(id)) return;
+            if (!pageAlive) addPendingJson("msgs", new JSONObject(m.toString()).put("channel", ch.id), 300);
+            if (!MainActivity.visible) notifyMessage(ch, m);
+            return;
+        }
+        if (age > MAX_AGE_MS) return;
+        if ("sync".equals(t)) {
+            resendOutbox(ch.id, false);
+            return;
+        }
+        JSONArray ids = m.optJSONArray("ids");
+        if (ids == null) return;
+        outboxAcked(ch, m.optString("by"), ids);
+        if (!pageAlive) {
+            addPendingJson("acks", new JSONObject().put("channel", ch.id).put("kind", t).put("by", m.optString("by")).put("ids", ids), 200);
+        }
+    }
+
+    /** Shown once, however often it comes (kept across restarts: a resend days later is not new). */
+    private boolean firstTime(String id) {
+        SharedPreferences p = prefs(this);
+        if (msgIds == null) {
+            msgIds = recent(500);
+            try {
+                JSONArray saved = new JSONArray(p.getString("msgIds", "[]"));
+                for (int i = 0; i < saved.length(); i++) msgIds.add(saved.getString(i));
+            } catch (Exception ignored) {
+                // Start again.
+            }
+        }
+        if (!msgIds.add(id)) return false;
+        p.edit().putString("msgIds", new JSONArray(msgIds).toString()).apply();
+        return true;
+    }
+
+    /** Like a chat app: one notification per person, the newest lines in it. Never the text on the lock screen. */
+    private void notifyMessage(Ch ch, JSONObject m) {
+        String x = m.optString("x", "").trim();
+        if (x.isEmpty()) return;
+        String from = clip(m.optString("from", ch.name));
+        List<String[]> list = lines.get(ch.id);
+        if (list == null) lines.put(ch.id, list = new ArrayList<>());
+        list.add(new String[] { from, ch.appOnly ? "New message" : x, String.valueOf(System.currentTimeMillis()) });
+        while (list.size() > 6) list.remove(0);
+        NotificationCompat.MessagingStyle style = new NotificationCompat.MessagingStyle(new Person.Builder().setName("You").build());
+        if (ch.size > 2) {
+            style.setConversationTitle(ch.name);
+            style.setGroupConversation(true);
+        }
+        for (String[] l : list) style.addMessage(l[1], Long.parseLong(l[2]), new Person.Builder().setName(l[0]).build());
+        int id = messageId(ch.id);
+        Notification hidden = new NotificationCompat.Builder(this, MESSAGE_CHANNEL)
+            .setSmallIcon(R.drawable.ic_stat_ekanto)
+            .setContentTitle("Ekanto")
+            .setContentText(list.size() == 1 ? "New message" : list.size() + " new messages")
+            .build();
+        Intent open = new Intent(this, MainActivity.class).setAction(ACTION_OPEN_CHAT).putExtra(EXTRA_CHANNEL, ch.id)
+            .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        manager().notify(id, new NotificationCompat.Builder(this, MESSAGE_CHANNEL)
+            .setSmallIcon(R.drawable.ic_stat_ekanto)
+            .setStyle(style)
+            .setContentTitle(ch.name)
+            .setContentText(list.get(list.size() - 1)[1])
+            .setContentIntent(PendingIntent.getActivity(this, id, open, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT))
+            .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setPublicVersion(hidden)
+            .setNumber(list.size())
+            .setAutoCancel(true)
+            .build());
+    }
+
+    static int messageId(String channel) {
+        return 100000 + (channel.hashCode() & 0xffff);
+    }
+
+    /** The chat was opened in the app: its notification goes. */
+    static void clearMessages(Context context, String channel) {
+        RingService s = instance;
+        if (s != null) s.handler.post(() -> s.lines.remove(channel));
+        context.getSystemService(NotificationManager.class).cancel(messageId(channel));
+    }
+
+    /** The page's list of mine not yet delivered changed. */
+    static void outboxChanged() {
+        RingService s = instance;
+        if (s != null) s.handler.post(() -> s.resendOutbox(null, true));
+    }
+
+    private void linkUp() {
+        resendOutbox(null, true);
+        long now = System.currentTimeMillis();
+        if (now - lastSync < SYNC_EVERY_MS) return;
+        lastSync = now;
+        // "I'm back": phones holding a message for this one send it now.
+        for (Ch ch : channels) {
+            try {
+                if (!ch.gone) publish(ch, envelope(ch, "sync"));
+            } catch (Exception ignored) {
+                // Their next wake-up sends it anyway.
+            }
+        }
+    }
+
+    /** Mine not yet on the other phones, sent again. A "sync" asks for one channel at most every 20 s. */
+    private void resendOutbox(String only, boolean all) {
+        long now = System.currentTimeMillis();
+        if (only != null) {
+            Long last = lastResend.get(only);
+            if (last != null && now - last < 20000) return;
+            lastResend.put(only, now);
+        }
+        JSONArray items = outbox();
+        for (int i = 0; i < items.length(); i++) {
+            try {
+                JSONObject item = items.getJSONObject(i);
+                String channel = item.optString("channel");
+                if (only != null && !only.equals(channel)) continue;
+                Ch ch = find(channel);
+                JSONObject m = new JSONObject(item.optString("json"));
+                if (ch == null || ch.gone || now - m.optLong("ts") > MSG_MAX_AGE_MS) continue;
+                publish(ch, m);
+            } catch (Exception ignored) {
+                // A broken item waits for the page to replace the list.
+            }
+        }
+    }
+
+    /** "got"/"seen" from one phone: once every other phone has it, it leaves the outbox. */
+    private void outboxAcked(Ch ch, String by, JSONArray ids) throws Exception {
+        Set<String> acked = new HashSet<>();
+        for (int i = 0; i < ids.length(); i++) acked.add(ids.optString(i));
+        JSONArray items = outbox();
+        JSONArray keep = new JSONArray();
+        boolean changed = false;
+        for (int i = 0; i < items.length(); i++) {
+            JSONObject item = items.getJSONObject(i);
+            if (ch.id.equals(item.optString("channel")) && acked.contains(item.optString("id"))) {
+                JSONArray got = item.optJSONArray("got");
+                if (got == null) got = new JSONArray();
+                boolean has = false;
+                for (int j = 0; j < got.length(); j++) has |= by.equals(got.optString(j));
+                if (!has) got.put(by);
+                item.put("got", got);
+                changed = true;
+                if (got.length() >= Math.max(1, ch.size - 1)) continue;
+            }
+            keep.put(item);
+        }
+        if (changed) prefs(this).edit().putString("outbox", keep.toString()).apply();
+    }
+
+    private JSONArray outbox() {
+        try {
+            return new JSONArray(prefs(this).getString("outbox", "[]"));
+        } catch (Exception e) {
+            return new JSONArray();
+        }
+    }
+
+    private Ch find(String id) {
+        for (Ch ch : channels) if (ch.id.equals(id)) return ch;
+        return null;
+    }
+
+    private JSONObject envelope(Ch ch, String type) throws Exception {
+        return new JSONObject().put("t", type).put("from", myName).put("by", ch.me).put("ts", System.currentTimeMillis());
     }
 
     /* ---------- Ringing ---------- */
@@ -642,20 +854,18 @@ public class RingService extends Service {
     /** A sealed answer ("decline") on today's topic, through every MQTT relay that is connected. */
     private void send(Ch ch, String type, String call) {
         try {
-            long now = System.currentTimeMillis();
-            JSONObject m = new JSONObject();
-            m.put("t", type);
-            m.put("call", call);
-            m.put("from", myName);
-            m.put("by", ch.me);
-            m.put("ts", now);
-            String text = RingCrypto.toBase64Url(RingCrypto.seal(ch.key, m.toString()));
-            seen.add(text.substring(0, 16));
-            String topic = RingCrypto.topic(ch.ring, RingCrypto.day(now));
-            for (RingLink link : links) link.publish(topic, text);
+            publish(ch, envelope(ch, type).put("call", call));
         } catch (Exception ignored) {
             // Not sent: they hear "no answer" when their ringing time is up.
         }
+    }
+
+    /** Sealed with the channel's key, on today's topic. A message keeps its own "ts" when sent again. */
+    private void publish(Ch ch, JSONObject m) {
+        String text = RingCrypto.toBase64Url(RingCrypto.seal(ch.key, m.toString()));
+        seen.add(text.substring(0, 16));
+        String topic = RingCrypto.topic(ch.ring, RingCrypto.day(System.currentTimeMillis()));
+        for (RingLink link : links) link.publish(topic, text);
     }
 
     /** Ekanto is on screen: ring with the phone's own ringtone (it respects silent and vibrate mode). */
@@ -703,6 +913,21 @@ public class RingService extends Service {
             p.edit().putString("pending", pending.toString()).apply();
         } catch (Exception ignored) {
             // Only a hint for the page.
+        }
+    }
+
+    private void addPendingJson(String list, JSONObject item, int max) {
+        try {
+            SharedPreferences p = prefs(this);
+            JSONObject pending = new JSONObject(p.getString("pending", "{}"));
+            JSONArray items = pending.optJSONArray(list);
+            if (items == null) items = new JSONArray();
+            items.put(item);
+            while (items.length() > max) items.remove(0);
+            pending.put(list, items);
+            p.edit().putString("pending", pending.toString()).apply();
+        } catch (Exception ignored) {
+            // The sender sends it again; the next copy is kept.
         }
     }
 
