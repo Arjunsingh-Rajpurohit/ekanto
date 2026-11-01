@@ -43,10 +43,11 @@ export interface Ring {
    * ring: "pick up!" (repeated while ringing) · cancel: the caller gave up, or the call is over ·
    * live: I'm in a call you can join · left: I left it · decline / busy: the answer to a ring ·
    * gone: the sender deleted the channel · msg: a chat message (sent again until "got") ·
-   * got / seen: it reached / was read on a phone · sync: "I'm back — send what I missed".
+   * got / seen: it reached / was read on a phone · sync: "I'm back — send what I missed" ·
+   * fx: setting up a phone-to-phone line to fetch a photo or file (see transfer.ts).
    * An older Ekanto ignores the chat ones.
    */
-  t: 'ring' | 'cancel' | 'live' | 'left' | 'decline' | 'busy' | 'gone' | 'msg' | 'got' | 'seen' | 'sync';
+  t: 'ring' | 'cancel' | 'live' | 'left' | 'decline' | 'busy' | 'gone' | 'msg' | 'got' | 'seen' | 'sync' | 'fx';
   /** The call's own link (its secret). Only members can read it. */
   call?: string;
   /** The sender's name. */
@@ -66,6 +67,45 @@ export interface Ring {
   k?: number;
   /** got / seen: which messages. */
   ids?: string[];
+  /** A photo, video, voice note or file: what it is. The file itself goes phone to phone (transfer.ts). */
+  f?: FileMeta;
+  /** A sticker: "e:😂" (a big emoji) or "i:data:image/webp;base64,…" (one you made, small enough to ride along). */
+  s?: string;
+  /** A reply: the message it answers. */
+  q?: string;
+  /** A reaction: the message it is on, and the emoji ('' takes it off). */
+  on?: string;
+  e?: string;
+  /** Delete for everyone / take back: the sender's own message it removes. */
+  del?: string;
+  /** A surprise: it arrives now, wrapped, and opens at this time. */
+  op?: number;
+  /** fx: who it is for, which line, and its offer / answer. */
+  to?: string;
+  sid?: string;
+  a?: 'offer' | 'answer' | 'none';
+  sdp?: string;
+}
+
+/** What a sent file is, so the other phone can show it before (and while) it arrives. */
+export interface FileMeta {
+  /** Name, size in bytes, type. */
+  n: string;
+  z: number;
+  m: string;
+  /** View only: shown inside Ekanto, never saved or shared. */
+  v?: boolean;
+  /** Picture or video size, and length in seconds. */
+  w?: number;
+  h?: number;
+  d?: number;
+  /** A tiny blurred preview (a few hundred bytes), shown until the real one is here. */
+  th?: string;
+  /** A GIF (or a looping clip made in Ekanto): plays by itself, silent, round and round. */
+  g?: boolean;
+  /** A voice message, and its shape (one letter 0-9 per bar). */
+  vo?: boolean;
+  wf?: string;
 }
 
 const enc = new TextEncoder();

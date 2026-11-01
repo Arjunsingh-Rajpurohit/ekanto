@@ -2709,3 +2709,1066 @@ body {
     border-right: 1px solid var(--line);
   }
 }
+
+/* ---------- Chat: composer, photos, files, voice, stickers, surprises ---------- */
+
+.thread-composer {
+  align-items: flex-end;
+}
+
+.comp-btn {
+  flex: none;
+  width: 46px;
+  height: 46px;
+  border: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: none;
+  color: var(--ink-2);
+}
+
+.comp-btn:active {
+  transform: scale(0.94);
+}
+
+.comp-btn.on {
+  color: #f5c451;
+}
+
+.comp-btn.small {
+  width: 32px;
+  height: 32px;
+}
+
+.comp-btn.in {
+  width: 40px;
+  height: 40px;
+  margin: 3px 3px 3px 0;
+}
+
+.comp-box {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  background: var(--card);
+  border-radius: 22px;
+  overflow: hidden;
+}
+
+.comp-row {
+  display: flex;
+  align-items: flex-end;
+}
+
+.thread-composer .comp-box textarea {
+  border: 0;
+  background: none;
+  border-radius: 0;
+  padding: 12px 4px 11px 16px;
+  min-height: 44px;
+}
+
+.reply-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 6px 0;
+  padding: 6px 4px 6px 10px;
+  border-left: 3px solid #9fc0ff;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.reply-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+}
+
+.reply-text strong {
+  color: #9fc0ff;
+  font-size: 12px;
+}
+
+.reply-text small,
+.quote span {
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Recording a voice message: the bar takes the composer's place. */
+.rec-bar {
+  align-items: center;
+}
+
+.rec-live {
+  flex: 1;
+  min-width: 0;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  border-radius: 23px;
+  background: var(--card);
+  font-variant-numeric: tabular-nums;
+}
+
+.rec-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--danger);
+  animation: pulse 1.2s infinite;
+}
+
+.rec-wave {
+  flex: 1;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.rec-wave i {
+  flex: none;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--ink-2);
+}
+
+/* Stickers and GIFs open where the keyboard would be. */
+.sticker-panel {
+  height: min(300px, 42dvh);
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--line);
+  background: #0d121b;
+}
+
+.stk-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 10px 12px 6px;
+}
+
+.stk-tabs button,
+.mode-pill button {
+  border: 1px solid var(--line);
+  background: none;
+  color: var(--ink-2);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.stk-tabs button.on,
+.mode-pill button.on {
+  border-color: transparent;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.stk-grid {
+  flex: 1;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  gap: 4px;
+  padding: 4px 10px calc(10px + env(safe-area-inset-bottom));
+  align-content: start;
+}
+
+.stk-grid .stk {
+  aspect-ratio: 1;
+  border: 0;
+  border-radius: 14px;
+  background: none;
+  font-size: 38px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  padding: 4px;
+}
+
+.stk-grid .stk:active {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.stk-grid .stk img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.stk-grid .stk.make {
+  border: 1.5px dashed var(--line);
+  color: var(--ink-2);
+  font-size: 30px;
+}
+
+.stk-grid.gif {
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding-top: 10px;
+}
+
+.gif-tile {
+  height: 92px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--card);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.stk-hint {
+  grid-column: 1 / -1;
+  margin: 8px 0 0;
+  color: var(--ink-2);
+  font-size: 13px;
+  text-align: center;
+}
+
+/* Attach: four round choices, like every chat app's. */
+.attach-card {
+  padding-top: 22px;
+}
+
+.attach-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.attach-grid button {
+  border: 0;
+  background: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.att-ic {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--card-2);
+  color: var(--ink);
+}
+
+.attach-grid button:active .att-ic {
+  transform: scale(0.94);
+}
+
+/* Full-screen layers: a look before sending, a photo, the GIF camera. */
+.layer {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  text-align: left;
+  background: #000;
+  padding-top: env(safe-area-inset-top);
+}
+
+.layer[hidden] {
+  display: none;
+}
+
+.ov-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+}
+
+.ov-title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ov-title strong,
+.ov-title small {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ov-title small {
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.ov-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.ov-stage > img,
+.ov-stage > video,
+.ov-stage > canvas {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.mv-stage {
+  overflow: auto;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.mv-stage > img.zoom {
+  max-width: none;
+  max-height: none;
+  width: 200%;
+  cursor: zoom-out;
+}
+
+.mv-stage > pre {
+  align-self: stretch;
+  margin: 0;
+  padding: 16px;
+  overflow: auto;
+  white-space: pre-wrap;
+  color: var(--ink);
+}
+
+.mv-stage:has(> canvas + canvas) {
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.mv-caption {
+  margin: 0;
+  padding: 12px 16px calc(14px + env(safe-area-inset-bottom));
+  color: var(--ink);
+  text-align: center;
+}
+
+.send-strip {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px 0;
+  overflow-x: auto;
+}
+
+.send-strip button {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  overflow: hidden;
+  padding: 0;
+  background: var(--card-2);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.send-strip button.on {
+  border-color: var(--accent);
+}
+
+.send-strip img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.send-foot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 10px calc(10px + env(safe-area-inset-bottom));
+}
+
+.mode-pill {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.mode-pill button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mode-pill button:disabled {
+  opacity: 0.35;
+}
+
+.send-note {
+  min-height: 16px;
+  color: var(--ink-2);
+  font-size: 13px;
+  text-align: center;
+}
+
+.send-row {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.send-row input,
+.input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  border-radius: 22px;
+  padding: 12px 16px;
+  font: inherit;
+  font-size: 16px;
+  outline: none;
+}
+
+textarea.input {
+  border-radius: 16px;
+  resize: none;
+}
+
+/* A document, the same in the chat and before sending. */
+.doc {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 220px;
+  padding: 6px 4px;
+}
+
+.doc.big {
+  min-width: 0;
+  width: min(340px, 86vw);
+  padding: 18px;
+  border-radius: 18px;
+  background: var(--card);
+}
+
+.doc-icon {
+  flex: none;
+  width: 44px;
+  height: 52px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.doc-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.doc-info strong {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 15px;
+}
+
+.doc-info small {
+  opacity: 0.7;
+  font-size: 12px;
+}
+
+/* ---------- In the chat ---------- */
+
+.thread-list .bubble {
+  position: relative;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.thread-list .bubble.media {
+  padding: 3px;
+}
+
+.pic {
+  position: relative;
+  width: min(260px, 64vw);
+  max-height: 340px;
+  border-radius: 13px;
+  overflow: hidden;
+  background: #0b0f17;
+  cursor: pointer;
+}
+
+.pic .blur,
+.pic .real {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pic .blur {
+  filter: blur(12px);
+  transform: scale(1.2);
+}
+
+.pic.lock .blur {
+  filter: blur(18px) brightness(0.6);
+}
+
+.lock-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+}
+
+.pic .play {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 52px;
+  height: 52px;
+  margin: -26px 0 0 -26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+}
+
+.pic-chip {
+  position: absolute;
+  padding: 1px 7px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.gif-chip {
+  left: 8px;
+  top: 8px;
+}
+
+.pic-chip.dur {
+  left: 8px;
+  bottom: 8px;
+}
+
+/* Waiting / arriving / tap to download: a round button, with a ring that fills up. */
+.dl {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 54px;
+  height: 54px;
+  margin: -27px 0 0 -27px;
+  border: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+}
+
+.dl.loading {
+  background:
+    radial-gradient(closest-side, rgba(0, 0, 0, 0.6) 82%, transparent 84%),
+    conic-gradient(#fff calc(var(--p, 0) * 360deg), rgba(255, 255, 255, 0.2) 0);
+}
+
+.dl-label {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.55);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.dl.gone {
+  display: none;
+}
+
+.doc .dl,
+.voice-row .dl {
+  position: relative;
+  left: auto;
+  top: auto;
+  margin: 0;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+.doc .dl.loading,
+.voice-row .dl.loading {
+  background:
+    radial-gradient(closest-side, var(--card-2) 80%, transparent 82%),
+    conic-gradient(#fff calc(var(--p, 0) * 360deg), rgba(255, 255, 255, 0.2) 0);
+}
+
+.doc .dl-label,
+.voice-row .dl-label {
+  display: none;
+}
+
+.bubble.media > p {
+  display: block;
+  padding: 5px 7px 0;
+}
+
+/* No caption: the time sits on the picture, as in every chat app. */
+.bubble.media:not(:has(> p)) > .meta {
+  position: absolute;
+  right: 9px;
+  bottom: 8px;
+  margin: 0;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  opacity: 1;
+}
+
+.bubble.media > .meta {
+  margin-right: 6px;
+}
+
+.bubble.file {
+  min-width: 0;
+}
+
+/* Files, voice notes and surprises: the time sits under them, never squeezed beside. */
+.bubble.file > .meta,
+.bubble.voice > .meta,
+.bubble.wrapped > .meta {
+  float: none;
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 2px 0 0;
+}
+
+.gift-mark {
+  font-size: 46px;
+  line-height: 1;
+  text-align: center;
+}
+
+.voice-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(260px, 66vw);
+  padding: 2px 0;
+}
+
+.vplay {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.wave {
+  flex: 1;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.wave i {
+  flex: 1;
+  min-width: 2px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.32);
+}
+
+.wave i.on {
+  background: #fff;
+}
+
+.vtime {
+  font-size: 12px;
+  opacity: 0.75;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Stickers have no bubble: the sticker is the message. */
+.thread-list .bubble.sticker {
+  background: none;
+  padding: 0;
+}
+
+.stk-e {
+  display: block;
+  font-size: 92px;
+  line-height: 1.05;
+  filter: url(#stk-cut);
+}
+
+.stk-i {
+  display: block;
+  width: 150px;
+  height: 150px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.45));
+}
+
+.bubble.sticker > .meta {
+  float: none;
+  display: flex;
+  justify-content: flex-end;
+  margin: 2px 4px 0;
+}
+
+/* A surprise of theirs, still wrapped. */
+.thread-list .bubble.wrapped {
+  padding: 4px;
+  background: linear-gradient(140deg, #3a2c12, #1f2937 70%);
+  box-shadow: inset 0 0 0 1px rgba(245, 196, 81, 0.35);
+}
+
+.gift {
+  width: min(240px, 64vw);
+  border: 0;
+  background: none;
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 10px 8px;
+}
+
+.gift-box {
+  font-size: 48px;
+  line-height: 1;
+  animation: wiggle 2.6s ease-in-out infinite;
+}
+
+.gift small {
+  color: #f5c451;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes wiggle {
+  0%, 80%, 100% { transform: rotate(0); }
+  84% { transform: rotate(-9deg) scale(1.05); }
+  88% { transform: rotate(8deg) scale(1.05); }
+  92% { transform: rotate(-5deg); }
+  96% { transform: rotate(3deg); }
+}
+
+.surprise-note {
+  display: block;
+  margin: 4px 0 2px;
+  color: #f5c451;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.bubble.deleted p {
+  font-style: italic;
+  opacity: 0.65;
+}
+
+/* A reply quotes the message it answers; tapping it goes there. */
+.quote {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 140px;
+  margin-bottom: 4px;
+  padding: 5px 9px;
+  border: 0;
+  border-left: 3px solid #9fc0ff;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  color: inherit;
+  text-align: left;
+  font-size: 13px;
+}
+
+.quote strong {
+  color: #9fc0ff;
+  font-size: 12px;
+}
+
+.bubble.media .quote,
+.bubble.sticker .quote {
+  margin: 0 0 4px;
+}
+
+.bubble.flash {
+  animation: flash 1.2s ease-out;
+}
+
+@keyframes flash {
+  0%, 30% { box-shadow: 0 0 0 3px rgba(159, 192, 255, 0.7); }
+  100% { box-shadow: 0 0 0 3px transparent; }
+}
+
+/* Reactions hang off the bottom of the bubble. */
+.thread-list .bubble.has-react {
+  margin-bottom: 16px;
+}
+
+.reacts {
+  position: absolute;
+  bottom: -17px;
+  display: flex;
+  gap: 2px;
+  padding: 1px 6px;
+  border-radius: 12px;
+  background: var(--card-2);
+  box-shadow: 0 0 0 2px var(--bg);
+  font-size: 14px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.bubble.mine .reacts {
+  right: 8px;
+}
+
+.bubble.theirs .reacts {
+  left: 8px;
+}
+
+/* The message menu: reactions on top, then what can be done. */
+.msg-card {
+  gap: 10px;
+  padding-top: 18px;
+}
+
+.react-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 6px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.react-row button {
+  width: 46px;
+  height: 46px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  font-size: 28px;
+  transition: transform 0.1s;
+}
+
+.react-row button.on {
+  background: var(--accent-soft);
+}
+
+.react-row button:active {
+  transform: scale(1.25);
+}
+
+.msg-actions {
+  display: flex;
+  flex-direction: column;
+}
+
+.msg-actions button {
+  border: 0;
+  background: none;
+  text-align: left;
+  padding: 14px 6px;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.msg-actions button.text-danger {
+  color: var(--danger);
+}
+
+.picks.center {
+  justify-content: center;
+}
+
+.surprise-what {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.stk-canvas {
+  width: 240px;
+  height: 240px;
+  align-self: center;
+  border-radius: 18px;
+  background:
+    conic-gradient(#1a202b 25%, #121721 0 50%, #1a202b 0 75%, #121721 0) 0 0 / 24px 24px;
+  touch-action: none;
+  cursor: grab;
+}
+
+#stk-zoom {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+#stk-shape {
+  align-self: center;
+}
+
+/* The GIF camera. */
+#loop-cam {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+#loop-cam.mirror {
+  transform: scaleX(-1);
+}
+
+.loop-foot {
+  display: flex;
+  justify-content: center;
+  padding: 18px 0 calc(22px + env(safe-area-inset-bottom));
+}
+
+.loop-rec {
+  width: 76px;
+  height: 76px;
+  border: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: conic-gradient(var(--danger) calc(var(--p, 0) * 360deg), #fff 0);
+}
+
+.loop-rec span {
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  border: 4px solid #000;
+  background: var(--danger);
+}
+
+.loop-rec.busy span {
+  transform: scale(0.8);
+  transition: transform 0.2s;
+}
+
+/* On the website a screenshot can't be stopped, so a view-only picture carries the viewer's name. */
+.watermark {
+  position: absolute;
+  inset: -20%;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: space-around;
+  justify-content: space-around;
+  gap: 60px 40px;
+  transform: rotate(-28deg);
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.watermark span {
+  color: rgba(255, 255, 255, 0.14);
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.confetti {
+  position: fixed;
+  z-index: 60;
+  font-size: 22px;
+  pointer-events: none;
+  animation: burst 1.2s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+
+@keyframes burst {
+  from { transform: translate(-50%, -50%) scale(0.4); opacity: 1; }
+  to { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy) + 80px)) scale(1) rotate(200deg); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gift-box,
+  .confetti {
+    animation: none;
+  }
+}
+
+@media (min-width: 900px) {
+  .sticker-panel {
+    width: 100%;
+    max-width: 760px;
+    margin: 0 auto;
+  }
+
+  .stk-grid {
+    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  }
+}
+
+/* Shared SVG definitions (the sticker edge): present, never taking space. */
+.svg-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}

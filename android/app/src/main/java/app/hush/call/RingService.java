@@ -69,6 +69,8 @@ public class RingService extends Service {
     static final String EXTRA_WHY = "why";
     /** A message notification was tapped: open that person's chat. */
     static final String ACTION_OPEN_CHAT = "app.hush.call.OPEN_CHAT";
+    /** A surprise's time has come: "🎁 Priya's surprise is ready". */
+    static final String ACTION_SURPRISE = "app.hush.call.SURPRISE";
 
     static final String PREFS = "hush.ring";
     private static final String READY_CHANNEL = "ready";
@@ -466,6 +468,11 @@ public class RingService extends Service {
                 return;
             }
             if (!"gone".equals(t) && Math.abs(System.currentTimeMillis() - m.optLong("ts")) > MAX_AGE_MS) return;
+            // Someone wants a photo or file I sent, but Ekanto is closed here: only the app can send it.
+            if ("fx".equals(t)) {
+                if (!pageAlive && "offer".equals(m.optString("a")) && ch.me.equals(m.optString("to"))) askToOpen(ch, from);
+                return;
+            }
             if ("ring".equals(t) && call != null) ring(ch, call, from, m.optBoolean("v"), RingCrypto.cleanReason(m.optString("r", "")));
             else if ("cancel".equals(t) && call != null && ringing.containsKey(call)) missed(call, pageAlive);
             else if ("gone".equals(t)) gone(ch, from, pageAlive);
@@ -486,6 +493,8 @@ public class RingService extends Service {
             publish(ch, envelope(ch, "got").put("ids", ids));
             if (!firstTime(id)) return;
             if (!pageAlive) addPendingJson("msgs", new JSONObject(m.toString()).put("channel", ch.id), 300);
+            long op = m.optLong("op", 0);
+            if (op > System.currentTimeMillis() && !m.has("on") && !m.has("del")) surpriseAt(ch, clip(m.optString("from", ch.name)), id, op);
             if (!MainActivity.visible) notifyMessage(ch, m);
             return;
         }
@@ -521,7 +530,7 @@ public class RingService extends Service {
 
     /** Like a chat app: one notification per person, the newest lines in it. Never the text on the lock screen. */
     private void notifyMessage(Ch ch, JSONObject m) {
-        String x = m.optString("x", "").trim();
+        String x = label(this, m);
         if (x.isEmpty()) return;
         String from = clip(m.optString("from", ch.name));
         List<String[]> list = lines.get(ch.id);
@@ -552,6 +561,84 @@ public class RingService extends Service {
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .setPublicVersion(hidden)
             .setNumber(list.size())
+            .setAutoCancel(true)
+            .build());
+    }
+
+    /**
+     * A message in a few words: the text, or "📷 Photo", "🎤 Voice message", "Sticker"… A surprise
+     * never shows what is inside before its time; a delete or a removed reaction shows nothing.
+     */
+    static String label(Context context, JSONObject m) {
+        long op = m.optLong("op", 0);
+        if (op > System.currentTimeMillis()) {
+            return "🎁 A surprise — opens " + android.text.format.DateUtils.formatDateTime(context, op,
+                android.text.format.DateUtils.FORMAT_SHOW_TIME | android.text.format.DateUtils.FORMAT_SHOW_WEEKDAY
+                    | android.text.format.DateUtils.FORMAT_ABBREV_WEEKDAY);
+        }
+        if (m.has("del")) return "";
+        if (m.has("on")) {
+            String e = m.optString("e", "");
+            return e.isEmpty() ? "" : "Reacted " + e + " to your message";
+        }
+        if (m.has("s")) return "Sticker";
+        String x = m.optString("x", "").trim();
+        JSONObject f = m.optJSONObject("f");
+        if (f == null) return x;
+        String mime = f.optString("m", "");
+        String kind = f.optBoolean("vo") ? "🎤 Voice message"
+            : f.optBoolean("g") ? "GIF"
+            : mime.startsWith("image/") ? "📷 Photo"
+            : mime.startsWith("video/") ? "🎬 Video"
+            : "📄 " + clip(f.optString("n", "File"));
+        if (f.optBoolean("v")) kind += " · view only";
+        return x.isEmpty() ? kind : kind.split(" ")[0] + " " + x;
+    }
+
+    /** At the surprise's time the phone says it is ready — even if Ekanto is closed then. */
+    private void surpriseAt(Ch ch, String from, String id, long at) {
+        Intent ready = new Intent(this, RingReceiver.class).setAction(ACTION_SURPRISE)
+            .putExtra(EXTRA_CHANNEL, ch.id).putExtra(EXTRA_FROM, from);
+        PendingIntent pi = PendingIntent.getBroadcast(this, 300000 + (id.hashCode() & 0xffff), ready,
+            PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+        AlarmManager alarms = getSystemService(AlarmManager.class);
+        if (canExactAlarm(this)) alarms.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi);
+        else alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi);
+    }
+
+    static void surpriseReady(Context context, String channel, String from) {
+        if (channel == null || MainActivity.visible) return;
+        Intent open = new Intent(context, MainActivity.class).setAction(ACTION_OPEN_CHAT).putExtra(EXTRA_CHANNEL, channel)
+            .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        int id = 300000 + (channel.hashCode() & 0xffff);
+        context.getSystemService(NotificationManager.class).notify(id, new NotificationCompat.Builder(context, MESSAGE_CHANNEL)
+            .setSmallIcon(R.drawable.ic_stat_ekanto)
+            .setContentTitle("🎁 " + (from == null ? "A" : from + "'s") + " surprise is ready")
+            .setContentText("Tap to open it.")
+            .setContentIntent(PendingIntent.getActivity(context, id, open, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT))
+            .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setAutoCancel(true)
+            .build());
+    }
+
+    /** At most once in 10 minutes per person: "Priya is waiting for what you sent". */
+    private final Map<String, Long> asked = new HashMap<>();
+
+    private void askToOpen(Ch ch, String from) {
+        Long last = asked.get(ch.id);
+        if (last != null && System.currentTimeMillis() - last < 10 * 60 * 1000) return;
+        asked.put(ch.id, System.currentTimeMillis());
+        Intent open = new Intent(this, MainActivity.class).setAction(ACTION_OPEN_CHAT).putExtra(EXTRA_CHANNEL, ch.id)
+            .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        int id = 200000 + (ch.id.hashCode() & 0xffff);
+        manager().notify(id, new NotificationCompat.Builder(this, MESSAGE_CHANNEL)
+            .setSmallIcon(R.drawable.ic_stat_ekanto)
+            .setContentTitle(ch.appOnly ? "Ekanto" : from + " is waiting for your file")
+            .setContentText("Open Ekanto to send it — it goes phone to phone.")
+            .setContentIntent(PendingIntent.getActivity(this, id, open, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT))
+            .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .setAutoCancel(true)
             .build());
     }

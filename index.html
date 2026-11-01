@@ -23,6 +23,20 @@
     <meta name="twitter:card" content="summary_large_image" />
   </head>
   <body>
+    <!-- The white die-cut edge of an emoji sticker (faint corner pixels are dropped first, so no specks). -->
+    <svg class="svg-defs" width="0" height="0" aria-hidden="true" focusable="false">
+      <filter id="stk-cut" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+        <feComponentTransfer in="SourceAlpha" result="a"><feFuncA type="linear" slope="3" intercept="-0.6" /></feComponentTransfer>
+        <feMorphology in="a" operator="dilate" radius="3" result="d" />
+        <feFlood flood-color="#fff" />
+        <feComposite in2="d" operator="in" result="edge" />
+        <feGaussianBlur in="d" stdDeviation="3" />
+        <feOffset dy="3" result="so" />
+        <feFlood flood-color="#000" flood-opacity="0.45" />
+        <feComposite in2="so" operator="in" result="shadow" />
+        <feMerge><feMergeNode in="shadow" /><feMergeNode in="edge" /><feMergeNode in="SourceGraphic" /></feMerge>
+      </filter>
+    </svg>
     <main id="app">
       <!-- Home. A phone: three tabs (Calls · Link · Settings). A computer: Calls and Link side by side,
            Settings in a side panel. Each fits the screen without scrolling. -->
@@ -198,12 +212,145 @@
           <button id="thread-video" class="ch-call" type="button" aria-label="Video call"></button>
         </header>
         <ol id="thread-list" class="thread-list" aria-live="polite"></ol>
+        <div id="sticker-panel" class="sticker-panel" hidden>
+          <div id="stk-tabs" class="stk-tabs" role="tablist">
+            <button type="button" data-tab="emoji" class="on" role="tab">Stickers</button>
+            <button type="button" data-tab="mine" role="tab">Mine</button>
+            <button type="button" data-tab="gif" role="tab">GIF</button>
+          </div>
+          <div id="stk-grid" class="stk-grid"></div>
+        </div>
         <form id="thread-form" class="thread-composer">
-          <textarea id="thread-input" rows="1" maxlength="1000" autocomplete="off" enterkeyhint="send" placeholder="Message" aria-label="Message"></textarea>
-          <button id="thread-send" class="send-btn" type="submit" aria-label="Send" disabled><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13"/><path d="m13 6 6 6-6 6"/></svg></button>
+          <button id="attach-btn" class="comp-btn" type="button" aria-label="Send a photo, video, file or surprise"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg></button>
+          <div class="comp-box">
+            <div id="reply-bar" class="reply-bar" hidden>
+              <span class="reply-text"><strong id="reply-who"></strong><small id="reply-what"></small></span>
+              <button id="reply-cancel" class="comp-btn small" type="button" aria-label="Cancel reply"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg></button>
+            </div>
+            <div class="comp-row">
+              <textarea id="thread-input" rows="1" maxlength="1000" autocomplete="off" enterkeyhint="send" placeholder="Message" aria-label="Message"></textarea>
+              <button id="sticker-btn" class="comp-btn in" type="button" aria-label="Stickers and GIFs"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5s1.3 2 3.5 2 3.5-2 3.5-2"/><path d="M9 9.5h.01"/><path d="M15 9.5h.01"/></svg></button>
+            </div>
+          </div>
+          <button id="thread-send" class="send-btn" type="submit" aria-label="Send" hidden><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13"/><path d="m13 6 6 6-6 6"/></svg></button>
+          <button id="mic-btn" class="send-btn" type="button" aria-label="Record a voice message"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21"/></svg></button>
         </form>
+        <div id="rec-bar" class="thread-composer rec-bar" hidden>
+          <button id="rec-cancel" class="comp-btn" type="button" aria-label="Delete recording"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M6 7l1 13h10l1-13"/><path d="M9 7V4h6v3"/></svg></button>
+          <span class="rec-live"><span class="rec-dot"></span><span id="rec-time">0:00</span><span id="rec-wave" class="rec-wave"></span></span>
+          <button id="rec-send" class="send-btn" type="button" aria-label="Send voice message"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13"/><path d="m13 6 6 6-6 6"/></svg></button>
+        </div>
         <p id="thread-closed" class="thread-closed" hidden></p>
       </section>
+
+      <!-- Chat: attach, send preview, viewer, stickers, surprise, message actions -->
+      <div id="attach-sheet" class="sheet fixed" hidden>
+        <div class="sheet-card attach-card">
+          <div class="attach-grid">
+            <button type="button" data-pick="media"><span class="att-ic"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg></span><span>Photos</span></button>
+            <button type="button" data-pick="camera"><span class="att-ic"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></svg></span><span>Camera</span></button>
+            <button type="button" data-pick="file"><span class="att-ic"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg></span><span>Document</span></button>
+            <button type="button" data-pick="surprise"><span class="att-ic"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="9" width="18" height="12" rx="2"/><path d="M3 13h18"/><path d="M12 9v12"/><path d="M12 9C10 5 6 5 6.5 7.5S12 9 12 9z"/><path d="M12 9c2-4 6-4 5.5-1.5S12 9 12 9z"/></svg></span><span>Surprise</span></button>
+          </div>
+        </div>
+      </div>
+      <input id="pick-media" type="file" accept="image/*,video/*" multiple hidden />
+      <input id="pick-camera" type="file" accept="image/*,video/*" capture="environment" hidden />
+      <input id="pick-file" type="file" multiple hidden />
+      <input id="pick-sticker" type="file" accept="image/*" hidden />
+      <input id="pick-gif" type="file" accept="image/gif,video/mp4,video/webm" hidden />
+
+      <section id="send-pane" class="layer" hidden>
+        <header class="ov-head">
+          <button id="send-close" class="tool-icon plain" type="button" aria-label="Cancel"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg></button>
+          <span class="ov-title"><strong id="send-title">Send</strong><small id="send-size"></small></span>
+          <button id="send-remove" class="tool-icon plain" type="button" aria-label="Remove this one" hidden><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M6 7l1 13h10l1-13"/><path d="M9 7V4h6v3"/></svg></button>
+        </header>
+        <div id="send-stage" class="ov-stage"></div>
+        <div id="send-strip" class="send-strip" hidden></div>
+        <div class="send-foot">
+          <div id="send-mode" class="mode-pill" role="radiogroup" aria-label="What they can do with it">
+            <button type="button" data-mode="save" class="on" role="radio" aria-checked="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12"/><path d="m6 11 6 6 6-6"/><path d="M5 20h14"/></svg><span>Can save</span></button>
+            <button type="button" data-mode="view" role="radio" aria-checked="false"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>View only</span></button>
+          </div>
+          <small id="send-note" class="send-note"></small>
+          <div class="send-row">
+            <input id="send-caption" type="text" maxlength="1000" autocomplete="off" enterkeyhint="send" placeholder="Add a caption" aria-label="Caption" />
+            <button id="send-surprise" class="comp-btn" type="button" aria-label="Make it a surprise"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="9" width="18" height="12" rx="2"/><path d="M3 13h18"/><path d="M12 9v12"/><path d="M12 9C10 5 6 5 6.5 7.5S12 9 12 9z"/><path d="M12 9c2-4 6-4 5.5-1.5S12 9 12 9z"/></svg></button>
+            <button id="send-go" class="send-btn" type="button" aria-label="Send"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13"/><path d="m13 6 6 6-6 6"/></svg></button>
+          </div>
+        </div>
+      </section>
+
+      <section id="media-view" class="layer" hidden>
+        <header class="ov-head">
+          <button id="mv-close" class="tool-icon plain" type="button" aria-label="Close"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg></button>
+          <span class="ov-title"><strong id="mv-who"></strong><small id="mv-when"></small></span>
+          <button id="mv-save" class="tool-icon plain" type="button" aria-label="Save"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12"/><path d="m6 11 6 6 6-6"/><path d="M5 20h14"/></svg></button>
+        </header>
+        <div id="mv-stage" class="ov-stage mv-stage"></div>
+        <p id="mv-caption" class="mv-caption" hidden></p>
+      </section>
+
+      <section id="loop-view" class="layer" hidden>
+        <header class="ov-head">
+          <button id="loop-close" class="tool-icon plain" type="button" aria-label="Close"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg></button>
+          <span class="ov-title"><strong>Make a GIF</strong><small>Tap — it loops there and back</small></span>
+          <button id="loop-flip" class="tool-icon plain" type="button" aria-label="Switch camera"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9a8 8 0 0 1 14-3l2 2"/><path d="M20 4v4h-4"/><path d="M20 15a8 8 0 0 1-14 3l-2-2"/><path d="M4 20v-4h4"/></svg></button>
+        </header>
+        <div class="ov-stage"><video id="loop-cam" autoplay muted playsinline></video></div>
+        <div class="loop-foot"><button id="loop-rec" class="loop-rec" type="button" aria-label="Record a GIF"><span></span></button></div>
+      </section>
+
+      <div id="surprise-sheet" class="sheet fixed" hidden>
+        <div class="sheet-card">
+          <div class="gift-mark" aria-hidden="true">🎁</div>
+          <h2>Surprise</h2>
+          <p class="sub">It arrives now, wrapped, and opens at the time you pick — even if your phone is off by then.</p>
+          <div id="surprise-picks" class="picks center">
+            <button type="button" data-when="hour">In 1 hour</button>
+            <button type="button" data-when="midnight">Midnight</button>
+            <button type="button" data-when="morning">Tomorrow 9 AM</button>
+            <button type="button" data-when="custom">Pick a time</button>
+          </div>
+          <input id="surprise-time" class="input" type="datetime-local" aria-label="Opens at" hidden />
+          <div id="surprise-what" class="surprise-what">
+            <textarea id="surprise-text" class="input" rows="3" maxlength="1000" placeholder="Write the surprise…" aria-label="Surprise message"></textarea>
+            <button id="surprise-photo" class="btn" type="button">Add a photo or video instead</button>
+          </div>
+          <button id="surprise-go" class="btn primary" type="button" disabled>Send surprise</button>
+          <button id="surprise-cancel" class="btn" type="button">Cancel</button>
+        </div>
+      </div>
+
+      <div id="stk-maker" class="sheet fixed" hidden>
+        <div class="sheet-card">
+          <h2>Make a sticker</h2>
+          <canvas id="stk-canvas" class="stk-canvas" width="320" height="320" aria-label="Drag to move the photo"></canvas>
+          <input id="stk-zoom" type="range" min="1" max="4" step="0.01" value="1" aria-label="Zoom" />
+          <div id="stk-shape" class="mode-pill" role="radiogroup" aria-label="Shape">
+            <button type="button" data-shape="round" class="on" role="radio" aria-checked="true">Round</button>
+            <button type="button" data-shape="square" role="radio" aria-checked="false">Square</button>
+          </div>
+          <input id="stk-text" class="input" type="text" maxlength="24" autocomplete="off" placeholder="Words on it (optional)" aria-label="Words on the sticker" />
+          <button id="stk-save" class="btn primary" type="button">Save and send</button>
+          <button id="stk-cancel" class="btn" type="button">Cancel</button>
+        </div>
+      </div>
+
+      <div id="msg-sheet" class="sheet fixed" hidden>
+        <div class="sheet-card msg-card">
+          <div id="msg-reacts" class="react-row" role="group" aria-label="React"></div>
+          <div class="msg-actions">
+            <button type="button" data-do="reply">Reply</button>
+            <button type="button" data-do="copy">Copy</button>
+            <button type="button" data-do="save">Save</button>
+            <button type="button" data-do="sticker">Make a sticker</button>
+            <button type="button" data-do="unsend" class="text-danger">Delete for everyone</button>
+            <button type="button" data-do="delete">Delete for me</button>
+          </div>
+        </div>
+      </div>
 
       <!-- In the call -->
       <section id="call" class="screen call" hidden>

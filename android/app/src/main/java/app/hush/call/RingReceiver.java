@@ -5,7 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.PowerManager;
 
-/** "Decline" on the ringing notification, and the regular wake-up that keeps ringing working. */
+/** "Decline" on the ringing notification, the regular wake-up that keeps ringing working, and a surprise's time. */
 public class RingReceiver extends BroadcastReceiver {
 
     @Override
@@ -22,6 +22,8 @@ public class RingReceiver extends BroadcastReceiver {
             PowerManager power = context.getSystemService(PowerManager.class);
             power.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "hush:ring-test").acquire(15000);
             RingService.testRing(context);
+        } else if (RingService.ACTION_SURPRISE.equals(action)) {
+            RingService.surpriseReady(context, intent.getStringExtra(RingService.EXTRA_CHANNEL), intent.getStringExtra(RingService.EXTRA_FROM));
         }
     }
 }

@@ -14,12 +14,12 @@ import { LINK_HOURS, MAX_PEOPLE, MIN_PEOPLE, SMOOTH_PEOPLE, cleanReason, expired
 import { LOWDATA_KEY, MediaProblem, NOISE_KEY, cameraTrack, canShareScreenInBrowser, lowDataOn, micCleanup, noiseOn, openCamera, screenTrack, type Facing } from './media';
 import { IN_APP, nativeAudio, nativeCall, nativeFloat, nativeProtect, nativeRing, nativeScreenTrack, type AudioRoute, type AudioRoutes, type RingSetting } from './native';
 import { PROTECTED_INVITE, PROTECTED_LIMIT, PROTECTED_PROMISE, RECORDING_SELF, parseRecording, recordingNotice, recordingWire } from './protect';
-import { DEFAULT_KEEP, unreadOf, type Msg } from './messages';
+import { DEFAULT_KEEP, labelOf, shown, unreadOf, type Msg } from './messages';
 import { Ringing } from './ringing';
 import type { PluginListenerHandle } from '@capacitor/core';
 import { SpeakingMeter } from './speaking';
 import { Stage } from './stage';
-import { drawThread } from './thread-ui';
+import { ThreadScreen } from './thread-screen';
 import { startTone } from './tones';
 import { clearSaved } from './viewer';
 
@@ -865,23 +865,29 @@ const chats = new Chats({
   changed: chatChanged,
   outbox: (items) => void nativeRing.setOutbox(items),
   json: (ch, ring) => ringing.json(ch, ring),
+  me: (ch) => ringing.tagOf(ch),
+  relayOnly: () => HAS_TURN && hideIp(),
+  progress: (id, msg) => threadScreen.progress(id, msg),
 });
 
+/** Photos, files, voice notes, stickers, replies, reactions and surprises on the chat screen. */
+const threadScreen = new ThreadScreen({ chats, current: () => threadOf, toast, myName, inApp: IN_APP });
+
 function chatChanged(id: string, news?: Msg): void {
-  if (threadOf?.id === id && !$('thread').hidden) drawThread($('thread-list'), threadOf, chats.thread(id));
+  if (threadOf?.id === id && !$('thread').hidden) threadScreen.draw();
   // In a call, a message is a quiet line, not a new screen.
-  if (news && !news.mine && !news.note && session && threadOf?.id !== id) toast(`💬 ${news.from}: ${news.x.slice(0, 80)}`);
+  if (news && !news.mine && !news.note && session && threadOf?.id !== id) toast(`💬 ${news.from}: ${labelOf(news).slice(0, 80)}`);
   drawChannels();
 }
 
 /** The list row: the newest message (or a missed call when that is newer) and how many are unread. */
 function rowChat(ch: Channel): RowChat | undefined {
   const t = chats.thread(ch.id);
-  const last = [...t.msgs].reverse().find((m) => m.note !== 'missed');
+  const last = [...t.msgs].reverse().find((m) => m.note !== 'missed' && shown(m));
   if (!last) return undefined;
   const text = last.note === 'keep'
     ? '⏱ Disappearing messages changed'
-    : `${last.mine ? 'You: ' : ch.size > 2 ? `${last.from}: ` : ''}${last.x}`;
+    : `${last.mine ? 'You: ' : ch.size > 2 ? `${last.from}: ` : ''}${labelOf(last)}`;
   return { text: text.replace(/\s+/g, ' '), at: last.ts, unread: unreadOf(t) };
 }
 
@@ -896,8 +902,10 @@ function openThread(ch: Channel): void {
   show('thread');
   // Sized once it is on screen: a hidden box measures nothing.
   sizeInput();
+  threadScreen.opened();
   const list = $('thread-list');
-  drawThread(list, ch, chats.thread(ch.id));
+  list.replaceChildren();
+  threadScreen.draw();
   list.scrollTop = list.scrollHeight;
   chats.markRead(ch);
   chats.sync(ch);
@@ -925,6 +933,7 @@ function drawThreadHead(ch: Channel): void {
 }
 
 function closeThread(): void {
+  threadScreen.closed();
   threadOf = null;
   show('home');
 }
@@ -934,13 +943,13 @@ function sizeInput(): void {
   const input = $<HTMLTextAreaElement>('thread-input');
   input.style.height = 'auto';
   input.style.height = `${Math.min(input.scrollHeight, 128)}px`;
-  $<HTMLButtonElement>('thread-send').disabled = !input.value.trim();
+  threadScreen.composerChanged(!!input.value.trim());
 }
 
 function sendFromThread(): void {
   const input = $<HTMLTextAreaElement>('thread-input');
   if (!threadOf || !input.value.trim()) return;
-  chats.send(threadOf, input.value);
+  chats.send(threadOf, input.value, threadScreen.sendOptions());
   input.value = '';
   sizeInput();
   input.focus();
@@ -1102,11 +1111,14 @@ function endChannelCall(): void {
 
 /** Everything heard on the channels' ring topics. */
 function onRing(ch: Channel, ring: Ring): void {
+  // Any sign of their phone: a file waiting on it is fetched now.
+  chats.heard(ch, ring.by);
   switch (ring.t) {
     case 'msg':
     case 'got':
     case 'seen':
     case 'sync':
+    case 'fx':
       return chats.onRing(ch, ring);
     case 'ring':
       return incomingRing(ch, ring);
@@ -1914,15 +1926,24 @@ void syncChannels().then(() => {
   // On the website this page is the listener: say "I'm here" so waiting messages come now.
   if (!IN_APP) for (const ch of channels) chats.sync(ch);
   chats.syncOutbox();
+  // Photos and files still on their way: fetched now, from where they stopped.
+  chats.resumeFetches();
 });
-window.addEventListener('online', () => chats.resendAll());
+window.addEventListener('online', () => {
+  chats.resendAll();
+  chats.transfers.wake();
+});
 
 window.addEventListener('hashchange', () => {
   if (!session) route();
 });
 // Back in a browser during a call: stay on the call and ask.
 window.addEventListener('popstate', () => {
-  if (!session && !$('thread').hidden) return closeThread();
+  if (!session && !$('thread').hidden) {
+    // A photo or sheet open on the chat closes first; the chat stays.
+    if (threadScreen.back()) return history.pushState({ hushThread: threadOf?.id }, '', location.href);
+    return closeThread();
+  }
   if (!session) return;
   history.pushState({ hushCall: true }, '', location.href);
   $('leave-sheet').hidden = false;
@@ -1938,6 +1959,7 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && session && !wakeLock) void keepAwake();
   // Back on the chat: what arrived meanwhile is read now.
   if (document.visibilityState === 'visible' && threadOf && !$('thread').hidden) chats.markRead(threadOf);
+  if (document.visibilityState === 'visible') chats.transfers.wake();
 });
 
 /** A link opened from outside (hushcall://join#…) lands here, in the app. */
@@ -1969,6 +1991,7 @@ if (IN_APP) {
     // Back closes whatever is open on top; in the call itself it keeps the call going in the
     // background (it never hangs up by accident).
     if (!$('viewer').hidden) return panel?.hideViewer();
+    if (!$('thread').hidden && threadScreen.back()) return;
     for (const id of ['send-sheet', 'more-sheet', 'audio-sheet', 'sheet', 'save-sheet', 'ask-sheet', 'newch-sheet', 'ch-sheet', 'ring-sheet', 'callwhy-sheet', ...HOME_SHEETS]) {
       if (!$(id).hidden) return void ($(id).hidden = true);
     }

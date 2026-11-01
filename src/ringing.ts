@@ -116,6 +116,11 @@ export class Ringing {
     return up;
   }
 
+  /** What the other phones call this one in a channel. */
+  tagOf(ch: Channel): string | null {
+    return this.prepared.get(ch.id)?.me ?? null;
+  }
+
   /** A ring as the Android listener sends it again while Ekanto is closed (it seals it itself). */
   json(ch: Channel, ring: Omit<Ring, 'by'>): string | null {
     const p = this.prepared.get(ch.id);

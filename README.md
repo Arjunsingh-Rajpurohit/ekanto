@@ -53,6 +53,25 @@ Tap a person on **Calls** to open your chat with them; 📞 and 🎥 in the chat
   "New message". A protected person's chat is app-only, like their calls.
 - On the website, messages arrive while Ekanto is open; ones sent meanwhile arrive when you open it.
 
+**Photos, videos, voice, files, stickers** — ➕ next to the box, 🙂 inside it, 🎤 when it's empty.
+
+| | |
+|---|---|
+| 📷 **Photos & videos** | A look before sending, a caption, several at once. Sent as **the original** — no squeezing, any size up to 2 GB. |
+| ⬇️ / 👁 **Can save · View only** | Picked before sending. View only: shown inside Ekanto, never saved or shared; screenshots blocked in the app, and on the website the viewer's name is printed faintly over it. **Take it back any time** — it goes from their phone too. |
+| 📄 **Any file** | Every type (PDF, zip, docx, apk…). PDFs, text, pictures and videos open inside Ekanto. |
+| 🎤 **Voice messages** | Tap the mic, talk, send. Plays in the chat. |
+| 🙂 **Stickers & GIFs** | Big emoji stickers; **your own** from any photo (round or square, words on it); **make a GIF** with the camera (a loop, there and back). No GIF search — it would tell a GIF company what you type. |
+| ↩️ ❤️ 🗑 | Long-press a message: reply, react, copy, save, make a sticker, delete for everyone (no time limit) or for you. |
+| 🎁 **Surprise** | Arrives now, wrapped, with a countdown — **opens at the time you pick, even if your phone is off then**. Nothing inside shows before (not in the list, not in the notification). |
+
+How a file travels: the message (sealed, like any message) says what it is and carries a tiny blurred
+preview; the file itself goes **straight from the sender's phone to the other phone** over an
+encrypted WebRTC line set up with sealed offer/answer rings — no server holds it, not even
+encrypted. It's saved as it arrives, so a broken transfer goes on where it stopped. If the sender's
+phone is off, it waits there and comes when both are on (the app tells the sender someone is
+waiting). Files go with their messages — when the chat's time is up, or a message is deleted.
+
 ## In a call
 
 | | |
