@@ -26,6 +26,7 @@ export interface RowActions {
 }
 
 export interface RowIcons {
+  chat: string;
   voice: string;
   video: string;
 }
@@ -37,7 +38,7 @@ export interface RowChat {
   unread: number;
 }
 
-/** One saved person: who, their state, and the two call buttons (like a contact in a phone app). */
+/** One saved person: who, their state, and chat · voice · video (like a contact in a phone app). */
 export function channelRow(ch: Channel, live: boolean, icons: RowIcons, actions: RowActions, chat?: RowChat): HTMLLIElement {
   const li = document.createElement('li');
   let line: string;
@@ -80,8 +81,15 @@ export function channelRow(ch: Channel, live: boolean, icons: RowIcons, actions:
   small.textContent = line;
   text.append(name, small);
   main.append(avatar, text);
-  // Like a chat app: the row opens the conversation; the two buttons call.
+  // Like a chat app: the row opens the conversation; so does the chat button, for anyone who looks for one.
   main.addEventListener('click', () => actions.open(ch));
+
+  const chatButton = document.createElement('button');
+  chatButton.type = 'button';
+  chatButton.className = 'ch-call ch-chat';
+  chatButton.innerHTML = icons.chat;
+  chatButton.setAttribute('aria-label', `Chat with ${ch.name}`);
+  chatButton.addEventListener('click', () => actions.open(ch));
 
   const button = (icon: string, label: string, voice: boolean) => {
     const b = document.createElement('button');
@@ -95,6 +103,7 @@ export function channelRow(ch: Channel, live: boolean, icons: RowIcons, actions:
   };
   li.append(
     main,
+    chatButton,
     button(icons.voice, live ? `Join the call in ${ch.name}` : `Voice call ${ch.name}`, true),
     button(icons.video, live ? `Join the call in ${ch.name} with video` : `Video call ${ch.name}`, false),
   );

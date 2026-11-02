@@ -1494,6 +1494,11 @@ body.floating .stage[data-layout='focus'] .main {
   height: 21px;
 }
 
+/* Chat stays quiet when a call is live: only the call buttons turn green. */
+.ch.live .ch-chat {
+  background: var(--accent-soft);
+}
+
 .ch-call:disabled {
   opacity: 0.3;
 }

@@ -989,7 +989,7 @@ function drawChannels(): void {
   const rows = channels.map((ch) => ({ ch, chat: rowChat(ch) }));
   const active = (r: (typeof rows)[number]) => Math.max(r.chat?.at ?? 0, r.ch.missed ?? 0, r.ch.created ?? 0);
   rows.sort((a, b) => active(b) - active(a));
-  $('channel-list').replaceChildren(...rows.map(({ ch, chat }) => channelRow(ch, isLive(ch), { voice: ICON.earpiece, video: ICON.cam }, {
+  $('channel-list').replaceChildren(...rows.map(({ ch, chat }) => channelRow(ch, isLive(ch), { chat: ICON.chat, voice: ICON.earpiece, video: ICON.cam }, {
     open: openThread,
     call: askWhy,
   }, chat)));
