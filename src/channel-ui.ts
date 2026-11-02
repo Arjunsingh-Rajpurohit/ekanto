@@ -23,6 +23,8 @@ export function timeText(at: number, now = Date.now()): string {
 export interface RowActions {
   open(ch: Channel): void;
   call(ch: Channel, voice: boolean): void;
+  /** Long-press or right-click: rename, disappearing messages, delete. */
+  more(ch: Channel): void;
 }
 
 export interface RowIcons {
@@ -101,11 +103,74 @@ export function channelRow(ch: Channel, live: boolean, icons: RowIcons, actions:
     b.addEventListener('click', () => actions.call(ch, voice));
     return b;
   };
+  pressable(li, () => actions.more(ch));
   li.append(
     main,
     chatButton,
     button(icons.voice, live ? `Join the call in ${ch.name}` : `Voice call ${ch.name}`, true),
     button(icons.video, live ? `Join the call in ${ch.name} with video` : `Video call ${ch.name}`, false),
   );
+  return li;
+}
+
+/**
+ * Long-press (touch) or right-click (mouse) opens a person's options, like a chat app's list.
+ * The tap that ends a long-press does not also open the chat.
+ */
+function pressable(el: HTMLElement, more: () => void): void {
+  let press: ReturnType<typeof setTimeout> | undefined;
+  let pressed = false;
+  let startX = 0;
+  let startY = 0;
+  el.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    if (!pressed) more();
+  });
+  el.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'mouse') return;
+    pressed = false;
+    startX = e.clientX;
+    startY = e.clientY;
+    clearTimeout(press);
+    press = setTimeout(() => {
+      pressed = true;
+      navigator.vibrate?.(15);
+      more();
+    }, 480);
+  });
+  const cancel = () => clearTimeout(press);
+  el.addEventListener('pointerup', cancel);
+  el.addEventListener('pointercancel', cancel);
+  el.addEventListener('pointermove', (e) => (Math.abs(e.clientX - startX) > 10 || Math.abs(e.clientY - startY) > 10) && cancel());
+  // The finger lifting after a long-press is not a tap.
+  el.addEventListener('click', (e) => {
+    if (!pressed) return;
+    pressed = false;
+    e.stopPropagation();
+    e.preventDefault();
+  }, true);
+}
+
+/** An invite I made, or a code I used, still waiting for the other phone. Tap: see it again. */
+export function pendingRow(title: string, line: string, mark: string, label: string, open: () => void): HTMLLIElement {
+  const li = document.createElement('li');
+  li.className = 'ch pending';
+  const main = document.createElement('button');
+  main.type = 'button';
+  main.className = 'ch-main';
+  main.setAttribute('aria-label', label);
+  const avatar = document.createElement('span');
+  avatar.className = 'ch-avatar';
+  avatar.textContent = mark;
+  const text = document.createElement('span');
+  text.className = 'ch-text';
+  const name = document.createElement('strong');
+  name.textContent = title;
+  const small = document.createElement('small');
+  small.textContent = line;
+  text.append(name, small);
+  main.append(avatar, text);
+  main.addEventListener('click', open);
+  li.append(main);
   return li;
 }

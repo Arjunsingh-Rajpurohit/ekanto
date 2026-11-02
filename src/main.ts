@@ -2,7 +2,9 @@ import './style.css';
 import { App as NativeApp } from '@capacitor/app';
 import { Share } from '@capacitor/share';
 import { CallSession, type CallState, type Person } from './call';
-import { channelRow, initial, listNames, type RowChat } from './channel-ui';
+import { AddScreen } from './add-screen';
+import { Adding } from './adding';
+import { channelRow, initial, listNames, pendingRow, type RowChat } from './channel-ui';
 import { Chats } from './chats';
 import {
   channelId, loadChannels, newChannelSecret, saveChannels, upsertChannel, type Channel, type Ring,
@@ -14,6 +16,7 @@ import { LINK_HOURS, MAX_PEOPLE, MIN_PEOPLE, SMOOTH_PEOPLE, cleanReason, expired
 import { LOWDATA_KEY, MediaProblem, NOISE_KEY, cameraTrack, canShareScreenInBrowser, lowDataOn, micCleanup, noiseOn, openCamera, screenTrack, type Facing } from './media';
 import { IN_APP, nativeAudio, nativeCall, nativeFloat, nativeProtect, nativeRing, nativeScreenTrack, type AudioRoute, type AudioRoutes, type RingSetting } from './native';
 import { PROTECTED_INVITE, PROTECTED_LIMIT, PROTECTED_PROMISE, RECORDING_SELF, parseRecording, recordingNotice, recordingWire } from './protect';
+import { formatCode, full, parseCode, personId } from './invites';
 import { DEFAULT_KEEP, labelOf, shown, unreadOf, type Msg } from './messages';
 import { Ringing } from './ringing';
 import type { PluginListenerHandle } from '@capacitor/core';
@@ -37,6 +40,7 @@ const ICON = {
   chat: svg('<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>'),
   screen: svg('<rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/>'),
   more: svg('<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>'),
+  dots: svg('<circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>'),
   grid: svg('<rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>'),
   speaker: svg('<rect width="18" height="12" x="3" y="3" rx="2"/><rect width="5" height="3" x="3" y="18" rx="1"/><rect width="5" height="3" x="10" y="18" rx="1"/><rect width="5" height="3" x="17" y="18" rx="1"/>'),
   pip: svg('<path d="M21 9V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10c0 1.1.9 2 2 2h4"/><rect width="10" height="7" x="12" y="13" rx="2"/>'),
@@ -386,6 +390,15 @@ function drawOptions(): void {
 function route(): void {
   const hash = location.hash.slice(1);
   if (!hash) return show('home');
+  // An invite link (…/#add-K7PM4QXD): add the person who sent it — no call.
+  if (hash.startsWith('add-')) {
+    const code = parseCode(hash);
+    history.replaceState(null, '', location.pathname);
+    if (!code) return message('🔗', 'This invite link is broken', 'Ask for the link again — or ask for the code and type it in: ＋ › Have a code?');
+    setTab('calls');
+    show('home');
+    return addScreen.join(code);
+  }
   const parsed = parseInvite(hash);
   if (!parsed) return message('🔗', 'This link is broken', 'Ask for the link again — part of it may be missing.');
   if (expired(parsed)) {
@@ -438,9 +451,7 @@ async function enterCall(name: string, via?: ChannelVia, camera?: boolean): Prom
   meter.watch('me', stream);
   updateMe(name);
   // One short line; the limit and the 24 hours travel in the shared text, not on this screen.
-  $('waiting-sub').textContent = newChannelName !== null
-    ? 'Send them the link — when they join, both phones save each other.'
-    : 'Send them the link.';
+  $('waiting-sub').textContent = 'Send them the link.';
   $('waiting-share').hidden = !!via;
   $<HTMLAnchorElement>('whatsapp').href = `https://wa.me/?text=${encodeURIComponent(`${inviteText()}\n${link()}`)}`;
   showWhy('waiting-why', via ? via.reason ?? null : invite.reason);
@@ -500,11 +511,6 @@ function render(state: CallState): void {
     channelCall.stopTone?.();
     channelCall.stopTone = undefined;
     void ringing.send(channelCall.ch, { t: 'live', call: channelCall.hash, from: myName() });
-  }
-  // Started from "New channel": everyone who joins is offered the channel.
-  if (newChannelName !== null) {
-    const fresh = state.people.filter((p) => p.connected && p.channelOpen && !offer?.asked.has(p.id));
-    if (fresh.length) offerChannel(newChannelName || listNames(fresh.map((p) => p.name)), fresh);
   }
   if (asked && !state.people.some((p) => p.id === asked!.from.id)) {
     asked = null;
@@ -729,7 +735,6 @@ async function keepAwake(): Promise<void> {
 function finish(): number {
   const since = lastState?.liveSince;
   endChannelCall();
-  newChannelName = null;
   offer = null;
   asked = null;
   void sharing?.stop();
@@ -833,8 +838,6 @@ const answeredRings = new Set<string>();
 const busyRings = new Set<string>();
 /** "Save as channel" offered in this call: one secret for everyone who accepts. */
 let offer: { secret: string; name: string; saved: boolean; asked: Set<string> } | null = null;
-/** The call was started from "New channel" (null = a normal call; '' = name it after who joins). */
-let newChannelName: string | null = null;
 /** Someone in the call offered a channel; waiting for this phone's answer. */
 let asked: { from: Person; secret: string; appOnly: boolean; size: number } | null = null;
 
@@ -872,6 +875,27 @@ const chats = new Chats({
 
 /** Photos, files, voice notes, stickers, replies, reactions and surprises on the chat screen. */
 const threadScreen = new ThreadScreen({ chats, current: () => threadOf, toast, myName, inApp: IN_APP });
+
+/* Adding a person with a code or a link — no call needed (adding.ts, invites.ts) */
+
+const adding = new Adding({
+  channels: () => channels,
+  keep: async (ch, drop) => {
+    for (const id of drop) chats.forget(id);
+    storeChannels(upsertChannel(channels.filter((c) => !drop.includes(c.id)), ch));
+    await syncChannels();
+  },
+  myName,
+  changed: () => {
+    addScreen.changed();
+    drawChannels();
+  },
+  joined: (s, ch, name) => addScreen.joined(s, ch, name),
+  added: (t, ch) => addScreen.added(t, ch),
+  refused: (t) => addScreen.refused(t),
+  hello: sayHi,
+});
+const addScreen = new AddScreen({ adding, toast, withName, openThread, inApp: IN_APP });
 
 function chatChanged(id: string, news?: Msg): void {
   if (threadOf?.id === id && !$('thread').hidden) threadScreen.draw();
@@ -979,7 +1003,15 @@ function isLive(ch: Channel): boolean {
 }
 
 function drawChannels(): void {
-  const any = channels.length > 0;
+  const waiting = [
+    ...adding.sent.filter((s) => !full(s)).map((s) => pendingRow(
+      s.name || (s.size === 2 ? 'Invite' : 'Group invite'),
+      `${s.joined.length ? `${listNames(s.joined.map((j) => j.name))} joined · ` : ''}Code ${formatCode(s.code)} · waiting`,
+      s.name ? initial(s.name) : '+', `Invite, code ${formatCode(s.code)}: show it again`, () => addScreen.openSent(s.code))),
+    ...adding.taken.map((t) => pendingRow('Joining…', `Code ${formatCode(t.code)} · waiting for them`, '…',
+      `Joining with code ${formatCode(t.code)}`, () => addScreen.openTaken(t.code))),
+  ];
+  const any = channels.length > 0 || waiting.length > 0;
   $('tab-calls').classList.toggle('is-empty', !any);
   $('calls-empty').hidden = any;
   $('channel-list').hidden = !any;
@@ -989,9 +1021,10 @@ function drawChannels(): void {
   const rows = channels.map((ch) => ({ ch, chat: rowChat(ch) }));
   const active = (r: (typeof rows)[number]) => Math.max(r.chat?.at ?? 0, r.ch.missed ?? 0, r.ch.created ?? 0);
   rows.sort((a, b) => active(b) - active(a));
-  $('channel-list').replaceChildren(...rows.map(({ ch, chat }) => channelRow(ch, isLive(ch), { chat: ICON.chat, voice: ICON.earpiece, video: ICON.cam }, {
+  $('channel-list').replaceChildren(...waiting, ...rows.map(({ ch, chat }) => channelRow(ch, isLive(ch), { chat: ICON.chat, voice: ICON.earpiece, video: ICON.cam }, {
     open: openThread,
     call: askWhy,
+    more: openChannelSheet,
   }, chat)));
 }
 
@@ -1162,11 +1195,27 @@ function onRing(ch: Channel, ring: Ring): void {
       }
       return;
     }
+    case 'hi':
+      return heardHi(ch, ring);
     case 'gone':
       if (ringingNow?.ch.id === ch.id) endRinging();
       storeChannels(channels.map((c) => (c.id === ch.id ? { ...c, gone: ring.from.slice(0, 30) || 'Someone' } : c)));
       return;
   }
+}
+
+/** Someone just joined (with a code, or saved from a call): their name, and who they are for next time. */
+function heardHi(ch: Channel, ring: Ring): void {
+  const name = ring.from.replace(/\s+/g, ' ').trim().slice(0, 30);
+  const pid = typeof ring.pid === 'string' && /^[A-Za-z0-9_-]{22}$/.test(ring.pid) ? ring.pid : undefined;
+  const newName = !!name && !ch.members.includes(name);
+  const members = newName ? [...ch.members, name].slice(0, 19) : ch.members;
+  const peer = ch.size <= 2 && pid && !ch.peer ? pid : ch.peer;
+  if (!newName && peer === ch.peer) return;
+  storeChannels(channels.map((c) => (c.id === ch.id
+    ? { ...c, members, size: c.size > 2 ? Math.min(20, Math.max(c.size, members.length + 1)) : c.size, ...(peer ? { peer } : {}) }
+    : c)));
+  if (newName && ch.size > 2) toast(`${name} joined ${ch.name}.`);
 }
 
 function incomingRing(ch: Channel, ring: Ring): void {
@@ -1337,7 +1386,20 @@ async function keepChannel(secret: string, name: string, appOnly: boolean, size:
   storeChannels(upsertChannel(channels, {
     id, secret, name: name.slice(0, 30) || listNames(members) || 'Channel', appOnly,
     size: Math.min(20, Math.max(2, size)), members, created: existing?.created ?? Date.now(),
+    ...(existing?.peer ? { peer: existing.peer } : {}),
   }));
+  await syncChannels();
+  // So their phone knows who this is: adding each other again later keeps one entry, not two.
+  const ch = channels.find((c) => c.id === id);
+  if (ch) sayHi(ch);
+}
+
+/**
+ * "I just joined", to the others in a channel: my name, and who I am for next time. Said again a
+ * little later — the relay connection was opened a moment ago and may not be on every relay yet.
+ */
+function sayHi(ch: Channel): void {
+  for (const wait of [0, 3000, 10000]) setTimeout(() => void ringing.send(ch, { t: 'hi', from: myName(), pid: personId() }), wait);
 }
 
 function onControl(from: Person, m: Record<string, unknown>): void {
@@ -1385,7 +1447,7 @@ function openChannelSheet(ch: Channel): void {
   $('ch-name').closest('.field')!.toggleAttribute('hidden', !!ch.gone);
   $('ch-keep-field').hidden = !!ch.gone;
   drawKeep(chats.thread(ch.id).keep);
-  $('ch-delete').textContent = 'Remove this person';
+  $('ch-delete').textContent = `Delete ${ch.name}`;
   delete $('ch-delete').dataset['armed'];
   $('ch-sheet').hidden = false;
 }
@@ -1405,7 +1467,7 @@ function deleteChannel(): void {
   // Two taps, so a channel is never deleted by accident.
   if (!btn.dataset['armed']) {
     btn.dataset['armed'] = '1';
-    btn.textContent = `Tap again to remove “${ch.name}”`;
+    btn.textContent = `Tap again to delete “${ch.name}”`;
     return;
   }
   $('ch-sheet').hidden = true;
@@ -1420,7 +1482,7 @@ function deleteChannel(): void {
     // Their messages go from this phone with them.
     chats.forget(ch.id);
   });
-  toast(`Removed “${ch.name}”.`);
+  toast(`Deleted “${ch.name}”.`);
 }
 
 /* App: what Android needs so a closed Ekanto still rings */
@@ -1537,22 +1599,17 @@ function addLowDataToggle(): void {
 
 function addHideIpToggles(): void {
   if (!HAS_TURN) return;
-  for (const before of ['join-btn', 'newch-start']) {
-    const label = document.createElement('label');
-    label.className = 'toggle hide-ip';
-    const box = document.createElement('input');
-    box.type = 'checkbox';
-    box.className = 'switch';
-    const text = document.createElement('span');
-    text.innerHTML = '<strong>Hide where I am (IP address)</strong><br>Sends the call through a middle computer, so the other side can\'t see your city. A bit slower.';
-    label.append(box, text);
-    // On the Join screen the switch hides under "More options": first-timers only need Join.
-    const more = before === 'join-btn' ? $('join-more') : null;
-    if (more) {
-      more.append(label);
-      more.hidden = false;
-    } else $(before).before(label);
-  }
+  const label = document.createElement('label');
+  label.className = 'toggle hide-ip';
+  const box = document.createElement('input');
+  box.type = 'checkbox';
+  box.className = 'switch';
+  const text = document.createElement('span');
+  text.innerHTML = '<strong>Hide where I am (IP address)</strong><br>Sends the call through a middle computer, so the other side can\'t see your city. A bit slower.';
+  label.append(box, text);
+  // On the Join screen the switch hides under "More options": first-timers only need Join.
+  $('join-more').append(label);
+  $('join-more').hidden = false;
   $('hide-ip-row').hidden = false;
   $('options-hide-ip').hidden = false;
   for (const box of document.querySelectorAll<HTMLInputElement>('.hide-ip input')) {
@@ -1669,10 +1726,7 @@ $('open-app').addEventListener('click', () => {
 });
 $('copy-protected').addEventListener('click', () => void copyLink());
 
-$('create').addEventListener('click', () => withName(() => {
-  newChannelName = null;
-  startNew();
-}));
+$('create').addEventListener('click', () => withName(() => startNew()));
 $('again').addEventListener('click', () => {
   history.replaceState(null, '', location.pathname);
   setTab('link');
@@ -1784,57 +1838,9 @@ $('send-view').addEventListener('click', () => panel?.send('view'));
 $('send-cancel').addEventListener('click', () => panel?.cancelSend());
 $('viewer-close').addEventListener('click', () => panel?.hideViewer());
 
-// Saved channels
-/** Who can be in a new channel: the call that saves it lets in only this many, so nobody extra gets it. */
-let newChannelSize: number | null = null;
-function setChannelSize(n: number | null): void {
-  newChannelSize = n;
-  const custom = $<HTMLInputElement>('newch-custom');
-  for (const b of $('newch-sizes').querySelectorAll<HTMLButtonElement>('button')) {
-    const on = (b.dataset['n'] ? Number(b.dataset['n']) : null) === n && custom.value === '';
-    b.classList.toggle('on', on);
-    b.setAttribute('aria-checked', String(on));
-  }
-  custom.classList.toggle('on', custom.value !== '');
-  $('newch-note').textContent = n === 2
-    ? 'Just the two of you. Nobody else can join and get it.'
-    : n ? `Up to ${n} people, including you. Nobody else can join and get it.${n > SMOOTH_PEOPLE ? ` Above ${SMOOTH_PEOPLE}, video may lag on phones.` : ''}`
-      : 'Anyone you send the link to can join and get it.';
-}
-for (const b of $('newch-sizes').querySelectorAll<HTMLButtonElement>('button')) {
-  b.addEventListener('click', () => {
-    $<HTMLInputElement>('newch-custom').value = '';
-    setChannelSize(b.dataset['n'] ? Number(b.dataset['n']) : null);
-  });
-}
-// Your own number, 2–20 — the same as the home screen's "#".
-$('newch-custom').addEventListener('input', () => {
-  const input = $<HTMLInputElement>('newch-custom');
-  capPeople(input);
-  const n = Math.round(Number(input.value));
-  if (input.value === '') return setChannelSize(null);
-  setChannelSize(Number.isFinite(n) ? Math.min(MAX_PEOPLE, Math.max(MIN_PEOPLE, n)) : null);
-});
-$('newch-custom').addEventListener('change', () => {
-  const input = $<HTMLInputElement>('newch-custom');
-  if (input.value !== '' && newChannelSize !== null) input.value = String(newChannelSize);
-});
-for (const id of ['new-channel', 'new-channel-fab']) {
-  $(id).addEventListener('click', () => withName(() => {
-    $<HTMLInputElement>('newch-name').value = '';
-    $<HTMLInputElement>('newch-custom').value = '';
-    $<HTMLInputElement>('newch-protect').checked = false;
-    setChannelSize(null);
-    $('newch-sheet').hidden = false;
-    $('newch-name').focus();
-  }));
-}
-$('newch-cancel').addEventListener('click', () => ($('newch-sheet').hidden = true));
-$('newch-start').addEventListener('click', () => {
-  $('newch-sheet').hidden = true;
-  newChannelName = $<HTMLInputElement>('newch-name').value.trim().slice(0, 30);
-  startNew(newChannelSize, IN_APP && $<HTMLInputElement>('newch-protect').checked, null);
-});
+// Saved channels: ＋ makes an invite (code · link · QR); a code someone gave you is typed in here too.
+for (const id of ['new-channel', 'new-channel-fab']) $(id).addEventListener('click', () => addScreen.open());
+$('have-code').addEventListener('click', () => addScreen.enterCode());
 $('ch-done').addEventListener('click', () => {
   const name = $<HTMLInputElement>('ch-name').value.trim().slice(0, 30);
   const ch = sheetChannel;
@@ -1855,6 +1861,8 @@ $('thread-back').addEventListener('click', () => {
   else closeThread();
 });
 $('thread-who').addEventListener('click', () => threadOf && openChannelSheet(threadOf));
+$('thread-more').innerHTML = ICON.dots;
+$('thread-more').addEventListener('click', () => threadOf && openChannelSheet(threadOf));
 $('thread-voice').addEventListener('click', () => threadOf && askWhy(threadOf, true));
 $('thread-video').addEventListener('click', () => threadOf && askWhy(threadOf, false));
 $('thread-input').addEventListener('input', sizeInput);
@@ -1932,7 +1940,10 @@ void syncChannels().then(() => {
 window.addEventListener('online', () => {
   chats.resendAll();
   chats.transfers.wake();
+  adding.wake();
 });
+// Invites and codes still waiting for the other phone: listened for now.
+adding.start();
 
 window.addEventListener('hashchange', () => {
   if (!session) route();
@@ -1959,11 +1970,19 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && session && !wakeLock) void keepAwake();
   // Back on the chat: what arrived meanwhile is read now.
   if (document.visibilityState === 'visible' && threadOf && !$('thread').hidden) chats.markRead(threadOf);
-  if (document.visibilityState === 'visible') chats.transfers.wake();
+  if (document.visibilityState === 'visible') {
+    chats.transfers.wake();
+    adding.wake();
+  }
 });
 
 /** A link opened from outside (hushcall://join#…) lands here, in the app. */
 function openFromOutside(url: string | undefined): void {
+  const code = url?.includes('#add-') ? parseCode(url) : null;
+  if (code && !session) {
+    history.replaceState(null, '', `#add-${code}`);
+    return route();
+  }
   const parsed = url ? parseInvite(url) : null;
   if (!parsed || session) return;
   history.replaceState(null, '', `#${inviteToHash(parsed)}`);
@@ -1992,6 +2011,7 @@ if (IN_APP) {
     // background (it never hangs up by accident).
     if (!$('viewer').hidden) return panel?.hideViewer();
     if (!$('thread').hidden && threadScreen.back()) return;
+    if (addScreen.back()) return;
     for (const id of ['send-sheet', 'more-sheet', 'audio-sheet', 'sheet', 'save-sheet', 'ask-sheet', 'newch-sheet', 'ch-sheet', 'ring-sheet', 'callwhy-sheet', ...HOME_SHEETS]) {
       if (!$(id).hidden) return void ($(id).hidden = true);
     }

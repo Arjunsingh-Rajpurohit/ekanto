@@ -359,7 +359,16 @@ export class Transfers {
       }
       this.wire(link, { end: id });
     }
-    link.idle = setTimeout(() => this.close(link), IDLE_CLOSE);
+    this.closeWhenSent(link);
+  }
+
+  /**
+   * The last piece is only queued here: on a slow line (a relay over mobile data) it can take
+   * longer than IDLE_CLOSE to leave. The line closes once it is idle AND everything has gone.
+   */
+  private closeWhenSent(link: Link): void {
+    clearTimeout(link.idle);
+    link.idle = setTimeout(() => (link.dc.readyState === 'open' && link.dc.bufferedAmount > 0 ? this.closeWhenSent(link) : this.close(link)), IDLE_CLOSE);
   }
 
   /* ---------- Both ---------- */

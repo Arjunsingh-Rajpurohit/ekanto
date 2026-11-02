@@ -7,6 +7,8 @@ import { RING_MQTT, RING_NOSTR } from './relays';
 
 /** Same ephemeral kind as calls: relays pass these on and never store them. */
 const KIND = 21733;
+/** The longest a relay keeps an invite's sealed note: an invite lives a day. */
+const KEEP_SECONDS = 24 * 3600;
 
 type Deliver = (topic: string, text: string) => void;
 
@@ -20,9 +22,12 @@ export class RingRelay {
   private nostr: NostrRing[] = [];
   private seen = new Set<string>();
   private readonly onData: (topic: string, data: Uint8Array) => void;
+  /** Invites: the relay may hold a sealed note for a day, so it reaches a phone that opens later. */
+  private readonly keep: boolean;
 
-  constructor(onData: (topic: string, data: Uint8Array) => void) {
+  constructor(onData: (topic: string, data: Uint8Array) => void, options: { keep?: boolean } = {}) {
     this.onData = onData;
+    this.keep = !!options.keep;
     const deliver: Deliver = (topic, text) => {
       // The same ring arrives once per relay; its random 12-byte nonce identifies it.
       const id = text.slice(0, 16);
@@ -41,12 +46,17 @@ export class RingRelay {
         clientId: `r${toBase64Url(crypto.getRandomValues(new Uint8Array(9)))}`,
         clean: true, reconnectPeriod: 5000, connectTimeout: 10000, keepalive: 45,
         timerVariant: 'native',
+        // MQTT 5 lets a kept note expire by itself.
+        ...(this.keep ? { protocolVersion: 5 as const } : {}),
       });
       client.on('connect', () => {
-        if (this.topics.length) client.subscribe(this.topics.map((t) => `h1/${t}`), { qos: 0 });
+        if (this.topics.length) client.subscribe(this.mqttTopics(this.topics), { qos: 0 });
       });
       client.on('error', () => undefined);
-      client.on('message', (topic, payload) => deliver(topic.replace(/^h1\//, ''), payload.toString()));
+      client.on('message', (topic, payload) => {
+        // A cleared note arrives empty.
+        if (payload.length) deliver(topic.split('/')[1] ?? '', payload.toString());
+      });
       this.mqttClients.push(client);
     }
     const key = schnorr.utils.randomSecretKey();
@@ -62,21 +72,38 @@ export class RingRelay {
     this.topics = next;
     for (const client of this.mqttClients) {
       if (!client.connected) continue;
-      if (gone.length) client.unsubscribe(gone.map((t) => `h1/${t}`));
-      if (added.length) client.subscribe(added.map((t) => `h1/${t}`), { qos: 0 });
+      if (gone.length) client.unsubscribe(this.mqttTopics(gone));
+      if (added.length) client.subscribe(this.mqttTopics(added), { qos: 0 });
     }
     for (const n of this.nostr) n.resubscribe();
   }
 
-  send(topic: string, data: Uint8Array): void {
+  /**
+   * `slot`: (invites only) the relay keeps this note — sealed, one per slot, for a day at most — and
+   * hands it to whoever listens later. Without it the relay forwards it and keeps nothing.
+   */
+  send(topic: string, data: Uint8Array, slot?: string): void {
     const text = toBase64Url(data);
     // Our own copy comes back from the relays: mark it seen so it isn't handled as news.
     this.seen.add(text.slice(0, 16));
+    const kept = this.keep && slot !== undefined;
     for (const client of this.mqttClients) {
-      // retain: false — the relay forwards it and keeps nothing.
-      if (client.connected) client.publish(`h1/${topic}`, text, { qos: 0, retain: false });
+      if (!client.connected) continue;
+      if (kept) client.publish(`h1/${topic}/${slot}`, text, { qos: 0, retain: true, properties: { messageExpiryInterval: KEEP_SECONDS } });
+      else client.publish(`h1/${topic}`, text, { qos: 0, retain: false });
     }
     for (const n of this.nostr) n.send(topic, text);
+  }
+
+  /** Takes a kept note off the relays once it has done its job. */
+  clear(topic: string, slot: string): void {
+    for (const client of this.mqttClients) {
+      if (client.connected) client.publish(`h1/${topic}/${slot}`, '', { qos: 0, retain: true });
+    }
+  }
+
+  private mqttTopics(topics: string[]): string[] {
+    return topics.flatMap((t) => (this.keep ? [`h1/${t}`, `h1/${t}/+`] : [`h1/${t}`]));
   }
 
   /** True once at least one relay is connected (a ring sent now gets somewhere). */

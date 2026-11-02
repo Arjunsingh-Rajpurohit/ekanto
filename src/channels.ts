@@ -35,6 +35,8 @@ export interface Channel {
   missed?: number;
   /** Why that missed call was made, if the caller said. */
   missedWhy?: string;
+  /** One-to-one: the other phone's own "this is me", so adding them again never saves them twice. */
+  peer?: string;
 }
 
 /** What travels on a channel's ring topic, sealed with the ring key. */
@@ -44,10 +46,11 @@ export interface Ring {
    * live: I'm in a call you can join · left: I left it · decline / busy: the answer to a ring ·
    * gone: the sender deleted the channel · msg: a chat message (sent again until "got") ·
    * got / seen: it reached / was read on a phone · sync: "I'm back — send what I missed" ·
-   * fx: setting up a phone-to-phone line to fetch a photo or file (see transfer.ts).
+   * fx: setting up a phone-to-phone line to fetch a photo or file (see transfer.ts) ·
+   * hi: "I just joined" (from someone who joined with a code; their name and own id).
    * An older Ekanto ignores the chat ones.
    */
-  t: 'ring' | 'cancel' | 'live' | 'left' | 'decline' | 'busy' | 'gone' | 'msg' | 'got' | 'seen' | 'sync' | 'fx';
+  t: 'ring' | 'cancel' | 'live' | 'left' | 'decline' | 'busy' | 'gone' | 'msg' | 'got' | 'seen' | 'sync' | 'fx' | 'hi';
   /** The call's own link (its secret). Only members can read it. */
   call?: string;
   /** The sender's name. */
@@ -85,6 +88,8 @@ export interface Ring {
   sid?: string;
   a?: 'offer' | 'answer' | 'none';
   sdp?: string;
+  /** hi: the sender's own long-lived "this is me" (invites.ts personId). */
+  pid?: string;
 }
 
 /** What a sent file is, so the other phone can show it before (and while) it arrives. */

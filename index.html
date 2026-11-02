@@ -62,8 +62,9 @@
             <div id="calls-empty" class="empty">
               <img src="./favicon.svg" alt="" class="empty-logo" />
               <h2>Nobody saved yet</h2>
-              <p class="sub">Save the people you call often. Next time, just tap to call — it rings their phone. No links.</p>
+              <p class="sub">Add the people you talk to. Then just tap to chat or call — it rings their phone. No links.</p>
               <button id="new-channel" class="btn primary" type="button">＋ Add a person</button>
+              <button id="have-code" class="text-link" type="button">Have a code? Enter it</button>
               <button id="go-link" class="btn with-icon" type="button"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><span>Start a one-time call link</span></button>
             </div>
             <div class="calls-foot">
@@ -210,6 +211,7 @@
           </button>
           <button id="thread-voice" class="ch-call" type="button" aria-label="Voice call"></button>
           <button id="thread-video" class="ch-call" type="button" aria-label="Video call"></button>
+          <button id="thread-more" class="ch-call" type="button" aria-label="Person options"></button>
         </header>
         <ol id="thread-list" class="thread-list" aria-live="polite"></ol>
         <div id="sticker-panel" class="sticker-panel" hidden>
@@ -537,14 +539,14 @@
         </div>
       </div>
 
-      <!-- New channel: starts a call; whoever joins is asked to save it -->
+      <!-- Add a person: an invite (code · link · QR) — no call needed -->
       <div id="newch-sheet" class="sheet fixed" hidden>
         <div class="sheet-card">
           <h2>Add a person</h2>
-          <p class="sub">Start a call and send them the link. When they join, you are saved on both phones — next time, just tap their name to call.</p>
+          <p class="sub">You get a code and a link. They type the code or tap the link — and you're saved on both phones. No call needed.</p>
           <label class="field left">
-            <span>Their name</span>
-            <input id="newch-name" type="text" maxlength="30" autocomplete="off" placeholder="e.g. Wife, Family" />
+            <span>Their name <em class="muted">(optional)</em></span>
+            <input id="newch-name" type="text" maxlength="30" autocomplete="off" enterkeyhint="done" placeholder="e.g. Priya, Family" />
           </label>
           <div class="field left">
             <span>How many people? <em class="muted">(including you)</em></span>
@@ -562,8 +564,44 @@
             <input id="newch-protect" type="checkbox" class="switch" />
             <span><strong>Protected calls</strong><br>Its calls work only in the Ekanto app: no screenshots, no screen recording, no browser extensions.</span>
           </label>
-          <button id="newch-start" class="btn primary" type="button">Start call &amp; get link</button>
+          <button id="newch-start" class="btn primary" type="button">Get code &amp; link</button>
+          <button id="newch-code" class="text-link" type="button">Have a code? Enter it</button>
           <button id="newch-cancel" class="btn" type="button">Cancel</button>
+        </div>
+      </div>
+
+      <!-- The invite: a QR to scan, the code to type, the link to send -->
+      <div id="invite-sheet" class="sheet fixed" hidden>
+        <div class="sheet-card invite-card">
+          <h2 id="invite-title">Invite someone</h2>
+          <div id="invite-qr" class="invite-qr"></div>
+          <button id="invite-code" class="invite-code" type="button"></button>
+          <p id="invite-state" class="invite-state"></p>
+          <button id="invite-share" class="btn primary" type="button">Share link</button>
+          <button id="invite-done" class="btn" type="button">Done</button>
+          <button id="invite-cancel" class="text-danger" type="button">Cancel invite</button>
+        </div>
+      </div>
+
+      <!-- Using a code someone gave you -->
+      <div id="code-sheet" class="sheet fixed" hidden>
+        <div class="sheet-card">
+          <h2>Enter a code</h2>
+          <p class="sub">The 8 letters and numbers from their invite.</p>
+          <input id="code-input" class="code-input" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go" maxlength="200" placeholder="K7PM-4QXD" aria-label="Code" />
+          <p id="code-error" class="hint err" hidden>That's not a code — it is 8 letters and numbers, like K7PM-4QXD.</p>
+          <button id="code-go" class="btn primary" type="button">Add</button>
+          <button id="code-cancel" class="btn" type="button">Cancel</button>
+        </div>
+      </div>
+
+      <div id="joining-sheet" class="sheet fixed" hidden>
+        <div class="sheet-card">
+          <div id="joining-spin" class="spinner joining-spin" aria-hidden="true"></div>
+          <h2 id="joining-title">Adding…</h2>
+          <p id="joining-sub" class="sub"></p>
+          <button id="joining-ok" class="btn primary" type="button">OK</button>
+          <button id="joining-cancel" class="text-danger" type="button">Cancel</button>
         </div>
       </div>
 
@@ -658,7 +696,7 @@
             </div>
           </div>
           <button id="ch-done" class="btn primary" type="button">Done</button>
-          <button id="ch-delete" class="text-danger" type="button">Remove this person</button>
+          <button id="ch-delete" class="text-danger" type="button">Delete</button>
         </div>
       </div>
 

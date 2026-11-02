@@ -22,15 +22,25 @@ A link works for **24 hours**. After that it opens nothing — an old link found
 
 For people you call often (e.g. you and your wife): save a channel once, then just tap it. No new links.
 
-1. **Calls** tab → **＋** → name it → send the link. When they join, both phones save it.
-   (Or in any call: **⋯ → Save as channel**.)
+1. **Calls** tab → **＋** → (their name) → **Get code & link**. You get a code like `K7PM-4QXD`, a link and a QR.
+   They tap the link, scan the QR, or open Ekanto → **＋ → Have a code?** and type it. Both phones save
+   each other — **no call needed**. (Or in any call: **⋯ → Save as channel**.)
 2. Next time: tap 📞 or 🎥 on the channel. Their phone **rings** like WhatsApp — **Answer** / **Decline**.
    Missed calls show on the channel. If a call is already on, the channel says **In a call now** — tap to join.
-3. **Delete** removes it from your phone, and tells the others' phones.
+3. **Delete**: long-press a person (right-click on a computer), or **⋮** in their chat → **Delete**. It tells the others' phones.
 
-Why a copied link can't get anyone in: the channel's key is never in a link. It goes phone to phone
-inside the encrypted call, only to the people in that call. Each call still gets a brand-new secret,
-and the ring's meeting name changes every day.
+Adding the same person again never saves them twice: each phone has its own random "this is me",
+shared only with the people it adds, so the second time they get the same entry back.
+
+Why a code or link can't get a stranger in later: the channel's key is never in it. A code **works once
+(one person; a group code for as many as you picked) and for 24 hours**. From it the two phones work out —
+slowly on purpose, so guessing a code from what a relay sees takes far longer than a day — a meeting point
+and a key. The channel's key then goes inside a box only those two phones can open (a fresh X25519 key
+pair each), so even a code worked out later opens nothing. Whoever has the code first takes the place, as
+with any invite — so you see who joined, and a second person is told "already used".
+The two phones don't have to be open at the same time: each leaves its sealed note with the relays,
+which keep it for at most a day (it expires by itself) and is taken off as soon as it has done its job.
+Each call still gets a brand-new secret, and the ring's meeting name changes every day.
 
 Ringing while Ekanto is closed works in the **Android app** (a quiet "Ekanto is ready for calls" notification
 keeps it listening — no Google push, no server). Allow **notifications**, **full-screen calls** and
@@ -88,7 +98,7 @@ waiting). Files go with their messages — when the chat's time is up, or a mess
 |---|---|
 | Video and voice | Go straight from phone to phone, encrypted end to end (WebRTC DTLS-SRTP). |
 | The key | Lives only in the link, after the `#`. Browsers never send that part to any server. |
-| Meeting points | Public relays (MQTT + Nostr) only pass sealed messages (AES-256-GCM). They can't read, change or fake them, so they can't join or listen. Each call uses 4 of them, picked from the link's secret. |
+| Meeting points | Public relays (MQTT + Nostr) only pass sealed messages (AES-256-GCM). They can't read, change or fake them, so they can't join or listen. Each call uses 4 of them, picked from the link's secret. The one thing they ever keep: an invite's sealed note, for a day at most. |
 | People limit | Mixed into the key: editing `.4` into `.40` in a link leads to an empty, different call. When the call is full, everyone agrees who stays (earliest joiners). |
 | Website | Strict security policy: it may load only its own files and talk only to the meeting points. No trackers, no fonts, no analytics. |
 | Nothing saved | No account, no history, no recordings. The link is wiped from the address bar when you hang up. Only your name (and any channels you save) stay, on your own phone — never backed up or copied to another phone. |

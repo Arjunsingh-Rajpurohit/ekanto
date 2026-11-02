@@ -3777,3 +3777,100 @@ textarea.input {
   height: 0;
   overflow: hidden;
 }
+
+/* ---------- Add a person: invite (QR · code · link), enter a code ---------- */
+
+.invite-card {
+  align-items: center;
+  text-align: center;
+}
+
+.invite-qr {
+  width: 216px;
+  height: 216px;
+  margin: 4px auto 0;
+  padding: 0;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.invite-qr svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* The code is the big, easy thing to read out or type: tap copies it. */
+.invite-code {
+  margin: 6px auto 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: 700 30px/1.2 ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  letter-spacing: 0.08em;
+  padding: 6px 12px;
+  border-radius: 12px;
+  min-height: 44px;
+}
+
+.invite-code:active {
+  background: var(--accent-soft);
+}
+
+.invite-state {
+  margin: 0 0 4px;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+
+.invite-state.ok {
+  color: var(--good);
+  font-weight: 600;
+}
+
+.invite-card .btn {
+  width: 100%;
+}
+
+.code-input {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: var(--card);
+  border-radius: 14px;
+  padding: 14px 16px;
+  outline: none;
+  text-align: center;
+  font: 700 26px/1.2 ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.code-input::placeholder {
+  color: var(--ink-2);
+  opacity: 0.45;
+}
+
+.code-input:focus {
+  border-color: rgba(255, 255, 255, 0.55);
+}
+
+.hint.err {
+  color: var(--danger);
+}
+
+.joining-spin {
+  margin: 4px auto 6px;
+}
+
+/* An invite or a code still waiting for the other phone: no call buttons yet. */
+.ch.pending .ch-avatar {
+  background: transparent;
+  box-shadow: none;
+  border: 1.5px dashed var(--ink-2);
+  color: var(--ink-2);
+}
+
+.ch.pending .ch-text small {
+  color: var(--ink-2);
+}
