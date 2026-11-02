@@ -22,10 +22,10 @@ A link works for **24 hours**. After that it opens nothing — an old link found
 
 For people you call often (e.g. you and your wife): save a channel once, then just tap it. No new links.
 
-1. Tap **＋**. It shows **your code** (like `K7PM-4QXD`) with its **QR**, and a box for **their code**. They tap
-   **＋** on their phone and **scan** your QR (the scan button beside the box) or type the code — both phones
-   save each other. No link, no call. The camera picture is read on the phone and never leaves it.
-   (**Share code** sends it in a chat if you're apart; **Options** makes it for a group. Or in any call:
+1. Tap **＋**. **My code** shows your QR and code (like `K7PM-4QXD`). They tap **＋ → Their code** on their
+   phone: the camera is already on — point it at your QR, or type the code. Both phones save each other.
+   No link, no call. The camera picture is read on the phone and never leaves it.
+   (Share sends the code in a chat if you're apart; the people icon makes it for a group. Or in any call:
    **⋯ → Save as channel**.)
 2. Next time: tap 📞 or 🎥 on the channel. Their phone **rings** like WhatsApp — **Answer** / **Decline**.
    Missed calls show on the channel. If a call is already on, the channel says **In a call now** — tap to join.

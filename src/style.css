@@ -3778,138 +3778,6 @@ textarea.input {
   overflow: hidden;
 }
 
-/* ---------- Add a person: your code, or theirs ---------- */
-
-.add-card {
-  text-align: center;
-}
-
-.add-part {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.add-label {
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: var(--ink-2);
-}
-
-.add-links {
-  display: flex;
-  justify-content: center;
-  gap: 18px;
-}
-
-.add-links .text-link {
-  min-height: 40px;
-  padding: 6px 4px;
-  font-size: 14.5px;
-}
-
-.add-options {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  margin-top: 6px;
-  text-align: left;
-}
-
-.add-options .text-link {
-  align-self: center;
-  color: var(--ink-2);
-  font-size: 14px;
-}
-
-/* "or" between the two halves: a thin line with the word on it. */
-.add-or {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: var(--ink-2);
-  font-size: 13px;
-}
-
-.add-or::before,
-.add-or::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--line);
-}
-
-.code-row {
-  width: 100%;
-  display: flex;
-  gap: 8px;
-  margin-top: 4px;
-}
-
-.code-row .code-input {
-  flex: 1;
-  min-width: 0;
-}
-
-.code-row .btn {
-  flex: none;
-  width: auto;
-  padding: 0 22px;
-}
-
-/* The code is the big, easy thing to read out or type: tap copies it. */
-.invite-code {
-  margin: 0 auto;
-  border: 0;
-  background: none;
-  color: var(--ink);
-  font: 700 30px/1.2 ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-  letter-spacing: 0.08em;
-  padding: 6px 12px;
-  border-radius: 12px;
-  min-height: 44px;
-}
-
-.invite-code:active {
-  background: var(--accent-soft);
-}
-
-.invite-state {
-  margin: 0 0 4px;
-  font-size: 13.5px;
-  color: var(--ink-2);
-}
-
-.invite-state.ok {
-  color: var(--good);
-  font-weight: 600;
-}
-
-.code-input {
-  width: 100%;
-  border: 1px solid var(--line);
-  background: var(--card);
-  border-radius: 14px;
-  padding: 14px 16px;
-  outline: none;
-  text-align: center;
-  font: 700 22px/1.2 ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.code-input::placeholder {
-  color: var(--ink-2);
-  opacity: 0.45;
-}
-
-.code-input:focus {
-  border-color: rgba(255, 255, 255, 0.55);
-}
-
 .hint.err {
   color: var(--danger);
 }
@@ -3930,14 +3798,66 @@ textarea.input {
   color: var(--ink-2);
 }
 
-/* Your code as a QR: scanned in Ekanto (or by any camera, which opens the link). */
-.invite-qr {
-  width: 148px;
-  height: 148px;
-  margin: 6px auto 2px;
-  border-radius: 14px;
-  overflow: hidden;
+
+/* ---------- Add a person: My code · Their code ---------- */
+
+.add-card {
+  gap: 16px;
+}
+
+.add-head {
+  position: relative;
+}
+
+.add-head h2 {
+  margin: 0;
+  line-height: 40px;
+}
+
+.add-x {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--ink);
+  background: var(--accent-soft);
+}
+
+.add-pane {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  /* Both tabs the same height: switching never makes the sheet jump. */
+  min-height: 394px;
+}
+
+.add-pane[hidden] {
+  display: none;
+}
+
+/* Your code, like a pass: a white card with the QR and the code to read out. */
+.qr-card {
+  width: min(100%, 264px);
+  padding: 18px 18px 10px;
+  border-radius: 24px;
   background: #fff;
+  color: #0b0f17;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+
+.invite-qr {
+  width: 100%;
+  aspect-ratio: 1;
 }
 
 .invite-qr svg {
@@ -3946,26 +3866,72 @@ textarea.input {
   height: 100%;
 }
 
-@media (max-height: 700px) {
-  .invite-qr {
-    width: 116px;
-    height: 116px;
-  }
+/* The code is the big, easy thing to read out or type: tap copies it. */
+.invite-code {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  color: #0b0f17;
+  font: 700 26px/1.2 ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  letter-spacing: 0.06em;
 }
 
-.code-scan {
+.invite-code svg {
   flex: none;
-  width: 56px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--card);
-  color: var(--ink);
-  display: grid;
-  place-items: center;
+  color: #6b7280;
 }
 
-.code-scan:active {
-  background: var(--accent-soft);
+.invite-code:active {
+  background: #eef0f3;
+}
+
+.invite-state {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+
+.invite-state.ok {
+  color: var(--good);
+  font-weight: 600;
+}
+
+.add-icons {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+}
+
+.add-icons .ch-call.on {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.add-icons .ch-call:disabled {
+  opacity: 0.35;
+}
+
+.add-options {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  text-align: left;
+}
+
+/* Their code: the camera, already looking, the same size as your card. */
+.scan-box {
+  position: relative;
+  width: min(100%, 264px);
+  aspect-ratio: 264 / 318;
+  border-radius: 24px;
+  overflow: hidden;
+  background: #000;
 }
 
 .scan-video {
@@ -3976,37 +3942,101 @@ textarea.input {
   object-fit: cover;
 }
 
-/* A clear square to aim with; the rest of the picture dimmed. */
-.scan-frame {
+/* Four corners to aim with. */
+.scan-corners {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  width: min(70vw, 280px);
-  aspect-ratio: 1;
-  transform: translate(-50%, -50%);
-  border: 3px solid #fff;
-  border-radius: 24px;
-  box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.5);
-}
-
-.scan-head {
-  position: relative;
+  inset: 16% 12% 24%;
+  --c: 26px;
+  --w: 4px;
+  background:
+    linear-gradient(#fff, #fff) top left / var(--c) var(--w),
+    linear-gradient(#fff, #fff) top left / var(--w) var(--c),
+    linear-gradient(#fff, #fff) top right / var(--c) var(--w),
+    linear-gradient(#fff, #fff) top right / var(--w) var(--c),
+    linear-gradient(#fff, #fff) bottom left / var(--c) var(--w),
+    linear-gradient(#fff, #fff) bottom left / var(--w) var(--c),
+    linear-gradient(#fff, #fff) bottom right / var(--c) var(--w),
+    linear-gradient(#fff, #fff) bottom right / var(--w) var(--c);
+  background-repeat: no-repeat;
+  border-radius: 6px;
 }
 
 .scan-hint {
   position: absolute;
-  left: 16px;
-  right: 16px;
-  bottom: calc(48px + env(safe-area-inset-bottom));
+  left: 12px;
+  right: 12px;
+  bottom: 18px;
   margin: 0;
   text-align: center;
   color: #fff;
-  font-size: 16px;
+  font-size: 14.5px;
   font-weight: 600;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
 }
 
-.scan-head .tool-icon {
-  background: rgba(0, 0, 0, 0.45);
-  color: #fff;
+.no-camera .scan-box {
+  background: var(--card-2);
+}
+
+.no-camera .scan-video,
+.no-camera .scan-corners {
+  display: none;
+}
+
+.no-camera .scan-hint {
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
+  color: var(--ink-2);
+  font-weight: 500;
+  text-shadow: none;
+}
+
+.code-row {
+  width: min(100%, 360px);
+  display: flex;
+  gap: 8px;
+}
+
+.code-input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--line);
+  background: var(--card);
+  border-radius: 14px;
+  padding: 12px 14px;
+  outline: none;
+  text-align: center;
+  font: 700 20px/1.2 ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.code-input::placeholder {
+  color: var(--ink-2);
+  opacity: 0.7;
+  font: 500 16px/1.2 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.code-input:focus {
+  border-color: rgba(255, 255, 255, 0.55);
+}
+
+.code-row .btn {
+  flex: none;
+  width: auto;
+  padding: 0 22px;
+}
+
+@media (max-height: 700px) {
+  .qr-card,
+  .scan-box {
+    width: min(100%, 208px);
+  }
+
+  .add-pane {
+    min-height: 0;
+  }
 }

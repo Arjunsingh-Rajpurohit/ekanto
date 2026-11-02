@@ -895,7 +895,7 @@ const adding = new Adding({
   refused: (t) => addScreen.refused(t),
   hello: sayHi,
 });
-const addScreen = new AddScreen({ adding, toast, withName, openThread, inApp: IN_APP });
+const addScreen = new AddScreen({ adding, toast, withName, openThread, myName, inApp: IN_APP });
 
 function chatChanged(id: string, news?: Msg): void {
   if (threadOf?.id === id && !$('thread').hidden) threadScreen.draw();

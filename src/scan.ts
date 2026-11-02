@@ -1,8 +1,12 @@
 import { encode } from 'uqr';
 
-/** A QR, black on white whatever the theme, with the quiet border scanners need. */
-export function qrSvg(text: string): string {
-  const { data, size } = encode(text, { ecc: 'M', border: 0 });
+/**
+ * A QR, black on white whatever the theme, with the quiet border scanners need. `mark`: a letter in
+ * a round badge in the middle (your initial, like a profile picture) — the strongest error
+ * correction reads straight through it.
+ */
+export function qrSvg(text: string, mark?: string): string {
+  const { data, size } = encode(text, { ecc: mark ? 'H' : 'M', border: 0 });
   let d = '';
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size;) {
@@ -18,9 +22,18 @@ export function qrSvg(text: string): string {
   }
   const q = 3;
   const all = size + 2 * q;
-  return `<svg viewBox="${-q} ${-q} ${all} ${all}" shape-rendering="crispEdges" aria-hidden="true">`
-    + `<rect x="${-q}" y="${-q}" width="${all}" height="${all}" fill="#fff"/><path d="${d}" fill="#000"/></svg>`;
+  const c = size / 2;
+  const r = size * 0.11;
+  const badge = mark
+    ? `<circle cx="${c}" cy="${c}" r="${r + 1}" fill="#fff"/><circle cx="${c}" cy="${c}" r="${r}" fill="#141a24"/>`
+      + `<text x="${c}" y="${c}" fill="#fff" font-family="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif" font-weight="700" `
+      + `font-size="${r * 1.15}" text-anchor="middle" dominant-baseline="central">${escapeXml(mark)}</text>`
+    : '';
+  return `<svg viewBox="${-q} ${-q} ${all} ${all}" aria-hidden="true">`
+    + `<rect x="${-q}" y="${-q}" width="${all}" height="${all}" fill="#fff"/><path d="${d}" fill="#000" shape-rendering="crispEdges"/>${badge}</svg>`;
 }
+
+const escapeXml = (t: string) => t.replace(/[<>&"']/g, (ch) => `&#${ch.charCodeAt(0)};`);
 
 interface Detector {
   detect(source: CanvasImageSource): Promise<{ rawValue: string }[]>;

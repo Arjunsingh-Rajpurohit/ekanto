@@ -538,18 +538,28 @@
         </div>
       </div>
 
-      <!-- Add a person: your code to give, a box for theirs — no link, no call -->
+      <!-- Add a person: My code (QR + code) · Their code (scan, or type) — no link, no call -->
       <div id="newch-sheet" class="sheet fixed" hidden>
         <div class="sheet-card add-card">
-          <h2>Add a person</h2>
-          <section class="add-part">
-            <span class="add-label">Your code</span>
-            <div id="invite-qr" class="invite-qr"></div>
-            <button id="invite-code" class="invite-code" type="button"></button>
+          <header class="add-head">
+            <h2>Add a person</h2>
+            <button id="newch-cancel" class="add-x" type="button" aria-label="Close"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg></button>
+          </header>
+          <div id="add-tabs" class="seg add-tabs" role="tablist" aria-label="Add a person">
+            <button id="tab-mine" type="button" role="tab" aria-controls="pane-mine">My code</button>
+            <button id="tab-theirs" type="button" role="tab" aria-controls="pane-theirs">Their code</button>
+          </div>
+
+          <section id="pane-mine" class="add-pane" role="tabpanel" aria-labelledby="tab-mine">
+            <div class="qr-card">
+              <div id="invite-qr" class="invite-qr"></div>
+              <button id="invite-code" class="invite-code" type="button"><span id="invite-code-text"></span><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button>
+            </div>
             <p id="invite-state" class="invite-state"></p>
-            <div class="add-links">
-              <button id="invite-share" class="text-link" type="button">Share code</button>
-              <button id="invite-more" class="text-link" type="button" aria-expanded="false">Options</button>
+            <div class="add-icons">
+              <button id="invite-share" class="ch-call" type="button" aria-label="Share code"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="m16 6-4-4-4 4"/><path d="M12 2v13"/></svg></button>
+              <button id="invite-more" class="ch-call" type="button" aria-label="For a group, and more" aria-expanded="false"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></button>
+              <button id="invite-new" class="ch-call" type="button" aria-label="Make a new code"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg></button>
             </div>
             <div id="invite-options" class="add-options" hidden>
               <div class="field left">
@@ -572,32 +582,23 @@
                 <input id="newch-protect" type="checkbox" class="switch" />
                 <span><strong>Protected calls</strong><br>Its calls work only in the Ekanto app: no screenshots, no screen recording, no browser extensions.</span>
               </label>
-              <button id="invite-new" class="text-link" type="button">Make a new code</button>
             </div>
           </section>
-          <div class="add-or" aria-hidden="true"><span>or</span></div>
-          <section class="add-part">
-            <span class="add-label">Enter their code</span>
+
+          <section id="pane-theirs" class="add-pane" role="tabpanel" aria-labelledby="tab-theirs" hidden>
+            <div class="scan-box">
+              <video id="scan-video" class="scan-video" playsinline muted></video>
+              <div class="scan-corners" aria-hidden="true"></div>
+              <p id="scan-hint" class="scan-hint">Point at their code</p>
+            </div>
             <div class="code-row">
-              <input id="code-input" class="code-input" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go" maxlength="200" placeholder="K7PM-4QXD" aria-label="Their code" />
-              <button id="code-scan" class="code-scan" type="button" aria-label="Scan their QR code"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg></button>
+              <input id="code-input" class="code-input" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go" maxlength="200" placeholder="Or type it" aria-label="Their code" />
               <button id="code-go" class="btn primary" type="button">Add</button>
             </div>
             <p id="code-error" class="hint err" hidden>That's not a code — it is 8 letters and numbers, like K7PM-4QXD.</p>
           </section>
-          <button id="newch-cancel" class="btn" type="button">Close</button>
         </div>
       </div>
-
-      <!-- Scanning their QR: the camera, read on this phone only -->
-      <section id="scan-view" class="layer scan-view" hidden>
-        <video id="scan-video" class="scan-video" playsinline muted></video>
-        <div class="scan-frame" aria-hidden="true"></div>
-        <header class="ov-head scan-head">
-          <button id="scan-close" class="tool-icon plain" type="button" aria-label="Close"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg></button>
-        </header>
-        <p id="scan-hint" class="scan-hint">Point at their code</p>
-      </section>
 
       <div id="joining-sheet" class="sheet fixed" hidden>
         <div class="sheet-card">
