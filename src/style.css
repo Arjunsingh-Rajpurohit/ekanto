@@ -3778,32 +3778,91 @@ textarea.input {
   overflow: hidden;
 }
 
-/* ---------- Add a person: invite (QR · code · link), enter a code ---------- */
+/* ---------- Add a person: your code, or theirs ---------- */
 
-.invite-card {
-  align-items: center;
+.add-card {
   text-align: center;
 }
 
-.invite-qr {
-  width: 216px;
-  height: 216px;
-  margin: 4px auto 0;
-  padding: 0;
-  border-radius: 18px;
-  overflow: hidden;
-  background: #fff;
+.add-part {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
 }
 
-.invite-qr svg {
-  display: block;
+.add-label {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--ink-2);
+}
+
+.add-links {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+}
+
+.add-links .text-link {
+  min-height: 40px;
+  padding: 6px 4px;
+  font-size: 14.5px;
+}
+
+.add-options {
   width: 100%;
-  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 6px;
+  text-align: left;
+}
+
+.add-options .text-link {
+  align-self: center;
+  color: var(--ink-2);
+  font-size: 14px;
+}
+
+/* "or" between the two halves: a thin line with the word on it. */
+.add-or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.add-or::before,
+.add-or::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.code-row {
+  width: 100%;
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.code-row .code-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.code-row .btn {
+  flex: none;
+  width: auto;
+  padding: 0 22px;
 }
 
 /* The code is the big, easy thing to read out or type: tap copies it. */
 .invite-code {
-  margin: 6px auto 0;
+  margin: 0 auto;
   border: 0;
   background: none;
   color: var(--ink);
@@ -3829,10 +3888,6 @@ textarea.input {
   font-weight: 600;
 }
 
-.invite-card .btn {
-  width: 100%;
-}
-
 .code-input {
   width: 100%;
   border: 1px solid var(--line);
@@ -3841,8 +3896,8 @@ textarea.input {
   padding: 14px 16px;
   outline: none;
   text-align: center;
-  font: 700 26px/1.2 ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-  letter-spacing: 0.08em;
+  font: 700 22px/1.2 ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 

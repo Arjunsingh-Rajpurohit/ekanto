@@ -16,7 +16,7 @@ import { LINK_HOURS, MAX_PEOPLE, MIN_PEOPLE, SMOOTH_PEOPLE, cleanReason, expired
 import { LOWDATA_KEY, MediaProblem, NOISE_KEY, cameraTrack, canShareScreenInBrowser, lowDataOn, micCleanup, noiseOn, openCamera, screenTrack, type Facing } from './media';
 import { IN_APP, nativeAudio, nativeCall, nativeFloat, nativeProtect, nativeRing, nativeScreenTrack, type AudioRoute, type AudioRoutes, type RingSetting } from './native';
 import { PROTECTED_INVITE, PROTECTED_LIMIT, PROTECTED_PROMISE, RECORDING_SELF, parseRecording, recordingNotice, recordingWire } from './protect';
-import { formatCode, full, parseCode, personId } from './invites';
+import { formatCode, parseCode, personId } from './invites';
 import { DEFAULT_KEEP, labelOf, shown, unreadOf, type Msg } from './messages';
 import { Ringing } from './ringing';
 import type { PluginListenerHandle } from '@capacitor/core';
@@ -1003,14 +1003,9 @@ function isLive(ch: Channel): boolean {
 }
 
 function drawChannels(): void {
-  const waiting = [
-    ...adding.sent.filter((s) => !full(s)).map((s) => pendingRow(
-      s.name || (s.size === 2 ? 'Invite' : 'Group invite'),
-      `${s.joined.length ? `${listNames(s.joined.map((j) => j.name))} joined · ` : ''}Code ${formatCode(s.code)} · waiting`,
-      s.name ? initial(s.name) : '+', `Invite, code ${formatCode(s.code)}: show it again`, () => addScreen.openSent(s.code))),
-    ...adding.taken.map((t) => pendingRow('Joining…', `Code ${formatCode(t.code)} · waiting for them`, '…',
-      `Joining with code ${formatCode(t.code)}`, () => addScreen.openTaken(t.code))),
-  ];
+  // A code I typed, still waiting for the other phone. (My own code lives behind ＋.)
+  const waiting = adding.taken.map((t) => pendingRow('Joining…', `Code ${formatCode(t.code)} · waiting for them`, '…',
+    `Joining with code ${formatCode(t.code)}`, () => addScreen.openTaken(t.code)));
   const any = channels.length > 0 || waiting.length > 0;
   $('tab-calls').classList.toggle('is-empty', !any);
   $('calls-empty').hidden = any;
@@ -1838,9 +1833,8 @@ $('send-view').addEventListener('click', () => panel?.send('view'));
 $('send-cancel').addEventListener('click', () => panel?.cancelSend());
 $('viewer-close').addEventListener('click', () => panel?.hideViewer());
 
-// Saved channels: ＋ makes an invite (code · link · QR); a code someone gave you is typed in here too.
+// Saved channels: ＋ shows your code, and a box for theirs.
 for (const id of ['new-channel', 'new-channel-fab']) $(id).addEventListener('click', () => addScreen.open());
-$('have-code').addEventListener('click', () => addScreen.enterCode());
 $('ch-done').addEventListener('click', () => {
   const name = $<HTMLInputElement>('ch-name').value.trim().slice(0, 30);
   const ch = sheetChannel;

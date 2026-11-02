@@ -22,9 +22,10 @@ A link works for **24 hours**. After that it opens nothing — an old link found
 
 For people you call often (e.g. you and your wife): save a channel once, then just tap it. No new links.
 
-1. **Calls** tab → **＋** → (their name) → **Get code & link**. You get a code like `K7PM-4QXD`, a link and a QR.
-   They tap the link, scan the QR, or open Ekanto → **＋ → Have a code?** and type it. Both phones save
-   each other — **no call needed**. (Or in any call: **⋯ → Save as channel**.)
+1. Tap **＋**. It shows **your code** (like `K7PM-4QXD`) and a box for **their code**. Tell them your code;
+   they tap **＋** on their phone, type it, **Add** — both phones save each other. No link, no call.
+   (**Share code** sends it in a chat if you're apart; **Options** makes it for a group. Or in any call:
+   **⋯ → Save as channel**.)
 2. Next time: tap 📞 or 🎥 on the channel. Their phone **rings** like WhatsApp — **Answer** / **Decline**.
    Missed calls show on the channel. If a call is already on, the channel says **In a call now** — tap to join.
 3. **Delete**: long-press a person (right-click on a computer), or **⋮** in their chat → **Delete**. It tells the others' phones.

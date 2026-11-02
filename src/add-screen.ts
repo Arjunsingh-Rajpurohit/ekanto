@@ -1,5 +1,4 @@
 import { Share } from '@capacitor/share';
-import { encode } from 'uqr';
 import type { Adding } from './adding';
 import { listNames } from './channel-ui';
 import type { Channel } from './channels';
@@ -19,46 +18,24 @@ export interface AddScreenDeps {
 
 /** After this long with no answer, "Adding…" says what is going on. */
 const PATIENCE_MS = 6000;
-const SHEETS = ['invite-sheet', 'joining-sheet', 'code-sheet', 'newch-sheet'];
+const SHEETS = ['joining-sheet', 'newch-sheet'];
 
-/** The link an invite's code travels as: https://…/#add-K7PM4QXD (it opens the app when installed). */
+/** The same code as a link (…/#add-K7PM4QXD), for whoever would rather tap than type. */
 export function inviteLink(code: string): string {
   return `${publicUrl()}#${LINK_PREFIX}${code}`;
 }
 
-/** A QR of the link, black on white whatever the theme, with a quiet border scanners need. */
-function qrSvg(text: string): string {
-  const { data, size } = encode(text, { ecc: 'M', border: 0 });
-  let d = '';
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size;) {
-      if (!data[y][x]) {
-        x++;
-        continue;
-      }
-      let run = 1;
-      while (x + run < size && data[y][x + run]) run++;
-      d += `M${x} ${y}h${run}v1h-${run}z`;
-      x += run;
-    }
-  }
-  const q = 3;
-  return `<svg viewBox="${-q} ${-q} ${size + 2 * q} ${size + 2 * q}" shape-rendering="crispEdges" aria-hidden="true">`
-    + `<rect x="${-q}" y="${-q}" width="${size + 2 * q}" height="${size + 2 * q}" fill="#fff"/><path d="${d}" fill="#000"/></svg>`;
-}
-
 /**
- * ＋ Add a person: name it, make an invite (code · link · QR), or type a code someone gave you.
- * No call needed — adding.ts does the rest, and both phones have each other.
+ * ＋ Add a person — one screen: your code to give them, and a box for theirs. Whoever types the
+ * other's code, both phones have each other (adding.ts). No link to send, no call.
  */
 export class AddScreen {
   private readonly d: AddScreenDeps;
-  private size: number | null = 2;
-  /** The invite on screen, and the code being joined on screen. */
+  /** The code on screen, and the code being joined on screen. */
   private showing: string | null = null;
   private joining: string | null = null;
   private patience?: ReturnType<typeof setTimeout>;
-  /** A double tap makes one invite, and joins once. */
+  /** A double tap joins once. */
   private busy = false;
 
   constructor(deps: AddScreenDeps) {
@@ -66,43 +43,32 @@ export class AddScreen {
     this.wire();
   }
 
-  open(): void {
-    this.d.withName(() => {
-      $<HTMLInputElement>('newch-name').value = '';
-      $<HTMLInputElement>('newch-custom').value = '';
-      $<HTMLInputElement>('newch-protect').checked = false;
-      this.setSize(2);
-      $('newch-sheet').hidden = false;
-      $('newch-name').focus();
-    });
+  /** ＋. `enter`: the box for their code gets the keyboard. */
+  open(enter = false): void {
+    this.d.withName(() => void this.show(enter));
   }
 
-  /** Opened from an invite link, or a code typed in. */
+  /** Opened from an invite link. */
   join(code: string): void {
     this.d.withName(() => void this.take(code));
   }
 
-  /** A waiting invite or code in the list was tapped. */
-  openSent(code: string): void {
-    const s = this.d.adding.sent.find((x) => x.code === code);
-    if (s) this.showInvite(s);
-  }
-
+  /** A code being joined, tapped in the list. */
   openTaken(code: string): void {
     this.joining = code;
     this.drawJoining('waiting');
   }
 
-  /** Someone joined with this phone's code. */
+  /** Someone typed this phone's code. */
   joined(s: Sent, ch: Channel, name: string): void {
-    if (this.showing === s.code && s.size === 2) {
-      $('invite-sheet').hidden = true;
-      this.showing = null;
+    const here = this.showing === s.code && !$('newch-sheet').hidden;
+    if (here && s.size === 2) {
+      this.close();
       this.d.openThread(ch);
       return this.d.toast(`✓ ${name} added — you're saved on both phones.`);
     }
-    if (this.showing === s.code) this.drawInvite();
-    this.d.toast(s.size === 2 ? `✓ ${name} joined with your code.` : `✓ ${name} joined ${ch.name}.`);
+    if (here) this.drawInvite();
+    this.d.toast(s.size === 2 ? `✓ ${name} added with your code.` : `✓ ${name} joined ${ch.name}.`);
   }
 
   /** This phone's code worked. */
@@ -118,25 +84,78 @@ export class AddScreen {
     this.d.toast(`Code ${formatCode(t.code)} was already used — ask for a new one.`);
   }
 
-  /** Something on the list changed: an invite on screen redraws (or goes, once cancelled). */
   changed(): void {
-    if (this.showing && !$('invite-sheet').hidden) this.drawInvite();
+    if (this.showing && !$('newch-sheet').hidden) this.drawInvite();
   }
 
   /** Android's Back: the top sheet closes. */
   back(): boolean {
-    const open = SHEETS.find((id) => !$(id).hidden);
-    if (!open) return false;
-    if (open === 'joining-sheet') this.closeJoining();
-    else $(open).hidden = true;
-    if (open === 'invite-sheet') this.showing = null;
-    return true;
+    if (!$('joining-sheet').hidden) {
+      this.closeJoining();
+      return true;
+    }
+    if (!$('newch-sheet').hidden) {
+      this.close();
+      return true;
+    }
+    return false;
   }
 
-  /* ---------- Making an invite ---------- */
+  /* ---------- Your code ---------- */
 
-  private setSize(n: number | null): void {
-    this.size = n;
+  private async show(enter: boolean): Promise<void> {
+    const s = await this.d.adding.current();
+    this.showing = s.code;
+    $<HTMLInputElement>('code-input').value = '';
+    $('code-error').hidden = true;
+    this.toggleOptions(false);
+    this.drawOptions(s);
+    this.drawInvite();
+    $('newch-sheet').hidden = false;
+    if (enter) $('code-input').focus();
+  }
+
+  private close(): void {
+    $('newch-sheet').hidden = true;
+    this.showing = null;
+  }
+
+  private sent(): Sent | undefined {
+    return this.d.adding.sent.find((x) => x.code === this.showing);
+  }
+
+  private drawInvite(): void {
+    const s = this.sent();
+    // Used up or cancelled while on screen: the next free code.
+    if (!s || full(s)) return void this.show(false);
+    $('invite-code').textContent = formatCode(s.code);
+    $('invite-code').setAttribute('aria-label', `Your code ${formatCode(s.code)} — tap to copy`);
+    const names = s.joined.map((j) => j.name);
+    const left = s.size === null ? null : s.size - 1 - s.joined.length;
+    const state = $('invite-state');
+    state.classList.toggle('ok', names.length > 0);
+    state.textContent = names.length
+      ? `✓ ${listNames(names)} joined · ${left === null ? 'more can join' : `${left} more can join`}`
+      : `They tap ＋ on their phone and enter it. ${s.size === 2 ? 'Works once' : s.size === null ? 'Anyone can use it' : `Works for ${s.size - 1} people`}, for 24 hours.`;
+    // Who it is for is fixed once someone has joined.
+    $('invite-more').hidden = names.length > 0;
+    if (names.length) this.toggleOptions(false);
+  }
+
+  private toggleOptions(open: boolean): void {
+    $('invite-options').hidden = !open;
+    $('invite-more').setAttribute('aria-expanded', String(open));
+  }
+
+  private drawOptions(s: Sent): void {
+    const custom = $<HTMLInputElement>('newch-custom');
+    custom.value = [2, 3, 4, 6, null].includes(s.size) ? '' : String(s.size);
+    $<HTMLInputElement>('newch-name').value = s.name;
+    $<HTMLInputElement>('newch-protect').checked = s.appOnly;
+    this.drawSize(s.size);
+  }
+
+  private drawSize(n: number | null): void {
     const custom = $<HTMLInputElement>('newch-custom');
     for (const b of $('newch-sizes').querySelectorAll<HTMLButtonElement>('button')) {
       const on = (b.dataset['n'] ? Number(b.dataset['n']) : null) === n && custom.value === '';
@@ -144,62 +163,27 @@ export class AddScreen {
       b.setAttribute('aria-checked', String(on));
     }
     custom.classList.toggle('on', custom.value !== '');
+    $('newch-name-field').hidden = n === 2;
     $('newch-note').textContent = n === 2
       ? 'Just the two of you — the code works once.'
       : n ? `Up to ${n} people, including you.${n > SMOOTH_PEOPLE ? ` Above ${SMOOTH_PEOPLE}, video may lag on phones.` : ''}`
         : 'Anyone with the code can join, for 24 hours.';
   }
 
-  private async make(): Promise<void> {
-    if (this.busy) return;
-    this.busy = true;
-    try {
-      const appOnly = this.d.inApp && $<HTMLInputElement>('newch-protect').checked;
-      const s = await this.d.adding.invite($<HTMLInputElement>('newch-name').value, this.size, appOnly);
-      $('newch-sheet').hidden = true;
-      this.showInvite(s);
-    } finally {
-      this.busy = false;
-    }
-  }
-
-  private showInvite(s: Sent): void {
-    this.showing = s.code;
-    $('invite-qr').innerHTML = qrSvg(inviteLink(s.code));
-    $('invite-code').textContent = formatCode(s.code);
-    $('invite-code').setAttribute('aria-label', `Code ${formatCode(s.code)} — tap to copy`);
-    $('invite-title').textContent = s.name ? `Invite ${s.name}` : s.size === 2 ? 'Invite someone' : 'Invite people';
+  private setSize(n: number | null): void {
+    if (this.showing) this.d.adding.update(this.showing, { size: n });
+    this.drawSize(n);
     this.drawInvite();
-    $('invite-sheet').hidden = false;
-  }
-
-  private drawInvite(): void {
-    const s = this.d.adding.sent.find((x) => x.code === this.showing);
-    if (!s) {
-      $('invite-sheet').hidden = true;
-      this.showing = null;
-      return;
-    }
-    const names = s.joined.map((j) => j.name);
-    const left = s.size === null ? null : s.size - 1 - s.joined.length;
-    const state = $('invite-state');
-    state.classList.toggle('ok', names.length > 0);
-    state.textContent = names.length
-      ? `✓ ${listNames(names)} joined${full(s) ? '' : left === null ? ' · works for more, for 24 hours' : ` · works for ${left} more`}`
-      : s.size === 2 ? 'Works once · for 24 hours · no call needed'
-        : `Works for ${s.size === null ? 'anyone' : `${s.size - 1} people`} · for 24 hours`;
-    $('invite-cancel').hidden = full(s);
   }
 
   private async share(): Promise<void> {
     const code = this.showing;
     if (!code) return;
-    const url = inviteLink(code);
-    const text = `Add me on Ekanto — private calls and chat, phone to phone.\nTap the link, or type the code ${formatCode(code)} in Ekanto (＋ › Have a code?).\nWorks once, for 24 hours.`;
+    const text = `My Ekanto code: ${formatCode(code)}\nOpen Ekanto, tap ＋ and enter it (works once, for 24 hours) — or just tap ${inviteLink(code)}`;
     try {
-      if (this.d.inApp) await Share.share({ title: 'Ekanto invite', text, url });
-      else if (navigator.share) await navigator.share({ title: 'Ekanto invite', text, url });
-      else await this.copy(url, 'Link copied — send it to the person you want to add.');
+      if (this.d.inApp) await Share.share({ title: 'Ekanto code', text });
+      else if (navigator.share) await navigator.share({ title: 'Ekanto code', text });
+      else await this.copy(formatCode(code), 'Code copied.');
     } catch {
       // Closing the share sheet is fine.
     }
@@ -214,16 +198,7 @@ export class AddScreen {
     }
   }
 
-  /* ---------- Using a code ---------- */
-
-  enterCode(): void {
-    $('newch-sheet').hidden = true;
-    const input = $<HTMLInputElement>('code-input');
-    input.value = '';
-    $('code-error').hidden = true;
-    $('code-sheet').hidden = false;
-    input.focus();
-  }
+  /* ---------- Their code ---------- */
 
   private submitCode(): void {
     const code = parseCode($<HTMLInputElement>('code-input').value);
@@ -231,7 +206,7 @@ export class AddScreen {
       $('code-error').hidden = false;
       return;
     }
-    $('code-sheet').hidden = true;
+    this.close();
     this.join(code);
   }
 
@@ -244,11 +219,11 @@ export class AddScreen {
       const t = await this.d.adding.take(code);
       if (t === 'own') {
         this.closeJoining();
-        this.d.toast('That is your own code — send it to the person you want to add.');
+        this.d.toast('That is your own code — give it to the person you want to add.');
         return;
       }
       clearTimeout(this.patience);
-      // No answer yet: the inviter's Ekanto is closed. It finishes when they open it.
+      // No answer yet: their Ekanto is closed. It finishes when they open it.
       this.patience = setTimeout(() => {
         if (this.joining === code && this.d.adding.taken.some((x) => x.code === code) && !$('joining-sheet').hidden) this.drawJoining('waiting');
       }, PATIENCE_MS);
@@ -262,7 +237,7 @@ export class AddScreen {
     const [title, sub] = state === 'adding'
       ? ['Adding…', `Code ${code}`]
       : state === 'waiting'
-        ? ['Waiting for them', `Code ${code}. It finishes by itself as soon as the person who invited you opens Ekanto — you can close this.`]
+        ? ['Waiting for them', `Code ${code}. It finishes by itself as soon as they open Ekanto — you can close this.`]
         : ['This code was already used', 'Each code works once. Ask them for a new one.'];
     $('joining-title').textContent = title;
     $('joining-sub').textContent = sub;
@@ -283,10 +258,18 @@ export class AddScreen {
       $(id).addEventListener('click', (e) => {
         if (e.target !== $(id)) return;
         if (id === 'joining-sheet') this.closeJoining();
-        else $(id).hidden = true;
-        if (id === 'invite-sheet') this.showing = null;
+        else this.close();
       });
     }
+    $('invite-code').addEventListener('click', () => this.showing && void this.copy(formatCode(this.showing), 'Code copied.'));
+    $('invite-share').addEventListener('click', () => void this.share());
+    $('invite-more').addEventListener('click', () => this.toggleOptions($('invite-options').hidden !== false));
+    $('invite-new').addEventListener('click', () => {
+      // The old code stops working: for a code told to the wrong person.
+      if (this.showing) this.d.adding.cancelInvite(this.showing);
+      this.showing = null;
+      void this.show(false).then(() => this.d.toast('New code — the old one works no more.'));
+    });
     for (const b of $('newch-sizes').querySelectorAll<HTMLButtonElement>('button')) {
       b.addEventListener('click', () => {
         $<HTMLInputElement>('newch-custom').value = '';
@@ -301,30 +284,13 @@ export class AddScreen {
       if (input.value === '') return this.setSize(2);
       this.setSize(Number.isFinite(n) ? Math.min(MAX_PEOPLE, Math.max(MIN_PEOPLE, n)) : 2);
     });
-    $('newch-custom').addEventListener('change', () => {
-      const input = $<HTMLInputElement>('newch-custom');
-      if (input.value !== '' && this.size !== null) input.value = String(this.size);
+    $('newch-name').addEventListener('input', () => {
+      if (this.showing) this.d.adding.update(this.showing, { name: $<HTMLInputElement>('newch-name').value.replace(/\s+/g, ' ').trim().slice(0, 30) });
     });
-    $('newch-start').addEventListener('click', () => void this.make());
-    $('newch-name').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') void this.make();
+    $('newch-protect').addEventListener('change', () => {
+      if (this.showing) this.d.adding.update(this.showing, { appOnly: this.d.inApp && $<HTMLInputElement>('newch-protect').checked });
     });
-    $('newch-cancel').addEventListener('click', () => ($('newch-sheet').hidden = true));
-    $('newch-code').addEventListener('click', () => this.enterCode());
-
-    $('invite-share').addEventListener('click', () => void this.share());
-    $('invite-code').addEventListener('click', () => this.showing && void this.copy(formatCode(this.showing), 'Code copied.'));
-    $('invite-done').addEventListener('click', () => {
-      $('invite-sheet').hidden = true;
-      this.showing = null;
-    });
-    $('invite-cancel').addEventListener('click', () => {
-      const code = this.showing;
-      $('invite-sheet').hidden = true;
-      this.showing = null;
-      if (code) this.d.adding.cancelInvite(code);
-      this.d.toast('Invite cancelled — that code works no more.');
-    });
+    $('newch-cancel').addEventListener('click', () => this.close());
 
     const input = $<HTMLInputElement>('code-input');
     input.addEventListener('input', () => {
@@ -339,7 +305,6 @@ export class AddScreen {
       if (e.key === 'Enter') this.submitCode();
     });
     $('code-go').addEventListener('click', () => this.submitCode());
-    $('code-cancel').addEventListener('click', () => ($('code-sheet').hidden = true));
 
     $('joining-ok').addEventListener('click', () => this.closeJoining());
     $('joining-cancel').addEventListener('click', () => {

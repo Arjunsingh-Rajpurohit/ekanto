@@ -64,7 +64,6 @@
               <h2>Nobody saved yet</h2>
               <p class="sub">Add the people you talk to. Then just tap to chat or call — it rings their phone. No links.</p>
               <button id="new-channel" class="btn primary" type="button">＋ Add a person</button>
-              <button id="have-code" class="text-link" type="button">Have a code? Enter it</button>
               <button id="go-link" class="btn with-icon" type="button"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><span>Start a one-time call link</span></button>
             </div>
             <div class="calls-foot">
@@ -539,59 +538,52 @@
         </div>
       </div>
 
-      <!-- Add a person: an invite (code · link · QR) — no call needed -->
+      <!-- Add a person: your code to give, a box for theirs — no link, no call -->
       <div id="newch-sheet" class="sheet fixed" hidden>
-        <div class="sheet-card">
+        <div class="sheet-card add-card">
           <h2>Add a person</h2>
-          <p class="sub">You get a code and a link. They type the code or tap the link — and you're saved on both phones. No call needed.</p>
-          <label class="field left">
-            <span>Their name <em class="muted">(optional)</em></span>
-            <input id="newch-name" type="text" maxlength="30" autocomplete="off" enterkeyhint="done" placeholder="e.g. Priya, Family" />
-          </label>
-          <div class="field left">
-            <span>How many people? <em class="muted">(including you)</em></span>
-            <div id="newch-sizes" class="sizes" role="radiogroup" aria-label="How many people">
-              <button type="button" data-n="2" role="radio">2</button>
-              <button type="button" data-n="3" role="radio">3</button>
-              <button type="button" data-n="4" role="radio">4</button>
-              <button type="button" data-n="6" role="radio">6</button>
-              <button type="button" data-n="" role="radio">Any</button>
-              <input id="newch-custom" type="number" inputmode="numeric" min="2" max="20" placeholder="#" aria-label="Type a number" />
+          <section class="add-part">
+            <span class="add-label">Your code</span>
+            <button id="invite-code" class="invite-code" type="button"></button>
+            <p id="invite-state" class="invite-state"></p>
+            <div class="add-links">
+              <button id="invite-share" class="text-link" type="button">Share code</button>
+              <button id="invite-more" class="text-link" type="button" aria-expanded="false">Options</button>
             </div>
-            <p id="newch-note" class="hint"></p>
-          </div>
-          <label id="newch-protect-row" class="toggle" hidden>
-            <input id="newch-protect" type="checkbox" class="switch" />
-            <span><strong>Protected calls</strong><br>Its calls work only in the Ekanto app: no screenshots, no screen recording, no browser extensions.</span>
-          </label>
-          <button id="newch-start" class="btn primary" type="button">Get code &amp; link</button>
-          <button id="newch-code" class="text-link" type="button">Have a code? Enter it</button>
-          <button id="newch-cancel" class="btn" type="button">Cancel</button>
-        </div>
-      </div>
-
-      <!-- The invite: a QR to scan, the code to type, the link to send -->
-      <div id="invite-sheet" class="sheet fixed" hidden>
-        <div class="sheet-card invite-card">
-          <h2 id="invite-title">Invite someone</h2>
-          <div id="invite-qr" class="invite-qr"></div>
-          <button id="invite-code" class="invite-code" type="button"></button>
-          <p id="invite-state" class="invite-state"></p>
-          <button id="invite-share" class="btn primary" type="button">Share link</button>
-          <button id="invite-done" class="btn" type="button">Done</button>
-          <button id="invite-cancel" class="text-danger" type="button">Cancel invite</button>
-        </div>
-      </div>
-
-      <!-- Using a code someone gave you -->
-      <div id="code-sheet" class="sheet fixed" hidden>
-        <div class="sheet-card">
-          <h2>Enter a code</h2>
-          <p class="sub">The 8 letters and numbers from their invite.</p>
-          <input id="code-input" class="code-input" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go" maxlength="200" placeholder="K7PM-4QXD" aria-label="Code" />
-          <p id="code-error" class="hint err" hidden>That's not a code — it is 8 letters and numbers, like K7PM-4QXD.</p>
-          <button id="code-go" class="btn primary" type="button">Add</button>
-          <button id="code-cancel" class="btn" type="button">Cancel</button>
+            <div id="invite-options" class="add-options" hidden>
+              <div class="field left">
+                <span>How many people? <em class="muted">(including you)</em></span>
+                <div id="newch-sizes" class="sizes" role="radiogroup" aria-label="How many people">
+                  <button type="button" data-n="2" role="radio">2</button>
+                  <button type="button" data-n="3" role="radio">3</button>
+                  <button type="button" data-n="4" role="radio">4</button>
+                  <button type="button" data-n="6" role="radio">6</button>
+                  <button type="button" data-n="" role="radio">Any</button>
+                  <input id="newch-custom" type="number" inputmode="numeric" min="2" max="20" placeholder="#" aria-label="Type a number" />
+                </div>
+                <p id="newch-note" class="hint"></p>
+              </div>
+              <label id="newch-name-field" class="field left" hidden>
+                <span>Group name <em class="muted">(optional)</em></span>
+                <input id="newch-name" type="text" maxlength="30" autocomplete="off" enterkeyhint="done" placeholder="e.g. Family" />
+              </label>
+              <label id="newch-protect-row" class="toggle" hidden>
+                <input id="newch-protect" type="checkbox" class="switch" />
+                <span><strong>Protected calls</strong><br>Its calls work only in the Ekanto app: no screenshots, no screen recording, no browser extensions.</span>
+              </label>
+              <button id="invite-new" class="text-link" type="button">Make a new code</button>
+            </div>
+          </section>
+          <div class="add-or" aria-hidden="true"><span>or</span></div>
+          <section class="add-part">
+            <span class="add-label">Enter their code</span>
+            <div class="code-row">
+              <input id="code-input" class="code-input" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go" maxlength="200" placeholder="K7PM-4QXD" aria-label="Their code" />
+              <button id="code-go" class="btn primary" type="button">Add</button>
+            </div>
+            <p id="code-error" class="hint err" hidden>That's not a code — it is 8 letters and numbers, like K7PM-4QXD.</p>
+          </section>
+          <button id="newch-cancel" class="btn" type="button">Close</button>
         </div>
       </div>
 

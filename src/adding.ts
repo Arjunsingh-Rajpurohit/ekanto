@@ -49,6 +49,7 @@ export class Adding {
   /** Joins being answered (or answers being opened) now: a second copy waits its turn, then does nothing. */
   private busy = new Set<string>();
   private lastJoin = new Map<string, number>();
+  private making: Promise<Sent> | null = null;
 
   constructor(deps: AddingDeps) {
     this.d = deps;
@@ -58,7 +59,27 @@ export class Adding {
     void this.refresh();
   }
 
-  /** A new invite: its code, link and QR are shown at once; nothing is saved until someone joins. */
+  /**
+   * The code ＋ shows: the newest one nobody has used yet (with an hour or more left), so opening ＋
+   * again, or tapping it twice, never makes another — or a new one.
+   */
+  current(): Promise<Sent> {
+    const now = Date.now();
+    const open = this.sent.find((s) => !s.joined.length && now - s.made < INVITE_MS - 3600 * 1000);
+    if (open) return Promise.resolve(open);
+    this.making ??= this.invite('', 2, false).finally(() => (this.making = null));
+    return this.making;
+  }
+
+  /** Options changed (how many people, group name, protected) — only before anyone joined. */
+  update(code: string, change: Partial<Pick<Sent, 'size' | 'appOnly' | 'name'>>): void {
+    const s = this.sent.find((x) => x.code === code);
+    if (!s || s.joined.length) return;
+    Object.assign(s, change);
+    saveSent(this.sent);
+  }
+
+  /** A new invite; nothing is saved until someone joins. */
   async invite(name: string, size: number | null, appOnly: boolean): Promise<Sent> {
     const s: Sent = {
       code: newCode(), name: clip(name), size, appOnly, cs: newChannelSecret(), keys: newKeyPair(), tag: newTag(), made: Date.now(), joined: [],
