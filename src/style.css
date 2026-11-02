@@ -3929,3 +3929,84 @@ textarea.input {
 .ch.pending .ch-text small {
   color: var(--ink-2);
 }
+
+/* Your code as a QR: scanned in Ekanto (or by any camera, which opens the link). */
+.invite-qr {
+  width: 148px;
+  height: 148px;
+  margin: 6px auto 2px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.invite-qr svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+@media (max-height: 700px) {
+  .invite-qr {
+    width: 116px;
+    height: 116px;
+  }
+}
+
+.code-scan {
+  flex: none;
+  width: 56px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+  color: var(--ink);
+  display: grid;
+  place-items: center;
+}
+
+.code-scan:active {
+  background: var(--accent-soft);
+}
+
+.scan-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* A clear square to aim with; the rest of the picture dimmed. */
+.scan-frame {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(70vw, 280px);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border: 3px solid #fff;
+  border-radius: 24px;
+  box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.5);
+}
+
+.scan-head {
+  position: relative;
+}
+
+.scan-hint {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: calc(48px + env(safe-area-inset-bottom));
+  margin: 0;
+  text-align: center;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+.scan-head .tool-icon {
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+}

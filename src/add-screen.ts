@@ -5,6 +5,7 @@ import type { Channel } from './channels';
 import { publicUrl } from './config';
 import { MAX_PEOPLE, MIN_PEOPLE, SMOOTH_PEOPLE } from './invite';
 import { LINK_PREFIX, formatCode, full, parseCode, type Sent, type Taken } from './invites';
+import { Scanner, qrSvg } from './scan';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -26,8 +27,8 @@ export function inviteLink(code: string): string {
 }
 
 /**
- * ＋ Add a person — one screen: your code to give them, and a box for theirs. Whoever types the
- * other's code, both phones have each other (adding.ts). No link to send, no call.
+ * ＋ Add a person — one screen: your code (and its QR) to give them, and a box for theirs (or scan
+ * it). Whoever enters the other's code, both phones have each other (adding.ts). No link, no call.
  */
 export class AddScreen {
   private readonly d: AddScreenDeps;
@@ -37,6 +38,9 @@ export class AddScreen {
   private patience?: ReturnType<typeof setTimeout>;
   /** A double tap joins once. */
   private busy = false;
+  private readonly scanner = new Scanner($<HTMLVideoElement>('scan-video'));
+  /** The code the QR on screen was drawn for. */
+  private qrOf: string | null = null;
 
   constructor(deps: AddScreenDeps) {
     this.d = deps;
@@ -88,8 +92,12 @@ export class AddScreen {
     if (this.showing && !$('newch-sheet').hidden) this.drawInvite();
   }
 
-  /** Android's Back: the top sheet closes. */
+  /** Android's Back: the camera, or the top sheet, closes. */
   back(): boolean {
+    if (!$('scan-view').hidden) {
+      this.stopScan();
+      return true;
+    }
     if (!$('joining-sheet').hidden) {
       this.closeJoining();
       return true;
@@ -128,6 +136,11 @@ export class AddScreen {
     const s = this.sent();
     // Used up or cancelled while on screen: the next free code.
     if (!s || full(s)) return void this.show(false);
+    if (this.qrOf !== s.code) {
+      // The QR is the link: Ekanto's scanner reads the code from it, and any other camera opens Ekanto.
+      $('invite-qr').innerHTML = qrSvg(inviteLink(s.code));
+      this.qrOf = s.code;
+    }
     $('invite-code').textContent = formatCode(s.code);
     $('invite-code').setAttribute('aria-label', `Your code ${formatCode(s.code)} — tap to copy`);
     const names = s.joined.map((j) => j.name);
@@ -136,7 +149,7 @@ export class AddScreen {
     state.classList.toggle('ok', names.length > 0);
     state.textContent = names.length
       ? `✓ ${listNames(names)} joined · ${left === null ? 'more can join' : `${left} more can join`}`
-      : `They tap ＋ on their phone and enter it. ${s.size === 2 ? 'Works once' : s.size === null ? 'Anyone can use it' : `Works for ${s.size - 1} people`}, for 24 hours.`;
+      : `They tap ＋ on their phone and scan or type it. ${s.size === 2 ? 'Works once' : s.size === null ? 'Anyone can use it' : `Works for ${s.size - 1} people`}, for 24 hours.`;
     // Who it is for is fixed once someone has joined.
     $('invite-more').hidden = names.length > 0;
     if (names.length) this.toggleOptions(false);
@@ -199,6 +212,33 @@ export class AddScreen {
   }
 
   /* ---------- Their code ---------- */
+
+  private async scan(): Promise<void> {
+    $('scan-hint').textContent = 'Point at their code';
+    $('scan-view').hidden = false;
+    try {
+      await this.scanner.start((text) => {
+        const code = parseCode(text);
+        if (!code) {
+          $('scan-hint').textContent = "That's not an Ekanto code — point at the one under “Your code”.";
+          return false;
+        }
+        navigator.vibrate?.(30);
+        this.stopScan();
+        this.close();
+        this.join(code);
+        return true;
+      });
+    } catch {
+      this.stopScan();
+      this.d.toast("Ekanto can't use the camera — allow it, or type their code.");
+    }
+  }
+
+  private stopScan(): void {
+    this.scanner.stop();
+    $('scan-view').hidden = true;
+  }
 
   private submitCode(): void {
     const code = parseCode($<HTMLInputElement>('code-input').value);
@@ -305,6 +345,15 @@ export class AddScreen {
       if (e.key === 'Enter') this.submitCode();
     });
     $('code-go').addEventListener('click', () => this.submitCode());
+    $('code-scan').addEventListener('click', () => void this.scan());
+    $('scan-close').addEventListener('click', () => this.stopScan());
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !$('scan-view').hidden) this.stopScan();
+    });
+    // Away from the screen, the camera goes off.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden' && !$('scan-view').hidden) this.stopScan();
+    });
 
     $('joining-ok').addEventListener('click', () => this.closeJoining());
     $('joining-cancel').addEventListener('click', () => {

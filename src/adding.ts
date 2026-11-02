@@ -248,9 +248,11 @@ export class Adding {
       }
       const others = s.joined.filter((j) => j.tag !== m.by).map((j) => j.name);
       const members = one ? [name] : [...new Set([...(existing?.members ?? []), ...s.joined.map((j) => j.name)])];
+      // An unnamed group is called after who is in it, and grows as they join (unless renamed here).
+      const auto = !one && !s.name && (!existing || existing.name === listNames(existing.members).slice(0, 30));
       const ch: Channel = {
         id, secret: cs,
-        name: existing?.name ?? (s.name || (one ? name : listNames(members)) || 'Group').slice(0, 30),
+        name: (auto ? listNames(members) : existing?.name ?? (s.name || (one ? name : listNames(members)))).slice(0, 30) || 'Group',
         appOnly: existing?.appOnly ?? s.appOnly,
         size: one ? 2 : Math.max(3, Math.min(20, members.length + 1)),
         members, created: existing?.created ?? Date.now(),
@@ -258,7 +260,7 @@ export class Adding {
       };
       if (!prior || !existing) await this.d.keep(ch, []);
       const welcome: Welcome = {
-        cs, n: me, ...(one ? {} : { gn: ch.name }), ms: one ? [] : others, size: ch.size, app: ch.appOnly, pid: personId(),
+        cs, n: me, ...(!one && s.name ? { gn: s.name } : {}), ms: one ? [] : others, size: ch.size, app: ch.appOnly, pid: personId(),
       };
       await this.reply(r, m.by, { t: 'welcome', by: s.tag, from: me, ts: Date.now(), to: m.by, pk: s.keys.pk, bx: await boxWelcome(s.keys, m.pk, welcome) });
       if (!prior) {

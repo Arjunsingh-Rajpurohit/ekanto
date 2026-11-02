@@ -544,6 +544,7 @@
           <h2>Add a person</h2>
           <section class="add-part">
             <span class="add-label">Your code</span>
+            <div id="invite-qr" class="invite-qr"></div>
             <button id="invite-code" class="invite-code" type="button"></button>
             <p id="invite-state" class="invite-state"></p>
             <div class="add-links">
@@ -579,6 +580,7 @@
             <span class="add-label">Enter their code</span>
             <div class="code-row">
               <input id="code-input" class="code-input" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go" maxlength="200" placeholder="K7PM-4QXD" aria-label="Their code" />
+              <button id="code-scan" class="code-scan" type="button" aria-label="Scan their QR code"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg></button>
               <button id="code-go" class="btn primary" type="button">Add</button>
             </div>
             <p id="code-error" class="hint err" hidden>That's not a code — it is 8 letters and numbers, like K7PM-4QXD.</p>
@@ -586,6 +588,16 @@
           <button id="newch-cancel" class="btn" type="button">Close</button>
         </div>
       </div>
+
+      <!-- Scanning their QR: the camera, read on this phone only -->
+      <section id="scan-view" class="layer scan-view" hidden>
+        <video id="scan-video" class="scan-video" playsinline muted></video>
+        <div class="scan-frame" aria-hidden="true"></div>
+        <header class="ov-head scan-head">
+          <button id="scan-close" class="tool-icon plain" type="button" aria-label="Close"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg></button>
+        </header>
+        <p id="scan-hint" class="scan-hint">Point at their code</p>
+      </section>
 
       <div id="joining-sheet" class="sheet fixed" hidden>
         <div class="sheet-card">

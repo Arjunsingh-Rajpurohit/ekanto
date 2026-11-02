@@ -1207,8 +1207,13 @@ function heardHi(ch: Channel, ring: Ring): void {
   const members = newName ? [...ch.members, name].slice(0, 19) : ch.members;
   const peer = ch.size <= 2 && pid && !ch.peer ? pid : ch.peer;
   if (!newName && peer === ch.peer) return;
+  // A group nobody named is called after who is in it: it grows as they join.
+  const auto = ch.size > 2 && newName && ch.name === listNames(ch.members).slice(0, 30);
   storeChannels(channels.map((c) => (c.id === ch.id
-    ? { ...c, members, size: c.size > 2 ? Math.min(20, Math.max(c.size, members.length + 1)) : c.size, ...(peer ? { peer } : {}) }
+    ? {
+      ...c, members, size: c.size > 2 ? Math.min(20, Math.max(c.size, members.length + 1)) : c.size, ...(peer ? { peer } : {}),
+      ...(auto ? { name: listNames(members).slice(0, 30) } : {}),
+    }
     : c)));
   if (newName && ch.size > 2) toast(`${name} joined ${ch.name}.`);
 }
