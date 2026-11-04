@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DAY, DEFAULT_KEEP, ack, addMsg, labelOf, prune, reactionsOf, readMsg, ringOf, shown, tickOf, undelivered, unreadOf, wrapped, type Msg, type Thread } from './messages';
+import { DAY, DEFAULT_KEEP, ack, addMsg, labelOf, lastReaction, prune, reactionsOf, readMsg, ringOf, shown, tickOf, undelivered, unreadOf, wrapped, type Msg, type Thread } from './messages';
 
 const thread = (): Thread => ({ msgs: [], keep: DEFAULT_KEEP });
 const mine = (id: string, ts = Date.now()): Msg => ({ id, mine: true, by: '', from: 'Arjun', x: 'hi', ts });
@@ -140,6 +140,19 @@ describe('reactions and delete for everyone', () => {
     expect([...reactionsOf(t).get('oooooooo1')!.values()]).toEqual(['😂']);
     // Reactions are not messages: nothing unread, nothing in the list row.
     expect(t.msgs.filter(shown)).toHaveLength(1);
+  });
+
+  it('the list row shows the newest reaction while it stands, like WhatsApp', () => {
+    const t = thread();
+    const now = Date.now();
+    addMsg(t, { ...mine('qqqqqqqq1', now - 3000), x: 'Yes, at 8' });
+    expect(lastReaction(t)).toBeUndefined();
+    addMsg(t, readMsg(ring({ id: 'qqqqqqqq2', on: 'qqqqqqqq1', e: '❤️', ts: now - 2000 }))!);
+    const r = lastReaction(t)!;
+    expect([r.r.from, r.r.e, labelOf(r.on)]).toEqual(['Priya', '❤️', 'Yes, at 8']);
+    // Taken off: nothing to show.
+    addMsg(t, readMsg(ring({ id: 'qqqqqqqq3', on: 'qqqqqqqq1', e: '', ts: now - 1000 }))!);
+    expect(lastReaction(t)).toBeUndefined();
   });
 
   it('only the sender can delete a message, even if the delete comes first', () => {

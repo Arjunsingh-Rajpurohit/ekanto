@@ -74,7 +74,7 @@ Tap a person on **Calls** to open your chat with them; 📞 and 🎥 in the chat
 | 📄 **Any file** | Every type (PDF, zip, docx, apk…). PDFs, text, pictures and videos open inside Ekanto. |
 | 🎤 **Voice messages** | Tap the mic, talk, send. Plays in the chat. |
 | 🙂 **Stickers & GIFs** | Big emoji stickers; **your own** from any photo (round or square, words on it); **make a GIF** with the camera (a loop, there and back). No GIF search — it would tell a GIF company what you type. |
-| ↩️ ❤️ 🗑 | Long-press a message: reply, react, copy, save, make a sticker, delete for everyone (no time limit) or for you. |
+| ↩️ ❤️ 🗑 | Like WhatsApp: swipe a message right to reply. Press and hold it: it lifts out, six quick reactions above it (＋ for any emoji), and below it reply, copy, save, make a sticker, delete for everyone (no time limit) or for you. Tap a reaction to see who chose what, or take yours off. With a mouse: hover for 😊 and ↩, or right-click. The chat list shows "Akul reacted ❤️ to …". |
 | 🎁 **Surprise** | Arrives now, wrapped, with a countdown — **opens at the time you pick, even if your phone is off then**. Nothing inside shows before (not in the list, not in the notification). |
 
 How a file travels: the message (sealed, like any message) says what it is and carries a tiny blurred

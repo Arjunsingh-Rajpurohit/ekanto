@@ -154,6 +154,15 @@ export function reactionsOf(t: Thread): Map<string, Map<string, string>> {
   return all;
 }
 
+/** The newest reaction when it still stands — for the list row, "Akul reacted ❤️ to …", like WhatsApp. */
+export function lastReaction(t: Thread): { r: Msg; on: Msg } | undefined {
+  const r = [...t.msgs].reverse().find((m) => m.note === 'react');
+  if (!r?.e || !r.on) return undefined;
+  const on = t.msgs.find((m) => m.id === r.on && !m.note && !m.gone);
+  if (!on || reactionsOf(t).get(on.id)?.get(r.mine ? '' : r.by) !== r.e) return undefined;
+  return { r, on };
+}
+
 export function keepText(keep: number): string {
   return keep === DAY ? '24 hours' : keep ? `${Math.round(keep / DAY)} days` : '';
 }

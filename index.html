@@ -339,17 +339,21 @@
         </div>
       </div>
 
-      <div id="msg-sheet" class="sheet fixed" hidden>
-        <div class="sheet-card msg-card">
-          <div id="msg-reacts" class="react-row" role="group" aria-label="React"></div>
-          <div class="msg-actions">
-            <button type="button" data-do="reply">Reply</button>
-            <button type="button" data-do="copy">Copy</button>
-            <button type="button" data-do="save">Save</button>
-            <button type="button" data-do="sticker">Make a sticker</button>
-            <button type="button" data-do="unsend" class="text-danger">Delete for everyone</button>
-            <button type="button" data-do="delete">Delete for me</button>
+      <!-- Press and hold a message, like WhatsApp: it lifts out of the chat, reactions above it, what you can do below -->
+      <div id="msg-sheet" class="msg-focus" hidden>
+        <div id="msg-pop" class="msg-pop">
+          <div id="msg-reacts" class="react-pill" role="group" aria-label="React"></div>
+          <ul id="msg-ghost" class="thread-list msg-ghost" aria-hidden="true"></ul>
+          <div id="msg-more" class="react-more" role="group" aria-label="More reactions" hidden></div>
+          <div id="msg-actions" class="msg-actions">
+            <button type="button" data-do="reply" data-icon="reply"><span>Reply</span></button>
+            <button type="button" data-do="copy" data-icon="copy"><span>Copy</span></button>
+            <button type="button" data-do="save" data-icon="down"><span>Save</span></button>
+            <button type="button" data-do="sticker" data-icon="sticker"><span>Make a sticker</span></button>
+            <button type="button" data-do="unsend" data-icon="trash" class="text-danger"><span>Delete for everyone</span></button>
+            <button type="button" data-do="delete" data-icon="trash"><span>Delete for me</span></button>
           </div>
+          <div id="msg-who" class="msg-who" hidden></div>
         </div>
       </div>
 

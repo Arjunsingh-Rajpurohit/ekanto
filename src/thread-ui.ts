@@ -22,7 +22,16 @@ export const ICONS = {
   wait: svg('<circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 2"/>', 20),
   retry: svg('<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>', 20),
   gift: '🎁',
+  reply: svg('<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>', 20),
+  smile: svg('<circle cx="12" cy="12" r="9"/><path d="M8.5 14.5a4.5 4.5 0 0 0 7 0"/><path d="M9 9.5h.01M15 9.5h.01"/>', 20),
+  copy: svg('<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/>', 20),
+  sticker: svg('<path d="M21 12V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h7z"/><path d="M21 12h-5a4 4 0 0 0-4 4v5"/>', 20),
+  trash: svg('<path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="m6 7 1 13h10l1-13"/><path d="M9 7V4h6v3"/>', 20),
+  plus: svg('<path d="M12 5v14M5 12h14"/>', 22),
 };
+
+/** Can be answered with a reply: not deleted, not a surprise still wrapped, not in a channel that is gone. */
+export const canReply = (m: Msg, ch: Channel) => !m.note && !m.gone && !ch.gone && !(!m.mine && wrapped(m));
 
 const time = (at: number) => new Date(at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 
@@ -274,7 +283,7 @@ function bubble(m: Msg, ch: Channel, t: Thread, view: ThreadView, reacts?: Map<s
   }
   if (isWrapped) {
     li.classList.add('wrapped');
-    li.append(gift(m), meta(m, ch));
+    li.append(gift(m), meta(m, ch), hoverActs(m, ch));
     return li;
   }
   const q = quote(m, t, ch);
@@ -307,7 +316,26 @@ function bubble(m: Msg, ch: Channel, t: Thread, view: ThreadView, reacts?: Map<s
     li.classList.add('has-react');
     li.append(r);
   }
+  li.append(hoverActs(m, ch));
   return li;
+}
+
+/** With a mouse: react and reply beside the message on hover, as on WhatsApp for computers. */
+function hoverActs(m: Msg, ch: Channel): HTMLElement {
+  const box = el('span', 'hover-acts');
+  if (ch.gone) return box;
+  const button = (act: string, icon: string, label: string) => {
+    const b = el('button');
+    b.type = 'button';
+    b.dataset.act = act;
+    b.innerHTML = icon;
+    b.title = label;
+    b.setAttribute('aria-label', label);
+    return b;
+  };
+  box.append(button('react-open', ICONS.smile, 'React'));
+  if (canReply(m, ch)) box.append(button('reply', ICONS.reply, 'Reply'));
+  return box;
 }
 
 /** What makes a bubble look different: if none of it changed, the old one stays (a GIF keeps playing). */

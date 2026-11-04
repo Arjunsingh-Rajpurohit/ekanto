@@ -17,7 +17,7 @@ import { LOWDATA_KEY, MediaProblem, NOISE_KEY, cameraTrack, canShareScreenInBrow
 import { IN_APP, nativeAudio, nativeCall, nativeFloat, nativeProtect, nativeRing, nativeScreenTrack, type AudioRoute, type AudioRoutes, type RingSetting } from './native';
 import { PROTECTED_INVITE, PROTECTED_LIMIT, PROTECTED_PROMISE, RECORDING_SELF, parseRecording, recordingNotice, recordingWire } from './protect';
 import { formatCode, parseCode, personId } from './invites';
-import { DEFAULT_KEEP, labelOf, shown, unreadOf, type Msg } from './messages';
+import { DEFAULT_KEEP, labelOf, lastReaction, shown, unreadOf, type Msg } from './messages';
 import { Ringing } from './ringing';
 import type { PluginListenerHandle } from '@capacitor/core';
 import { SpeakingMeter } from './speaking';
@@ -909,6 +909,11 @@ function rowChat(ch: Channel): RowChat | undefined {
   const t = chats.thread(ch.id);
   const last = [...t.msgs].reverse().find((m) => m.note !== 'missed' && shown(m));
   if (!last) return undefined;
+  const react = lastReaction(t);
+  if (react && react.r.ts >= last.ts) {
+    const who = react.r.mine ? 'You' : react.r.from;
+    return { text: `${who} reacted ${react.r.e} to "${labelOf(react.on)}"`.replace(/\s+/g, ' '), at: react.r.ts, unread: unreadOf(t) };
+  }
   const text = last.note === 'keep'
     ? '⏱ Disappearing messages changed'
     : `${last.mine ? 'You: ' : ch.size > 2 ? `${last.from}: ` : ''}${labelOf(last)}`;

@@ -3,7 +3,7 @@ import type { Chats } from './chats';
 import { MAX_FILE, REACTIONS, labelOf, reactionsOf, wrapped, type Msg } from './messages';
 import { VoiceRecorder, clock, describe, kindOf, recordLoop, sizeText, viewable } from './prepare';
 import { EMOJI_STICKERS, drawSticker, exportSticker, forgetSticker, keepSticker, myStickers, type StickerDraft } from './stickers';
-import { drawProgress, drawThread, tickCountdowns, whenText, type ThreadView } from './thread-ui';
+import { ICONS, canReply, drawProgress, drawThread, tickCountdowns, whenText, type ThreadView } from './thread-ui';
 import { saveFile, showFile } from './viewer';
 import type { ChatFile } from './chat';
 
@@ -23,6 +23,11 @@ interface Pick {
   url: string;
   meta: Promise<FileMeta>;
 }
+
+/** How far a message is swiped before it becomes a reply. */
+const SWIPE = 64;
+/** ＋ in the reactions: the quick six first, then the rest. */
+const MORE_REACTIONS = [...new Set([...REACTIONS, ...EMOJI_STICKERS, '🤣', '😅', '😁', '👀', '👎', '😡', '💔', '🤞'])];
 
 /** The overlays of a chat, in the order Back closes them. */
 const LAYERS = ['media-view', 'loop-view', 'stk-maker', 'surprise-sheet', 'send-pane', 'msg-sheet', 'attach-sheet'];
@@ -47,6 +52,11 @@ export class ThreadScreen {
   private surpriseAt: number | undefined;
   private recorder: VoiceRecorder | null = null;
   private sheetMsg: Msg | null = null;
+  private sheetMode: 'menu' | 'who' = 'menu';
+  /** A finger (or button) is down, and whether the menu opened under it: its lift is not a tap. */
+  private down = false;
+  private openedWhileDown = false;
+  private swallowUntil = 0;
   private draft: StickerDraft | null = null;
   private camera: MediaStream | null = null;
   private facing: 'user' | 'environment' = 'user';
@@ -110,6 +120,7 @@ export class ThreadScreen {
         if (id === 'media-view') this.hideViewer();
         else if (id === 'loop-view') this.closeLoop();
         else if (id === 'send-pane') this.closeSend();
+        else if (id === 'msg-sheet') this.closeActions();
         else $(id).hidden = true;
         return true;
       }
@@ -176,22 +187,18 @@ export class ThreadScreen {
       e.preventDefault();
       this.openActions(li.dataset.id!);
     });
-    // Long-press opens the same menu on a touch screen.
-    let press: ReturnType<typeof setTimeout> | undefined;
-    let startY = 0;
-    list.addEventListener('pointerdown', (e) => {
-      const li = (e.target as HTMLElement).closest<HTMLElement>('li.bubble');
-      if (!li || e.pointerType === 'mouse') return;
-      startY = e.clientY;
-      press = setTimeout(() => {
-        navigator.vibrate?.(15);
-        this.openActions(li.dataset.id!);
-      }, 480);
-    });
-    const cancel = () => clearTimeout(press);
-    list.addEventListener('pointerup', cancel);
-    list.addEventListener('pointercancel', cancel);
-    list.addEventListener('pointermove', (e) => Math.abs(e.clientY - startY) > 10 && cancel());
+    this.wireTouch(list);
+    // The lift of the finger that opened the menu lands on it as a tap: that tap is not the user's.
+    document.addEventListener('pointerdown', (e) => {
+      this.down = e.pointerType !== 'mouse';
+    }, true);
+    const lifted = () => {
+      if (this.down && this.openedWhileDown) this.swallowUntil = performance.now() + 150;
+      this.down = false;
+      this.openedWhileDown = false;
+    };
+    document.addEventListener('pointerup', lifted, true);
+    document.addEventListener('pointercancel', lifted, true);
 
     $('attach-btn').addEventListener('click', () => {
       $('sticker-panel').hidden = true;
@@ -319,14 +326,21 @@ export class ThreadScreen {
     $('surprise-go').addEventListener('click', () => this.sendSurprise());
 
     // Message actions.
+    for (const b of $('msg-actions').querySelectorAll<HTMLButtonElement>('[data-icon]')) {
+      b.insertAdjacentHTML('beforeend', ICONS[b.dataset.icon as keyof typeof ICONS]);
+    }
     $('msg-sheet').addEventListener('click', (e) => {
-      if (e.target === $('msg-sheet')) $('msg-sheet').hidden = true;
-      const r = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-e]');
-      const a = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-do]');
+      if (this.swallowed()) return;
+      const target = e.target as HTMLElement;
       const m = this.sheetMsg;
       const ch = this.d.current();
+      // Around the menu (or on the message itself): close it.
+      if (!target.closest('.react-pill, .react-more, .msg-actions, .msg-who')) return this.closeActions();
+      if (target.closest('[data-more]')) return this.showMore();
+      const r = target.closest<HTMLButtonElement>('[data-e]');
+      const a = target.closest<HTMLButtonElement>('[data-do]');
       if (!m || !ch || (!r && !a)) return;
-      $('msg-sheet').hidden = true;
+      this.closeActions();
       if (r) return this.d.chats.react(ch, m.id, r.dataset.e!);
       void this.act(a!.dataset.do!, m, ch);
     });
@@ -338,6 +352,8 @@ export class ThreadScreen {
   }
 
   private tapped(e: Event): void {
+    // A swipe or a hold just ended under this finger.
+    if (this.swallowed()) return;
     const target = e.target as HTMLElement;
     const actor = target.closest<HTMLElement>('[data-act]');
     const li = target.closest<HTMLElement>('li.bubble');
@@ -357,7 +373,11 @@ export class ThreadScreen {
       case 'gift':
         return this.unwrap(m, actor);
       case 'react-info':
-        return this.whoReacted(m);
+        return this.openActions(m.id, 'who');
+      case 'react-open':
+        return this.openActions(m.id);
+      case 'reply':
+        return canReply(m, ch) ? this.setReply(m) : undefined;
     }
   }
 
@@ -862,48 +882,207 @@ export class ThreadScreen {
     li.classList.add('flash');
   }
 
-  private whoReacted(m: Msg): void {
-    const ch = this.d.current();
-    if (!ch) return;
-    const t = this.d.chats.thread(ch.id);
-    const names = new Map(t.msgs.filter((o) => !o.mine).map((o) => [o.by, o.from]));
-    const on = reactionsOf(t).get(m.id);
-    if (!on?.size) return;
-    this.d.toast([...on].map(([by, e]) => `${e} ${by ? names.get(by) ?? ch.name : 'You'}`).join('   '));
+  /**
+   * Swipe a message to the right to answer it, and press and hold for reactions and the menu —
+   * WhatsApp's two gestures.
+   */
+  private wireTouch(list: HTMLElement): void {
+    let press: ReturnType<typeof setTimeout> | undefined;
+    let g: { li: HTMLElement; id: number; x: number; y: number; swiping: boolean; armed: boolean; icon?: HTMLElement } | null = null;
+    const stopPress = () => clearTimeout(press);
+    list.addEventListener('pointerdown', (e) => {
+      const li = (e.target as HTMLElement).closest<HTMLElement>('li.bubble');
+      if (!li || e.pointerType === 'mouse') return;
+      g = { li, id: e.pointerId, x: e.clientX, y: e.clientY, swiping: false, armed: false };
+      press = setTimeout(() => {
+        navigator.vibrate?.(15);
+        g = null;
+        this.openActions(li.dataset.id!);
+      }, 450);
+    });
+    list.addEventListener('pointermove', (e) => {
+      if (!g || e.pointerId !== g.id) return;
+      const dx = e.clientX - g.x;
+      const dy = e.clientY - g.y;
+      if (!g.swiping) {
+        if (Math.abs(dx) > 10 || Math.abs(dy) > 10) stopPress();
+        if (Math.abs(dy) > 10 && Math.abs(dy) >= Math.abs(dx)) {
+          g = null;
+          return;
+        }
+        const m = this.find(g.li.dataset.id!);
+        const ch = this.d.current();
+        if (dx < 14 || dx < Math.abs(dy) * 1.5 || !m || !ch || !canReply(m, ch)) return;
+        g.swiping = true;
+        g.li.setPointerCapture(e.pointerId);
+        g.icon = document.createElement('span');
+        g.icon.className = 'swipe-reply';
+        g.icon.innerHTML = ICONS.reply;
+        g.li.append(g.icon);
+      }
+      // Follows the finger, then pulls harder past the point where it counts.
+      const raw = Math.max(0, dx - 14);
+      const pull = raw < SWIPE ? raw : SWIPE + (raw - SWIPE) * 0.3;
+      g.li.style.transform = `translateX(${Math.min(pull, SWIPE + 30)}px)`;
+      g.icon!.style.opacity = String(Math.min(1, pull / SWIPE));
+      const armed = pull >= SWIPE;
+      if (armed && !g.armed) navigator.vibrate?.(10);
+      g.armed = armed;
+      g.icon!.classList.toggle('armed', armed);
+    });
+    const end = (e: PointerEvent) => {
+      stopPress();
+      if (!g || e.pointerId !== g.id) return;
+      const { li, swiping, armed, icon } = g;
+      g = null;
+      if (!swiping) return;
+      this.swallowUntil = performance.now() + 150;
+      li.classList.add('swipe-back');
+      li.style.transform = '';
+      setTimeout(() => {
+        li.classList.remove('swipe-back');
+        icon?.remove();
+      }, 200);
+      const m = this.find(li.dataset.id!);
+      if (armed && m && e.type === 'pointerup') this.setReply(m);
+    };
+    list.addEventListener('pointerup', end);
+    list.addEventListener('pointercancel', end);
   }
 
-  private openActions(id: string): void {
+  /** The one tap a lifting finger makes right after a hold or a swipe. */
+  private swallowed(): boolean {
+    const yes = performance.now() < this.swallowUntil;
+    this.swallowUntil = 0;
+    return yes;
+  }
+
+  private closeActions(): void {
+    $('msg-sheet').hidden = true;
+    $('msg-ghost').replaceChildren();
+    this.sheetMsg = null;
+  }
+
+  /** The message lifts where it is: reactions just above it, the menu just below (moved up when there is no room). */
+  private openActions(id: string, mode: 'menu' | 'who' = 'menu'): void {
     const m = this.find(id);
     const ch = this.d.current();
-    if (!m || !ch || m.note) return;
+    const li = $('thread-list').querySelector<HTMLElement>(`li.bubble[data-id="${CSS.escape(id)}"]`);
+    if (!m || !ch || m.note || !li) return;
+    // A hold fires both the timer and the phone's own long-press: one menu.
+    if (!$('msg-sheet').hidden && this.sheetMsg?.id === id && this.sheetMode === mode) return;
+    if (mode === 'who' && !reactionsOf(this.d.chats.thread(ch.id)).get(id)?.size) return;
     this.sheetMsg = m;
+    this.sheetMode = mode;
+    this.openedWhileDown = this.down;
     const theirsWrapped = !m.mine && wrapped(m);
-    const mineReact = [...this.d.chats.thread(ch.id).msgs].reverse().find((o) => o.note === 'react' && o.mine && o.on === m.id)?.e;
-    const row = $('msg-reacts');
-    row.hidden = !!m.gone || !!ch.gone;
-    row.replaceChildren(...REACTIONS.map((e) => {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.dataset.e = e;
-      b.textContent = e;
-      b.className = e === mineReact ? 'on' : '';
-      b.setAttribute('aria-label', `React ${e}`);
-      return b;
-    }));
+    const mineReact = this.myReaction(ch, m.id);
+    const pill = $('msg-reacts');
+    pill.hidden = mode === 'who' || !!m.gone || !!ch.gone;
+    const quick: string[] = [...REACTIONS];
+    // Picked from the others: it takes the last place, chosen, as on WhatsApp.
+    if (mineReact && !quick.includes(mineReact)) quick[quick.length - 1] = mineReact;
+    pill.replaceChildren(...quick.map((e) => this.emojiButton(e, e === mineReact)));
+    const more = document.createElement('button');
+    more.type = 'button';
+    more.className = 'more-btn';
+    more.dataset.more = '';
+    more.innerHTML = ICONS.plus;
+    more.setAttribute('aria-label', 'More reactions');
+    pill.append(more);
+    $('msg-more').hidden = true;
+
     const here = !!m.f && (m.mine || m.dl === 'done');
     const show: Record<string, boolean> = {
-      reply: !m.gone && !ch.gone && !theirsWrapped,
+      reply: canReply(m, ch),
       copy: !!m.x && !m.gone && !theirsWrapped,
       save: here && !m.gone && (m.mine || !m.f!.v) && !theirsWrapped,
       sticker: here && !m.gone && (m.mine || !m.f!.v) && m.f!.m.startsWith('image/') && !theirsWrapped,
       unsend: m.mine && !m.gone && !ch.gone,
       delete: true,
     };
-    for (const b of $('msg-sheet').querySelectorAll<HTMLButtonElement>('[data-do]')) {
+    for (const b of $('msg-actions').querySelectorAll<HTMLButtonElement>('[data-do]')) {
       b.hidden = !show[b.dataset.do!];
-      if (b.dataset.do === 'unsend') b.textContent = m.f?.v ? 'Take back from everyone' : 'Delete for everyone';
+      if (b.dataset.do === 'unsend') b.querySelector('span')!.textContent = m.f?.v ? 'Take back from everyone' : 'Delete for everyone';
     }
+    $('msg-actions').hidden = mode === 'who';
+    $('msg-who').hidden = mode !== 'who';
+    if (mode === 'who') this.drawWho(m, ch);
+
+    const ghost = li.cloneNode(true) as HTMLElement;
+    ghost.querySelector('.hover-acts')?.remove();
+    ghost.querySelector('.swipe-reply')?.remove();
+    ghost.classList.remove('flash', 'swipe-back');
+    ghost.removeAttribute('data-id');
+    ghost.style.transform = '';
+    ghost.style.width = `${li.getBoundingClientRect().width}px`;
+    $('msg-ghost').replaceChildren(ghost);
     $('msg-sheet').hidden = false;
+    this.place(li);
+  }
+
+  private place(li: HTMLElement): void {
+    const pop = $('msg-pop');
+    const r = li.getBoundingClientRect();
+    const mine = li.classList.contains('mine');
+    pop.classList.toggle('mine', mine);
+    pop.style.left = `${mine ? 8 : Math.max(8, r.left)}px`;
+    pop.style.right = `${mine ? Math.max(8, innerWidth - r.right) : 8}px`;
+    const top = r.top - $('msg-ghost').offsetTop;
+    const room = innerHeight - pop.offsetHeight - 12;
+    pop.style.top = `${Math.max(12, Math.min(top, room))}px`;
+  }
+
+  private emojiButton(e: string, on = false): HTMLButtonElement {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.dataset.e = e;
+    b.textContent = e;
+    b.className = on ? 'on' : '';
+    b.setAttribute('aria-label', `React ${e}`);
+    return b;
+  }
+
+  /** ＋: every emoji, in place of the menu. */
+  private showMore(): void {
+    const m = this.sheetMsg;
+    const ch = this.d.current();
+    if (!m || !ch) return;
+    const mine = this.myReaction(ch, m.id);
+    $('msg-more').replaceChildren(...MORE_REACTIONS.map((e) => this.emojiButton(e, e === mine)));
+    $('msg-more').hidden = false;
+    $('msg-actions').hidden = true;
+    const li = $('thread-list').querySelector<HTMLElement>(`li.bubble[data-id="${CSS.escape(m.id)}"]`);
+    if (li) this.place(li);
+  }
+
+  private myReaction(ch: Channel, id: string): string | undefined {
+    return reactionsOf(this.d.chats.thread(ch.id)).get(id)?.get('');
+  }
+
+  /** Tap the reactions under a message: who chose what, and yours to take off. */
+  private drawWho(m: Msg, ch: Channel): void {
+    const t = this.d.chats.thread(ch.id);
+    const names = new Map(t.msgs.filter((o) => !o.mine).map((o) => [o.by, o.from]));
+    const on = [...(reactionsOf(t).get(m.id) ?? new Map<string, string>())].sort(([a], [b]) => (a ? 1 : 0) - (b ? 1 : 0));
+    $('msg-who').replaceChildren(...on.map(([by, e]) => {
+      const row = document.createElement(by ? 'div' : 'button');
+      const name = document.createElement('span');
+      name.className = 'n';
+      name.textContent = by ? names.get(by) ?? ch.name : 'You';
+      if (!by) {
+        (row as HTMLButtonElement).type = 'button';
+        row.dataset.e = e;
+        const hint = document.createElement('small');
+        hint.textContent = 'Tap to remove';
+        name.append(hint);
+      }
+      const emoji = document.createElement('span');
+      emoji.className = 'e';
+      emoji.textContent = e;
+      row.append(emoji, name);
+      return row;
+    }));
   }
 
   private async act(what: string, m: Msg, ch: Channel): Promise<void> {
