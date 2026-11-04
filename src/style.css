@@ -3821,24 +3821,28 @@ textarea.input {
   transform: scale(1);
 }
 
-/* With a mouse: react and reply beside the message on hover. */
+/*
+ * With a mouse: react and reply beside the message on hover. The strip beside it is as tall as the
+ * message, and the buttons wait a moment after the mouse leaves — any path from a big photo reaches them.
+ */
 .hover-acts {
   position: absolute;
-  top: 50%;
+  top: 0;
+  bottom: 0;
   display: none;
+  align-items: center;
   gap: 4px;
-  transform: translateY(-50%);
 }
 
 .bubble.theirs .hover-acts {
   left: 100%;
-  padding-left: 8px;
+  padding: 0 28px 0 8px;
 }
 
 .bubble.mine .hover-acts {
   right: 100%;
   flex-direction: row-reverse;
-  padding-right: 8px;
+  padding: 0 8px 0 28px;
 }
 
 .hover-acts button {
@@ -3858,9 +3862,18 @@ textarea.input {
 }
 
 @media (hover: hover) and (pointer: fine) {
+  .thread-list .hover-acts {
+    display: flex;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.15s, visibility 0s linear 0.4s;
+  }
+
   .thread-list .bubble:hover .hover-acts,
   .thread-list .bubble:focus-within .hover-acts {
-    display: flex;
+    visibility: visible;
+    opacity: 1;
+    transition-delay: 0s;
   }
 }
 
